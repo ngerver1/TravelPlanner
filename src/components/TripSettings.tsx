@@ -14,7 +14,7 @@ export function TripSettings({ trip, onChange }: { trip: TripDoc['trip']; onChan
   const n = valid ? diffDays(s, e) : 0;
   const hint = !s && !e ? 'Choose your trip dates' : !isDate(s) || !isDate(e) ? 'Choose start and end' : valid ? `${n + 1} days · ${n} nights` : 'End must be on/after start';
   return (
-    <div className="settings">
+    <>
       <input className="trip-name" value={name} onChange={(ev) => setName(ev.target.value)}
         onBlur={() => name.trim() && name !== trip.name && onChange({ name: name.trim() })}
         onKeyDown={(ev) => ev.key === 'Enter' && (ev.target as HTMLInputElement).blur()} aria-label="Trip name" placeholder="Name your trip" />
@@ -27,8 +27,8 @@ export function TripSettings({ trip, onChange }: { trip: TripDoc['trip']; onChan
         }} aria-label="Start date" />
         <span className="arrow">→</span>
         <DateInput value={e} min={s || undefined} onChange={(ev) => { setE(ev.target.value); apply(s, ev.target.value); }} aria-label="End date" />
-        <span className="muted small nowrap">{hint}</span>
+        <span className="trip-len muted small nowrap">{hint}</span>
       </div>
-    </div>
+    </>
   );
 }

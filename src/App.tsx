@@ -223,23 +223,30 @@ export default function App() {
     <div className={'app' + (panel ? ' with-panel' : '')}>
       <datalist id="known-locs">{dv.known.map((k) => <option key={k} value={k} />)}</datalist>
       <header className="top">
-        <div className="top-row">
-          <TripSettings trip={doc.trip} onChange={(p) => update((x) => { x.trip = { ...x.trip, ...p }; })} />
-          <div className="top-actions">
-            <span className={'sync ' + (storageOk ? 'muted' : 'bad')} title="Every change is saved in this browser straight away">{syncText}</span>
-            <button className={'btn' + (panel === 'stays' ? ' on' : '')} onClick={() => setPanel(panel === 'stays' ? null : 'stays')}>🛏 Stays{dv.stats.none ? <em className="badge bad">{dv.stats.none}</em> : null}</button>
-            <button className={'btn' + (panel === 'flights' ? ' on' : '')} onClick={() => setPanel(panel === 'flights' ? null : 'flights')}>✈ Flights</button>
-            <button className="btn" disabled={!hasDates} onClick={() => setModal({ type: 'range', v: { from: firstUncovered, to: firstUncovered, loc: '', loc2: '' } })}>📍 Set locations</button>
-            <button className="btn ghost" onClick={() => setModal({ type: 'backup' })} title="Download / import JSON">⇅ Backup</button>
-          </div>
-        </div>
-        <nav className="tabs">
+        <TripSettings trip={doc.trip} onChange={(p) => update((x) => { x.trip = { ...x.trip, ...p }; })} />
+        <nav className="vtabs" aria-label="View">
           <button className={tab === 'calendar' ? 'on' : ''} onClick={() => goTab('calendar')}>Calendar</button>
           <button className={tab === 'days' ? 'on' : ''} onClick={() => goTab('days')}>Days</button>
         </nav>
       </header>
 
+      <nav className="bottombar" aria-label="Menu">
+        <button className={panel === 'stays' ? 'on' : ''} onClick={() => setPanel(panel === 'stays' ? null : 'stays')}>
+          <span className="bi">🛏{dv.stats.none ? <em className="badge bad">{dv.stats.none}</em> : null}</span><span>Stays</span>
+        </button>
+        <button className={panel === 'flights' ? 'on' : ''} onClick={() => setPanel(panel === 'flights' ? null : 'flights')}>
+          <span className="bi">✈</span><span>Flights</span>
+        </button>
+        <button disabled={!hasDates} onClick={() => { setPanel(null); setModal({ type: 'range', v: { from: firstUncovered, to: firstUncovered, loc: '', loc2: '' } }); }}>
+          <span className="bi">📍</span><span>Locations</span>
+        </button>
+        <button className={modal?.type === 'backup' ? 'on' : ''} onClick={() => { setPanel(null); setModal({ type: 'backup' }); }}>
+          <span className="bi">⚙</span><span>Settings</span>
+        </button>
+      </nav>
+
       <main>
+        {!storageOk && <div className="alert bad"><b>{syncText}</b></div>}
         {dv.outside.length > 0 && (
           <div className="alert warn">
             <div className="row between wrap">
@@ -259,7 +266,7 @@ export default function App() {
           <div className="welcome">
             <h2>Start a new trip</h2>
             <p>Give your trip a name and choose its first and last day at the top. The calendar and day list appear once the dates are set.</p>
-            <p className="muted small">Moving over from the old trip planner? Use <button className="link" onClick={() => setModal({ type: 'backup' })}>⇅ Backup → Import</button> with your v1 JSON export; it is converted automatically.</p>
+            <p className="muted small">Moving over from the old trip planner? Use <button className="link" onClick={() => setModal({ type: 'backup' })}>⚙ Settings → Import</button> with your v1 JSON export; it is converted automatically.</p>
           </div>
         )}
         {hasDates && isEmpty && (
@@ -271,7 +278,7 @@ export default function App() {
               <button className="btn primary" onClick={() => actions.addStay(doc.trip.start)}>+ Add a stay</button>
               <button className="btn" onClick={() => setModal({ type: 'range', v: { from: doc.trip.start, to: doc.trip.start, loc: '', loc2: '' } })}>📍 Set locations for some days</button>
             </div>
-            <p className="muted small">Everything saves in this browser automatically. Use ⇅ Backup to download or restore a JSON copy.</p>
+            <p className="muted small">Everything saves in this browser automatically. Use ⚙ Settings to download or restore a JSON copy.</p>
           </div>
         )}
 
@@ -353,7 +360,7 @@ export default function App() {
           </Modal>
         );
       })()}
-      {modal?.type === 'backup' && <BackupDialog doc={doc} toast={toast} onClose={close} onImport={(d) => { replace(d); toast('Trip imported'); }} />}
+      {modal?.type === 'backup' && <BackupDialog doc={doc} toast={toast} status={syncText} statusOk={storageOk} onClose={close} onImport={(d) => { replace(d); toast('Trip imported'); }} />}
       {toastMsg && <div className="toast" role="status">{toastMsg}</div>}
     </div>
   );

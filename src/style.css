@@ -321,3 +321,36 @@ ul.uncov li{display:flex;justify-content:space-between;align-items:center;paddin
   .mv-head{font-size:10px;letter-spacing:0}
   .dates .dt-input input[type=text]{width:136px;padding-left:7px}
 }
+
+/* compact header + bottom menu */
+.top{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;padding:6px 16px}
+.top .trip-name{font-size:17px;max-width:240px;padding:3px 6px}
+.top .dates{flex:1;min-width:0}
+.vtabs{display:inline-flex;border:1px solid var(--line2);border-radius:9px;overflow:hidden;background:#fff;margin-left:auto}
+.vtabs button{border:0;background:none;padding:6px 14px;cursor:pointer;color:var(--muted);font-weight:600;min-height:34px}
+.vtabs button.on{background:var(--accent-bg);color:var(--accent)}
+main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+.bottombar{position:fixed;left:0;right:0;bottom:0;z-index:35;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.97);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.bottombar button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:56px;cursor:pointer;color:var(--muted);font-size:11.5px;font-weight:600}
+.bottombar button .bi{font-size:19px;line-height:1.1;position:relative}
+.bottombar button .badge{position:absolute;top:-4px;right:-16px;font-size:10px;padding:0 5px;margin:0}
+.bottombar button.on{color:var(--accent)}
+.bottombar button:disabled{opacity:.4;cursor:default}
+.panel{bottom:calc(57px + env(safe-area-inset-bottom))}
+.toast{bottom:calc(72px + env(safe-area-inset-bottom))}
+.overlay{z-index:50}
+@media (min-width:701px){
+  .bottombar{left:50%;right:auto;transform:translateX(-50%);width:min(560px,100%);bottom:12px;border:1px solid var(--line);border-radius:14px;box-shadow:0 6px 20px rgba(16,24,40,.12);padding-bottom:0}
+  .with-panel .bottombar{left:calc((100% - 380px) / 2)}
+  .panel{bottom:0}
+}
+@media (max-width:1100px) and (min-width:701px){ .with-panel .bottombar{left:50%} }
+@media (max-width:700px){
+  .top{padding:6px 10px;gap:4px 8px}
+  .top .trip-name{font-size:16px;flex:1;max-width:none;order:0}
+  .vtabs{order:1}
+  .top .dates{order:2;flex-basis:100%;flex-wrap:nowrap;gap:4px}
+  .top .dates .dt-input input[type=text]{width:118px;padding-left:6px;padding-right:28px}
+  .top .trip-len{font-size:11px}
+  .vtabs button{padding:5px 10px}
+}
