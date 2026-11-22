@@ -6,12 +6,13 @@ import { derive, locationOn } from './domain/derive';
 import { ensureLocation, locationName } from './domain/locations';
 import type { Flight, Item, Placement, Stay, TripDoc } from './domain/types';
 import { useTripStore } from './store';
-import { Modal } from './components/ui';
+import { Modal, Seg } from './components/ui';
 import { DayForm, FlightForm, ItemForm, RangeLocForm, StayForm, type FlightDraft, type ItemDraft, type RangeDraft, type StayDraft } from './components/forms';
 import { FlightsPanel, StaysPanel } from './components/panels';
 import { BackupDialog } from './components/BackupDialog';
 import { TripSettings } from './components/TripSettings';
 import { CalendarView, Legend, Summary } from './views/Calendar';
+import { MonthView } from './views/Month';
 import { DaysView, type DayActions, type QuickType } from './views/Days';
 
 type Tab = 'calendar' | 'days';
@@ -53,6 +54,8 @@ function itemDraft(doc: TripDoc, it: Item, pi: number): ItemDraft {
 export default function App() {
   const { doc, update, replace, storageOk } = useTripStore();
   const [tab, setTab] = useState<Tab>(tabFromHash);
+  const [calView, setCalView] = useState<'month' | 'weeks'>(() => { try { return localStorage.getItem('tripPlanner.calView') === 'weeks' ? 'weeks' : 'month'; } catch { return 'month'; } });
+  const pickCalView = (v: 'month' | 'weeks') => { setCalView(v); try { localStorage.setItem('tripPlanner.calView', v); } catch { /* ignore */ } };
   const [panel, setPanel] = useState<'stays' | 'flights' | null>(null);
   const [modal, setModal] = useState<ModalState>(null);
   const [focus, setFocus] = useState<{ date: string; t: number } | null>(null);
@@ -211,6 +214,7 @@ export default function App() {
     else if (o.kind === 'day' && o.date) setModal({ type: 'outday', date: o.date });
   };
 
+  const openDay = (d: string) => { goTab('days'); setFocus({ date: d, t: Date.now() }); };
   const hasDates = dv.dates.length > 0;
   const isEmpty = !doc.flights.length && !doc.stays.length && !doc.items.length && !Object.keys(doc.days).length;
   const syncText = storageOk ? 'Saved on this device' : 'Couldn’t save: storage full or blocked. Download a backup';
@@ -273,9 +277,19 @@ export default function App() {
 
         {hasDates && (tab === 'calendar' ? (
           <>
-            <Summary s={dv.stats} />
-            <CalendarView dv={dv} onDay={(d) => { goTab('days'); setFocus({ date: d, t: Date.now() }); }} onAddStay={(d) => actions.addStay(d)} />
-            <Legend />
+            <div className="cal-bar">
+              <Summary s={dv.stats} />
+              <Seg value={calView} onChange={pickCalView} options={[['month', 'Month'], ['weeks', 'Weeks']]} />
+            </div>
+            {calView === 'month' ? (
+              <MonthView dv={dv} onDay={openDay} onStay={actions.editStay} onFlight={actions.editFlight}
+                onAddStay={(from, to) => actions.addStay(from, addDays(to, 1))} />
+            ) : (
+              <>
+                <CalendarView dv={dv} onDay={openDay} onAddStay={(d) => actions.addStay(d)} />
+                <Legend />
+              </>
+            )}
           </>
         ) : (
           <DaysView dv={dv} doc={doc} focus={focus} actions={actions} />

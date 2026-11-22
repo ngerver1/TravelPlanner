@@ -1,3 +1,4 @@
+import { DateInput, TimeInput } from './inputs';
 import { addDays, diffDays, fmt, isDate } from '../domain/dates';
 import { CATEGORIES, MEALS, MEAL_LABEL, RESTAURANT_ICON } from '../domain/constants';
 import type { ActivityCategory, Flight, ItemKind, Meal, Stay, Status } from '../domain/types';
@@ -34,10 +35,10 @@ export function FlightForm({ initial, onSave, onDelete, onClose }: {
         <Field label="Flight number"><input {...bind('flightNo', up)} /></Field>
         <Field label="From (airport code)"><input {...bind('from', iata)} maxLength={3} autoCapitalize="characters" /></Field>
         <Field label="To (airport code)"><input {...bind('to', iata)} maxLength={3} autoCapitalize="characters" /></Field>
-        <Field label="Departs (local date)"><input type="date" {...bind('depDate')} onChange={(e) => { const v = e.target.value; setF((p) => ({ ...p, depDate: v, arrDate: !p.arrDate || p.arrDate < v ? v : p.arrDate })); }} /></Field>
-        <Field label="Departure time (local)"><input type="time" {...bind('depTime')} /></Field>
-        <Field label="Arrives (local date)" hint={bad ? 'Arrival looks earlier than departure' : 'Next day for overnight flights'}><input type="date" {...bind('arrDate')} /></Field>
-        <Field label="Arrival time (local)"><input type="time" {...bind('arrTime')} /></Field>
+        <Field label="Departs (local date)"><DateInput {...bind('depDate')} onChange={(e) => { const v = e.target.value; setF((p) => ({ ...p, depDate: v, arrDate: !p.arrDate || p.arrDate < v ? v : p.arrDate })); }} /></Field>
+        <Field label="Departure time (local)"><TimeInput {...bind('depTime')} /></Field>
+        <Field label="Arrives (local date)" hint={bad ? 'Arrival looks earlier than departure' : 'Next day for overnight flights'}><DateInput {...bind('arrDate')} /></Field>
+        <Field label="Arrival time (local)"><TimeInput {...bind('arrTime')} /></Field>
         <Field label="Status" span><StatusSelect value={f.status} onChange={(s) => setF((p) => ({ ...p, status: s }))} /></Field>
         <Field label="Confirmation #"><input {...bind('conf')} /></Field>
         <Field label="Notes" span><textarea rows={2} {...bind('notes')} /></Field>
@@ -61,10 +62,10 @@ export function StayForm({ initial, onSave, onDelete, onClose }: {
         <Field label="Name" span><input {...bind('name')} placeholder="Hotel / apartment" autoFocus /></Field>
         <Field label="Location" hint="City or area: sets the day's location"><input list="known-locs" {...bind('locationName')} /></Field>
         <Field label="Address"><input {...bind('address')} /></Field>
-        <Field label="Check-in"><input type="date" {...bind('checkIn')} onChange={(e) => { const v = e.target.value; setF((p) => ({ ...p, checkIn: v, checkOut: !p.checkOut || p.checkOut <= v ? (v ? addDays(v, 1) : '') : p.checkOut })); }} /></Field>
-        <Field label="Check-out" hint={n > 0 ? `${n} night${n > 1 ? 's' : ''}` : f.checkIn && f.checkOut ? 'Check-out must be after check-in' : ''}><input type="date" {...bind('checkOut')} /></Field>
-        <Field label="Check-in time (optional)"><input type="time" {...bind('checkInTime')} /></Field>
-        <Field label="Check-out time (optional)"><input type="time" {...bind('checkOutTime')} /></Field>
+        <Field label="Check-in"><DateInput {...bind('checkIn')} onChange={(e) => { const v = e.target.value; setF((p) => ({ ...p, checkIn: v, checkOut: !p.checkOut || p.checkOut <= v ? (v ? addDays(v, 1) : '') : p.checkOut })); }} /></Field>
+        <Field label="Check-out" hint={n > 0 ? `${n} night${n > 1 ? 's' : ''}` : f.checkIn && f.checkOut ? 'Check-out must be after check-in' : ''}><DateInput {...bind('checkOut')} /></Field>
+        <Field label="Check-in time (optional)"><TimeInput {...bind('checkInTime')} /></Field>
+        <Field label="Check-out time (optional)"><TimeInput {...bind('checkOutTime')} /></Field>
         <Field label="Status" span><StatusSelect value={f.status} onChange={(s) => setF((p) => ({ ...p, status: s }))} /></Field>
         <Field label="Confirmation #"><input {...bind('conf')} /></Field>
         <Field label="Cost"><input {...bind('cost')} /></Field>
@@ -120,9 +121,9 @@ export function ItemForm({ initial, trip, onSave, onDelete, onClose }: {
           </Field>
         )}
         <Field label="Day" hint={placedElsewhere ? 'Empty: goes back to the ideas list' : outside ? 'Outside the trip dates' : 'Leave empty to keep it as an idea'}>
-          <input type="date" {...bind('date')} />
+          <DateInput {...bind('date')} />
         </Field>
-        <Field label="Time (optional)"><input type="time" {...bind('time')} /></Field>
+        <Field label="Time (optional)"><TimeInput {...bind('time')} /></Field>
         <Field label="Location" hint="Whose list of ideas it belongs to"><input list="known-locs" {...bind('locationName')} /></Field>
         <Field label="Place"><input {...bind('placeName')} /></Field>
         <Field label="Status" span><StatusSelect value={f.status} onChange={(s) => setF((p) => ({ ...p, status: s }))} /></Field>
@@ -151,8 +152,8 @@ export function RangeLocForm({ initial, trip, onApply, onClose }: {
         <button className="btn primary" disabled={!valid || !f.loc.trim()} onClick={() => onApply(f)}>Set {n ? `${n} day${n > 1 ? 's' : ''}` : ''}</button>
       </>}>
       <div className="grid2">
-        <Field label="From"><input type="date" {...bind('from')} min={trip.start} max={trip.end} /></Field>
-        <Field label="To"><input type="date" {...bind('to')} min={trip.start} max={trip.end} /></Field>
+        <Field label="From"><DateInput {...bind('from')} min={trip.start} max={trip.end} /></Field>
+        <Field label="To"><DateInput {...bind('to')} min={trip.start} max={trip.end} /></Field>
         <Field label="Location"><input list="known-locs" {...bind('loc')} autoFocus /></Field>
         <Field label="Travelling to (optional)" hint="For travel days, e.g. Sapporo → Tokyo"><input list="known-locs" {...bind('loc2')} /></Field>
       </div>

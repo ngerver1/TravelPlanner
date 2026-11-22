@@ -1,3 +1,4 @@
+import { TimeInput } from '../components/inputs';
 import { useEffect, useState } from 'react';
 import { fmt, fmtLong, fmtShort } from '../domain/dates';
 import { CATEGORIES, MEAL_LABEL, RESTAURANT_ICON, SLOT_LABEL } from '../domain/constants';
@@ -231,7 +232,7 @@ function QuickAdd({ d, onAdd, onMore }: { d: string; onAdd: DayActions['quickAdd
     <form className={'quick' + (title ? ' has' : '')} onSubmit={submit}>
       <input className="q-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="+ Add to this day…" aria-label="Add to this day" />
       <span className="q-extra">
-        <input className="q-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Time" />
+        <TimeInput className="q-time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Time" />
         <select value={type} onChange={(e) => setType(e.target.value as QuickType)} aria-label="Type">
           {(Object.keys(CATEGORIES) as (keyof typeof CATEGORIES)[]).map((k) => <option key={k} value={k}>{CATEGORIES[k].icon} {CATEGORIES[k].label}</option>)}
           <option value="restaurant">{RESTAURANT_ICON} Place to eat</option>

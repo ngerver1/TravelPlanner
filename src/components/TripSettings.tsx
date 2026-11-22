@@ -1,3 +1,4 @@
+import { DateInput } from './inputs';
 import { useEffect, useState } from 'react';
 import { MAX_SPAN, diffDays, isDate } from '../domain/dates';
 import type { TripDoc } from '../domain/types';
@@ -18,14 +19,14 @@ export function TripSettings({ trip, onChange }: { trip: TripDoc['trip']; onChan
         onBlur={() => name.trim() && name !== trip.name && onChange({ name: name.trim() })}
         onKeyDown={(ev) => ev.key === 'Enter' && (ev.target as HTMLInputElement).blur()} aria-label="Trip name" placeholder="Name your trip" />
       <div className={'dates' + (valid || (!s && !e) ? '' : ' invalid')}>
-        <input type="date" value={s} onChange={(ev) => {
+        <DateInput value={s} onChange={(ev) => {
           const v = ev.target.value;
           setS(v);
           // First time: no end yet, so start with a one-day trip you can then extend.
           if (isDate(v) && !isDate(e)) { setE(v); apply(v, v); } else apply(v, e);
         }} aria-label="Start date" />
         <span className="arrow">→</span>
-        <input type="date" value={e} min={s || undefined} onChange={(ev) => { setE(ev.target.value); apply(s, ev.target.value); }} aria-label="End date" />
+        <DateInput value={e} min={s || undefined} onChange={(ev) => { setE(ev.target.value); apply(s, ev.target.value); }} aria-label="End date" />
         <span className="muted small nowrap">{hint}</span>
       </div>
     </div>

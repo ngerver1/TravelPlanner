@@ -31,3 +31,40 @@ export const todayStr = () => {
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
 };
+
+/** YYYY-MM-DD → DD/MM/YYYY ('' if not a date). */
+export const fmtDMY = (s: string) => (isDate(s) ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : '');
+
+/** Mask typed digits as DD/MM/YYYY (slashes added automatically). */
+export function maskDMY(text: string): string {
+  const d = text.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 2) return d + (text.endsWith('/') && d.length === 2 ? '/' : '');
+  if (d.length <= 4) return `${d.slice(0, 2)}/${d.slice(2)}` + (text.endsWith('/') && d.length === 4 ? '/' : '');
+  return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+}
+
+/** DD/MM/YYYY (or D/M/YYYY) → YYYY-MM-DD, or null if not a real date. */
+export function parseDMY(text: string): string | null {
+  const m = text.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return isDate(iso) ? iso : null;
+}
+
+/** Mask typed digits as 24-hour HH:MM. */
+export function maskTime(text: string): string {
+  const d = text.replace(/\D/g, '').slice(0, 4);
+  return d.length <= 2 ? d : `${d.slice(0, 2)}:${d.slice(2)}`;
+}
+/** "930", "9:30", "0930", "09:30" → "09:30"; null if not a valid 24-hour time. */
+export function parseTime(text: string): string | null {
+  const t = text.trim();
+  if (!t) return null;
+  let h: string, m: string;
+  const c = t.match(/^(\d{1,2}):(\d{2})$/);
+  if (c) { h = c[1]; m = c[2]; }
+  else if (/^\d{3,4}$/.test(t)) { h = t.slice(0, t.length - 2); m = t.slice(-2); }
+  else return null;
+  const out = `${h.padStart(2, '0')}:${m}`;
+  return isTime(out) ? out : null;
+}
