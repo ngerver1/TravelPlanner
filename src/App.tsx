@@ -5,7 +5,8 @@ import { UNASSIGNED, mealFromTime, slotFromTime } from './domain/constants';
 import { derive, locationOn } from './domain/derive';
 import { ensureLocation, locationName } from './domain/locations';
 import { fits, moveToDate, placeAt, setChosen, swap, unplace, type Lane, type Ref } from './domain/plan';
-import type { Flight, Item, ItemKind, ItemSize, Placement, Stay, TripDoc } from './domain/types';
+import type { Flight, Item, ItemKind, ItemSize, Place, Placement, Stay, TripDoc } from './domain/types';
+import { parseMapsUrl } from './domain/maps';
 import { useTripStore } from './store';
 import { useRoute, type PlanView, type Route } from './router';
 import { Modal } from './components/ui';
@@ -41,6 +42,23 @@ function dayLocationId(x: TripDoc, date: string): string {
   return loc?.a.id ?? loc?.b?.id ?? ensureLocation(x, UNASSIGNED)!;
 }
 
+/** Place from the editor's fields; coordinates come from a pasted Maps link, or are kept if the link didn't change. */
+function buildPlace(prev: Place | undefined, name: string, address: string, mapsUrl: string): Place | undefined {
+  const url = mapsUrl.trim();
+  const parsed = url ? parseMapsUrl(url) : null;
+  const p: Place = { name };
+  if (address.trim()) p.address = address.trim();
+  if (parsed) {
+    p.mapsUrl = parsed.mapsUrl;
+    const same = prev?.mapsUrl === parsed.mapsUrl;
+    const lat = parsed.lat ?? (same ? prev?.lat : undefined), lng = parsed.lng ?? (same ? prev?.lng : undefined);
+    if (lat != null && lng != null) { p.lat = lat; p.lng = lng; }
+    const id = parsed.googlePlaceId ?? (same ? prev?.googlePlaceId : undefined);
+    if (id) p.googlePlaceId = id;
+  } else if (url) p.mapsUrl = url;
+  return name || p.address || p.mapsUrl ? p : undefined;
+}
+
 const placementLabel = (p: Placement) => `${fmtLong(p.date)}${p.meal ? ' ' + p.meal : ''}`;
 
 function itemDraft(doc: TripDoc, it: Item, pi: number): ItemDraft {
@@ -50,7 +68,8 @@ function itemDraft(doc: TripDoc, it: Item, pi: number): ItemDraft {
     category: it.category || 'other', size: it.size || 'half', includesEvening: !!it.includesEvening,
     meals: it.meals || [], cuisine: it.cuisine || '', booking: it.booking || '',
     status: it.status, mustDo: !!it.mustDo, done: !!it.done,
-    placeName: it.place?.name || '', link: it.link || '', notes: it.notes || '',
+    placeName: it.place?.name && it.place.name !== it.title ? it.place.name : '', placeAddress: it.place?.address || '', mapsUrl: it.place?.mapsUrl || '',
+    link: it.link || '', notes: it.notes || '',
     pi: p ? pi : -1, date: p?.date || '', time: p?.time || '', meal: p?.meal || it.meals?.[0] || mealFromTime(p?.time),
     elsewhere: it.kind === 'restaurant' ? it.placements.filter((_, i) => i !== pi).map(placementLabel) : [],
   };
@@ -112,8 +131,8 @@ export default function App() {
   }), [update]);
 
   const newFlight = (d?: string) => setModal({ type: 'flight', v: { _new: true, id: uid(), airline: '', flightNo: '', from: '', to: '', depDate: d || '', depTime: '', arrDate: d || '', arrTime: '', status: 'planned', conf: '', notes: '' } });
-  const addStay = (from?: string, to?: string, locName = '') => setModal({ type: 'stay', v: { _new: true, id: uid(), name: '', locationName: locName, address: '', checkIn: from || '', checkOut: to || (from ? addDays(from, 1) : ''), checkInTime: '', checkOutTime: '', status: 'planned', conf: '', cost: '', link: '', notes: '' } });
-  const editStay = (s: Stay) => { const { locationId, place: _p, ...rest } = s; setModal({ type: 'stay', v: { ...rest, locationName: locationName(doc, locationId) } }); };
+  const addStay = (from?: string, to?: string, locName = '') => setModal({ type: 'stay', v: { _new: true, id: uid(), name: '', locationName: locName, address: '', checkIn: from || '', checkOut: to || (from ? addDays(from, 1) : ''), checkInTime: '', checkOutTime: '', status: 'planned', conf: '', cost: '', link: '', notes: '', mapsUrl: '' } });
+  const editStay = (s: Stay) => { const { locationId, place, ...rest } = s; setModal({ type: 'stay', v: { ...rest, mapsUrl: place?.mapsUrl || '', locationName: locationName(doc, locationId) } }); };
   const patchStay = (id: string, p: Partial<Stay>) => update((x) => { x.stays = x.stays.map((s) => (s.id === id ? { ...s, ...p } : s)); });
   const editFlight = (f: Flight) => setModal({ type: 'flight', v: { ...f } });
   const patchFlight = (id: string, p: Partial<Flight>) => update((x) => { x.flights = x.flights.map((f) => (f.id === id ? { ...f, ...p } : f)); });
@@ -174,7 +193,7 @@ export default function App() {
     editItem: (it, pi) => setModal({ type: 'item', v: itemDraft(doc, it, pi) }),
     newIdea: ({ locationId, kind, date }) => setModal({ type: 'item', v: {
       _new: true, id: uid(), kind, title: '', locationName: locationName(doc, locationId), category: 'other', size: 'half', includesEvening: false,
-      meals: [], cuisine: '', booking: '', status: 'idea', mustDo: false, done: false, placeName: '', link: '', notes: '',
+      meals: [], cuisine: '', booking: '', status: 'idea', mustDo: false, done: false, placeName: '', placeAddress: '', mapsUrl: '', link: '', notes: '',
       pi: -1, date: date || '', time: '', meal: 'lunch', elsewhere: [],
     } }),
     quickIdea,
@@ -201,13 +220,14 @@ export default function App() {
     close();
   };
   const saveStay = (v: StayDraft) => {
-    const { _new, locationName: ln, ...rest } = v;
+    const { _new, locationName: ln, mapsUrl, ...rest } = v;
     update((x) => {
       const s: Stay = { ...rest };
       const lid = ensureLocation(x, ln);
       if (lid) s.locationId = lid;
       const prev = x.stays.find((e) => e.id === s.id);
-      if (prev?.place) s.place = prev.place;
+      const place = buildPlace(prev?.place, s.name, s.address, mapsUrl);
+      if (place && (mapsUrl.trim() || prev?.place)) s.place = place;
       const i = x.stays.findIndex((e) => e.id === s.id);
       if (i >= 0) x.stays[i] = s; else x.stays.push(s);
     });
@@ -224,8 +244,8 @@ export default function App() {
       it.locationId = ensureLocation(x, f.locationName) ?? (prev?.locationId || dayLocationId(x, f.date));
       if (f.mustDo) it.mustDo = true; else delete it.mustDo;
       if (f.done) it.done = true; else delete it.done;
-      if (f.placeName.trim()) it.place = it.place && it.place.name === f.placeName.trim() ? it.place : { name: f.placeName.trim() };
-      else delete it.place;
+      const place = buildPlace(it.place, f.placeName.trim() || it.title, f.placeAddress, f.mapsUrl);
+      if (place && (f.placeName.trim() || f.placeAddress.trim() || f.mapsUrl.trim() || it.place?.lat != null)) it.place = place; else delete it.place;
       if (f.link.trim()) it.link = f.link.trim(); else delete it.link;
       if (f.notes.trim()) it.notes = f.notes; else delete it.notes;
 

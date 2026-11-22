@@ -562,3 +562,12 @@ main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
   .conflict-cmp{grid-template-columns:1fr}
 }
 .sync-setup p{margin:0}.sync-setup .alert{margin:0}
+
+/* maps links */
+.maplink{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;color:var(--muted);text-decoration:none;padding:2px 4px;margin:-2px -4px;border-radius:5px}
+.maplink:hover{color:var(--accent);background:var(--hover2)}
+.maplink.pinned{color:var(--accent)}
+.dv-links{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:8px}
+.dv-links .btn{text-decoration:none;margin-left:auto}
+a.btn{text-decoration:none;color:inherit}
+@media (max-width:700px){.sync-chip.st-local .short{display:none}.sync-chip.st-local{border:0;padding:3px 6px}}

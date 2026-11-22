@@ -13,7 +13,8 @@ Live site, once set up: `https://ngerver1.github.io/TravelPlanner/`
 | 1 | Foundation: calendar, flights, stays, warnings, export/import, v1 import | **Done** |
 | 3 | Locations with ideas lists, Day planner with drag and drop, undo, phone layout | **Done** |
 | 2 | Sync between phone and laptop through a secret GitHub Gist | **Done** |
-| 4 | Google Places search and maps | Later |
+| 4a | Google Maps links: Map link on everything, paste-a-link places, directions for each day | **Done** (no key needed) |
+| 4b | In-app maps and place search (needs a Google Cloud key) | When you have a key |
 | 5 | Train/bus legs, travel times, flight number lookup | Later |
 
 ## One-time setup: turn on GitHub Pages
@@ -106,6 +107,20 @@ The app checks for changes from other devices when you open it and whenever you 
   GitHub account, so don't. Shared editing would need a different setup later.
 - Clearing the browser's data removes the token and the local copy; the Gist still has the trip.
   Reconnect and pick it from the list.
+
+## Maps
+
+No Google account or key needed for any of this:
+
+- **Map** (small pin link) on every idea and stay opens Google Maps. If you've pasted a link it goes
+  straight to that place (pin shown in blue); otherwise it searches for the name plus the city.
+- **Paste a Google Maps link** into an idea or stay (in Google Maps: **Share → Copy link**).
+  The place name fills in, and if the link contains the map position it's saved too, ready for an
+  in-app map later. Short `maps.app.goo.gl` links are kept as links (their position can't be read
+  from the browser), which still open the exact place.
+- **Directions for this day** (Day view) opens Google Maps with last night's stay → the day's stops
+  in order (breakfast, morning, lunch, afternoon, dinner, evening) → tonight's stay. Google Maps
+  takes up to 9 stops in between.
 
 ## Moving your trip over from v1
 

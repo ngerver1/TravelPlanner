@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   DndContext, DragOverlay, KeyboardSensor, MouseSensor, TouchSensor, pointerWithin, rectIntersection, useDraggable, useDroppable,
   useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragStartEvent,
@@ -6,9 +6,10 @@ import {
 import { addDays, fmt, fmtShort } from '../domain/dates';
 import { CATEGORIES, MEALS, MEAL_LABEL, SLOTS, SLOT_LABEL } from '../domain/constants';
 import { flightLabel, type DayInfo, type Derived } from '../domain/derive';
-import { fits, laneEntries, laneKey, overCapacity, parseLaneKey, slotLoad, swappable, type Entry, type Lane, type Ref } from '../domain/plan';
+import { dayStops, fits, laneEntries, laneKey, overCapacity, parseLaneKey, slotLoad, swappable, type Entry, type Lane, type Ref } from '../domain/plan';
 import type { ActivityCategory, Flight, Item, ItemKind, ItemSize, Meal, Status, Stay, TripDoc } from '../domain/types';
-import { ItemCard, itemIcon } from '../components/ItemCard';
+import { ItemCard, MapLink, itemIcon } from '../components/ItemCard';
+import { MAX_WAYPOINTS, directionsLink, mapsLink, placeQuery } from '../domain/maps';
 import { LocChip, LocDisplay, Modal, StatusPill, cssVars } from '../components/ui';
 
 export type DropTarget = { type: 'lane'; lane: Lane; index?: number } | { type: 'pool' } | { type: 'date'; date: string } | { type: 'swap'; with: Ref };
@@ -30,6 +31,9 @@ export interface PlanActions {
   drop: (ref: Ref, target: DropTarget) => void;
   setChosen: (ref: Ref, chosen: boolean) => void;
 }
+
+/** Location id → name, so cards can search Maps as "title, city". */
+const AreaNames = createContext<Map<string, string>>(new Map());
 
 const refId = (r: Ref) => (r.pi < 0 ? `pool:${r.itemId}` : `pl:${r.itemId}:${r.pi}`);
 function parseRef(id: string): Ref | null {
@@ -60,6 +64,7 @@ export function DayView({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived;
     useSensor(KeyboardSensor),
   );
   const dayLocIds = [x?.loc?.a.id, x?.loc?.b?.id].filter((v): v is string => !!v);
+  const areaNames = useMemo(() => new Map([...dv.locById].map(([id, l]) => [id, l.name])), [dv.locById]);
 
   const onStart = (e: DragStartEvent) => {
     const r = parseRef(String(e.active.id));
@@ -109,6 +114,7 @@ export function DayView({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived;
   if (!x) return <div className="empty">That day isn’t in the trip. <button className="link" onClick={() => actions.goDay(dv.dates[0])}>Go to day 1</button></div>;
 
   return (
+    <AreaNames.Provider value={areaNames}>
     <DndContext sensors={sensors} collisionDetection={collide} onDragStart={onStart} onDragEnd={onEnd} onDragCancel={() => setDragging(null)}>
       <div className={'dayview' + (poolOpen ? ' pool-open' : '') + (dragging ? ' is-dragging' : '')}>
         <DateStrip dv={dv} current={date} onPick={actions.goDay} />
@@ -117,8 +123,8 @@ export function DayView({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived;
             <Pool doc={doc} dv={dv} date={date} locIds={dayLocIds} actions={actions} onClose={() => setPoolOpen(false)} />
           </aside>
           <section className="dv-day" {...swipe}>
-            <DayHeader x={x} dv={dv} date={date} idx={idx} actions={actions} />
-            <DayTimeline x={x} actions={actions} />
+            <DayHeader x={x} dv={dv} date={date} idx={idx} actions={actions} directions={directions(doc, dv, x, date)} />
+            <DayTimeline x={x} dv={dv} actions={actions} />
             <LaneBox lane={{ date }} label="On this day" hint="slot not decided yet" doc={doc} actions={actions} onAdd={setPicker} compact />
             <h4 className="dv-h">Things to do</h4>
             <SlotLanes doc={doc} date={date} actions={actions} onAdd={setPicker} />
@@ -133,6 +139,7 @@ export function DayView({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived;
       </DragOverlay>
       {picker && <LanePicker doc={doc} dv={dv} lane={picker} locIds={dayLocIds} actions={actions} onClose={() => setPicker(null)} />}
     </DndContext>
+    </AreaNames.Provider>
   );
 }
 
@@ -160,7 +167,17 @@ function DateChip({ d, on, dv, onPick }: { d: string; on: boolean; dv: Derived; 
   );
 }
 
-function DayHeader({ x, dv, date, idx, actions }: { x: DayInfo; dv: Derived; date: string; idx: number; actions: PlanActions }) {
+/** Google Maps directions: last night's stay → the day's stops in order → tonight's stay. */
+function directions(doc: TripDoc, dv: Derived, x: DayInfo, date: string): { url: string; stops: number } | null {
+  const area = (id?: string) => (id ? dv.locById.get(id)?.name : undefined);
+  const stayQ = (s?: Stay) => (s ? placeQuery(s.place ?? { name: s.name, address: s.address }, s.name || 'Hotel', area(s.locationId)) : undefined);
+  const stops = dayStops(doc, date).map((e) => placeQuery(e.item.place, e.item.title, area(e.item.locationId)));
+  if (!stops.length) return null;
+  const url = directionsLink(stops, stayQ(x.last[0]), stayQ(x.tonight[0]));
+  return url ? { url, stops: stops.length } : null;
+}
+
+function DayHeader({ x, dv, date, idx, actions, directions: dir }: { x: DayInfo; dv: Derived; date: string; idx: number; actions: PlanActions; directions: { url: string; stops: number } | null }) {
   const prev = dv.dates[idx - 1], next = dv.dates[idx + 1];
   const n = x.night;
   return (
@@ -181,17 +198,20 @@ function DayHeader({ x, dv, date, idx, actions }: { x: DayInfo; dv: Derived; dat
             : <span className="staybit" onClick={() => actions.editStay(n.stay)}>🛏 {n.stay.name || 'Stay'} <StatusPill small value={n.stay.status} onChange={(s) => actions.patchStay(n.stay.id, { status: s })} /></span>}
         </span>
       </div>
-      {x.notes ? <p className="iday-notes" onClick={() => actions.editDay(date)}>{x.notes}</p>
-        : <button type="button" className="link note-add" onClick={() => actions.editDay(date)}>+ Add a note</button>}
+      <div className="dv-links">
+        {!x.notes && <button type="button" className="link note-add" onClick={() => actions.editDay(date)}>+ Add a note</button>}
+        {dir && <a className="btn sm" href={dir.url} target="_blank" rel="noreferrer" title={dir.stops > MAX_WAYPOINTS + 1 ? `Google Maps takes up to ${MAX_WAYPOINTS} stops in between; the rest are left off` : ''}>Directions for this day ↗</a>}
+      </div>
+      {x.notes && <p className="iday-notes" onClick={() => actions.editDay(date)}>{x.notes}</p>}
     </header>
   );
 }
 
-function DayTimeline({ x, actions }: { x: DayInfo; actions: PlanActions }) {
+function DayTimeline({ x, dv, actions }: { x: DayInfo; dv: Derived; actions: PlanActions }) {
   const rows: { key: string; t: string; node: ReactNode; onClick: () => void; status: Status; set: (s: Status) => void }[] = [];
   for (const f of x.arr) rows.push({ key: 'a' + f.id, t: f.arrTime, node: <>✈ <b>{flightLabel(f)}</b> arrives {f.to} <span className="muted">· from {f.from}, left {fmtShort(f.depDate)} {f.depTime}</span></>, onClick: () => actions.editFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
   for (const s of x.checkOuts) rows.push({ key: 'o' + s.id, t: s.checkOutTime, node: <>🛏 Check out: <b>{s.name || 'Stay'}</b></>, onClick: () => actions.editStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
-  for (const s of x.checkIns) rows.push({ key: 'i' + s.id, t: s.checkInTime, node: <>🛏 Check in: <b>{s.name || 'Stay'}</b>{s.address && <span className="muted"> · {s.address}</span>}</>, onClick: () => actions.editStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
+  for (const s of x.checkIns) rows.push({ key: 'i' + s.id, t: s.checkInTime, node: <>🛏 Check in: <b>{s.name || 'Stay'}</b>{s.address && <span className="muted"> · {s.address}</span>} <MapLink href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, dv.locById.get(s.locationId || '')?.name)} pinned={!!s.place?.mapsUrl} /></>, onClick: () => actions.editStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
   for (const f of x.dep) rows.push({ key: 'd' + f.id, t: f.depTime, node: <>✈ <b>{flightLabel(f)} {f.from || '?'} → {f.to || '?'}</b> <span className="muted">dep {f.depTime || '?'} · arr {f.arrTime || '?'}{f.arrDate !== f.depDate ? ` (${fmtShort(f.arrDate)})` : ''}{f.conf ? ` · ${f.conf}` : ''}</span></>, onClick: () => actions.editFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
   if (!rows.length) return null;
   rows.sort((p, q) => (p.t || '99').localeCompare(q.t || '99'));
@@ -244,13 +264,14 @@ function LaneBox({ lane, label, hint, doc, actions, onAdd, warn, ghosts, compact
 }
 
 function DnDCard({ entry, actions, dim }: { entry: Entry; actions: PlanActions; dim?: boolean }) {
+  const area = useContext(AreaNames).get(entry.item.locationId);
   const ref: Ref = { itemId: entry.item.id, pi: entry.pi };
   const drag = useDraggable({ id: refId(ref) });
   const drop = useDroppable({ id: `card:${ref.itemId}:${ref.pi}` });
   const setRef = (el: HTMLElement | null) => { drag.setNodeRef(el); drop.setNodeRef(el); };
   return (
     <div ref={setRef} {...drag.attributes} {...drag.listeners} className={'dnd' + (drag.isDragging ? ' dragging' : '') + (drop.isOver ? ' over' : '')}>
-      <ItemCard item={entry.item} placement={entry.placement} className={entry.item.size === 'full' ? 'full' : ''} dim={dim}
+      <ItemCard item={entry.item} placement={entry.placement} className={entry.item.size === 'full' ? 'full' : ''} dim={dim} area={area}
         onOpen={() => actions.editItem(entry.item, entry.pi)} onStatus={(s) => actions.patchItem(entry.item.id, { status: s })}
         onMenu={() => actions.moveMenu(entry.item, entry.pi)}
         onChosen={entry.placement.meal ? () => actions.setChosen(ref, !entry.placement.chosen) : undefined} />
@@ -262,7 +283,7 @@ function PoolCard({ item, extra, actions, date }: { item: Item; extra?: ReactNod
   const drag = useDraggable({ id: `pool:${item.id}` });
   return (
     <div ref={drag.setNodeRef} {...drag.attributes} {...drag.listeners} className={'dnd' + (drag.isDragging ? ' dragging' : '')}>
-      <ItemCard item={item} extra={extra} onOpen={() => actions.editItem(item, -1)} onStatus={(s) => actions.patchItem(item.id, { status: s })}
+      <ItemCard item={item} extra={extra} area={useContext(AreaNames).get(item.locationId)} onOpen={() => actions.editItem(item, -1)} onStatus={(s) => actions.patchItem(item.id, { status: s })}
         onMenu={() => actions.moveMenu(item, -1, date)} />
     </div>
   );

@@ -4,7 +4,8 @@ import { MEAL_LABEL, SLOT_LABEL } from '../domain/constants';
 import { HUES, PICKER, swatch } from '../domain/colors';
 import type { Derived } from '../domain/derive';
 import type { Item, ItemKind, ItemSize, Location, Stay, TripDoc } from '../domain/types';
-import { ItemCard } from '../components/ItemCard';
+import { ItemCard, MapLink } from '../components/ItemCard';
+import { mapsLink } from '../domain/maps';
 import { ConfirmDel, StatusPill, cssVars } from '../components/ui';
 import type { PlanActions } from './DayView';
 
@@ -99,18 +100,19 @@ export function LocationPage({ doc, dv, id, actions, plan, onBack }: {
         <div className="row gap wrap lp-actions">
           <button className="btn" onClick={() => actions.assignDates(loc.name)}>📍 Assign to dates</button>
           <button className="btn" onClick={() => plan.addStay(days[0], days[0] ? addDays(days[days.length - 1], 1) : undefined, loc.name)}>🛏 Add stay here</button>
+          <a className="btn" href={mapsLink(undefined, loc.name)} target="_blank" rel="noreferrer">Open {loc.name} in Google Maps ↗</a>
         </div>
         {stays.map((s: Stay) => (
           <div key={s.id} className="card" onClick={() => plan.editStay(s)}>
             <div className="card-row"><b>🛏 {s.name || 'Untitled stay'}</b><StatusPill small value={s.status} onChange={(st) => plan.patchStay(s.id, { status: st })} /></div>
-            <div className="muted small">{fmtShort(s.checkIn)} → {fmtShort(s.checkOut)}</div>
+            <div className="muted small">{fmtShort(s.checkIn)} → {fmtShort(s.checkOut)} <MapLink href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, loc.name)} pinned={!!s.place?.mapsUrl} /></div>
           </div>
         ))}
       </section>
 
       <div className="lp-pools">
-        <PoolSection title="Things to do" kind="activity" items={items.filter((i) => i.kind === 'activity')} locId={id} plan={plan} defaultDate={days[0]} />
-        <PoolSection title="Places to eat" kind="restaurant" items={items.filter((i) => i.kind === 'restaurant')} locId={id} plan={plan} defaultDate={days[0]} />
+        <PoolSection title="Things to do" kind="activity" items={items.filter((i) => i.kind === 'activity')} locId={id} plan={plan} defaultDate={days[0]} area={loc.name} />
+        <PoolSection title="Places to eat" kind="restaurant" items={items.filter((i) => i.kind === 'restaurant')} locId={id} plan={plan} defaultDate={days[0]} area={loc.name} />
       </div>
 
       <section className="lp-sec">
@@ -121,7 +123,7 @@ export function LocationPage({ doc, dv, id, actions, plan, onBack }: {
   );
 }
 
-function PoolSection({ title, kind, items, locId, plan, defaultDate }: { title: string; kind: ItemKind; items: Item[]; locId: string; plan: PlanActions; defaultDate?: string }) {
+function PoolSection({ title, kind, items, locId, plan, defaultDate, area }: { title: string; kind: ItemKind; items: Item[]; locId: string; plan: PlanActions; defaultDate?: string; area: string }) {
   const [t, setT] = useState('');
   const [size, setSize] = useState<ItemSize>('half');
   const sorted = [...items].sort((a, b) => Number(!!b.mustDo) - Number(!!a.mustDo) || Number(a.placements.length > 0) - Number(b.placements.length > 0));
@@ -146,7 +148,7 @@ function PoolSection({ title, kind, items, locId, plan, defaultDate }: { title: 
         {sorted.map((i) => {
           const where = placedLabel(i);
           return (
-            <ItemCard key={i.id} item={i} onOpen={() => plan.editItem(i, -1)} onStatus={(s) => plan.patchItem(i.id, { status: s })}
+            <ItemCard key={i.id} item={i} area={area} onOpen={() => plan.editItem(i, -1)} onStatus={(s) => plan.patchItem(i.id, { status: s })}
               onMenu={() => plan.moveMenu(i, kind === 'activity' && i.placements.length ? 0 : -1, defaultDate)}
               extra={where.length
                 ? <button type="button" className="ic-used link" onClick={(e) => { e.stopPropagation(); plan.goDay(i.placements[0].date); }}>{where.join(', ')}</button>

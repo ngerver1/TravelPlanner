@@ -5,6 +5,7 @@ import type { ActivityCategory, Flight, ItemKind, ItemSize, Meal, Stay, Status }
 import type { DayInfo } from '../domain/derive';
 import { ConfirmDel, Field, Modal, Seg, StatusSelect, useForm } from './ui';
 import { LocationSelect } from './LocationSelect';
+import { parseMapsUrl } from '../domain/maps';
 
 const Footer = ({ isNew, onDelete, onClose, onSave, disabled, deleteLabel }: {
   isNew?: boolean; onDelete: () => void; onClose: () => void; onSave: () => void; disabled?: boolean; deleteLabel?: string;
@@ -49,7 +50,7 @@ export function FlightForm({ initial, onSave, onDelete, onClose }: {
 }
 
 // ---------- stay ----------
-export type StayDraft = Omit<Stay, 'locationId'> & { locationName: string; _new?: boolean };
+export type StayDraft = Omit<Stay, 'locationId' | 'place'> & { locationName: string; mapsUrl: string; _new?: boolean };
 
 export function StayForm({ initial, onSave, onDelete, onClose }: {
   initial: StayDraft; onSave: (s: StayDraft) => void; onDelete: () => void; onClose: () => void;
@@ -63,6 +64,7 @@ export function StayForm({ initial, onSave, onDelete, onClose }: {
         <Field label="Name" span><input {...bind('name')} placeholder="Hotel / apartment" autoFocus /></Field>
         <Field label="Location" hint="City or area: sets the day's location"><LocationSelect {...bind('locationName')} /></Field>
         <Field label="Address"><input {...bind('address')} /></Field>
+        <MapsLinkField value={f.mapsUrl} onChange={(url, parsed) => setF((p) => ({ ...p, mapsUrl: url, name: p.name || parsed?.name || '' }))} />
         <Field label="Check-in"><DateInput {...bind('checkIn')} onChange={(e) => { const v = e.target.value; setF((p) => ({ ...p, checkIn: v, checkOut: !p.checkOut || p.checkOut <= v ? (v ? addDays(v, 1) : '') : p.checkOut })); }} /></Field>
         <Field label="Check-out" hint={n > 0 ? `${n} night${n > 1 ? 's' : ''}` : f.checkIn && f.checkOut ? 'Check-out must be after check-in' : ''}><DateInput {...bind('checkOut')} /></Field>
         <Field label="Check-in time (optional)"><TimeInput {...bind('checkInTime')} /></Field>
@@ -94,6 +96,8 @@ export interface ItemDraft {
   mustDo: boolean;
   done: boolean;
   placeName: string;
+  placeAddress: string;
+  mapsUrl: string;
   link: string;
   notes: string;
   /** The placement being edited (-1: none; a date then adds one). */
@@ -150,7 +154,13 @@ export function ItemForm({ initial, trip, onSave, onDelete, onClose }: {
           <Field label="Booking"><input {...bind('booking')} placeholder="e.g. booked 19:00, ref 1234" /></Field>
         </>)}
         <Field label="Location" hint="Whose list of ideas it belongs to"><LocationSelect {...bind('locationName')} emptyLabel="— Choose —" /></Field>
-        <Field label="Place"><input {...bind('placeName')} /></Field>
+        <MapsLinkField value={f.mapsUrl} onChange={(url, parsed) => setF((p) => ({
+          ...p, mapsUrl: url,
+          placeName: p.placeName || parsed?.name || '',
+          title: p.title || parsed?.name || '',
+        }))} />
+        <Field label="Place name"><input {...bind('placeName')} placeholder="If different from the title" /></Field>
+        <Field label="Address"><input {...bind('placeAddress')} /></Field>
         <Field label="Link" span><input {...bind('link')} placeholder="https://" inputMode="url" /></Field>
         <Field label="Notes" span><textarea rows={3} {...bind('notes')} /></Field>
         <div className="field span sub-h"><span>{placed ? 'On this day' : 'Put it on a day (optional)'}</span></div>
@@ -221,5 +231,21 @@ export function DayForm({ date, info, onSave, onReset, onClose }: {
         <Field label="Notes" span><textarea rows={3} {...bind('notes')} /></Field>
       </div>
     </Modal>
+  );
+}
+
+/** Paste a Google Maps link (Share → Copy link). The name and position are read from it where possible. */
+export function MapsLinkField({ value, onChange }: { value: string; onChange: (url: string, parsed: ReturnType<typeof parseMapsUrl>) => void }) {
+  const parsed = value ? parseMapsUrl(value) : null;
+  const bad = !!value.trim() && !parsed;
+  return (
+    <Field label="Google Maps link (optional)" span
+      hint={bad ? 'That doesn’t look like a Google Maps link' : parsed ? (parsed.lat != null ? 'Linked, with its map position' : 'Linked') : 'In Google Maps: Share → Copy link, then paste here'}>
+      <span className="row gap">
+        <input className="grow" value={value} inputMode="url" placeholder="https://maps.app.goo.gl/…"
+          onChange={(e) => { const v = e.target.value; onChange(v, parseMapsUrl(v)); }} />
+        {parsed && <a className="btn sm" href={parsed.mapsUrl} target="_blank" rel="noreferrer">Open ↗</a>}
+      </span>
+    </Field>
   );
 }

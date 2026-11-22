@@ -130,3 +130,19 @@ describe('meal options', () => {
     expect(daySummary(d, D1).meals).toEqual({ breakfast: 'none', lunch: 'none', dinner: 'chosen' });
   });
 });
+
+import { dayStops } from './plan';
+describe('day stops', () => {
+  it('orders a day breakfast → morning → lunch → afternoon → dinner → evening → unslotted, picking chosen meals', () => {
+    const d = trip(act('m'), act('a'), act('e'), act('u', 'quick'), food('b'), food('l1'), food('l2'));
+    placeAt(d, { itemId: 'e', pi: -1 }, { date: D1, slot: 'evening' });
+    placeAt(d, { itemId: 'u', pi: -1 }, { date: D1 });
+    placeAt(d, { itemId: 'a', pi: -1 }, { date: D1, slot: 'afternoon' });
+    placeAt(d, { itemId: 'm', pi: -1 }, { date: D1, slot: 'morning' });
+    placeAt(d, { itemId: 'b', pi: -1 }, { date: D1, meal: 'breakfast' });
+    placeAt(d, { itemId: 'l1', pi: -1 }, { date: D1, meal: 'lunch' });
+    placeAt(d, { itemId: 'l2', pi: -1 }, { date: D1, meal: 'lunch' });
+    setChosen(d, { itemId: 'l2', pi: 0 }, true);
+    expect(dayStops(d, D1).map((e) => e.item.id)).toEqual(['b', 'm', 'l2', 'a', 'e', 'u']);
+  });
+});

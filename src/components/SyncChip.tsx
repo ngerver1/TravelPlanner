@@ -14,7 +14,7 @@ const SHORT: Partial<Record<SyncStatus, string>> = { offline: 'Offline', local: 
 export function SyncChip({ status, onClick }: { status: SyncStatus; onClick: () => void }) {
   const [label, tone] = SYNC_LABEL[status];
   return (
-    <button type="button" className={'sync-chip ' + tone} onClick={onClick} title={label}>
+    <button type="button" className={'sync-chip ' + tone + ' st-' + status} onClick={onClick} title={label}>
       <span className={'sync-dot ' + tone} aria-hidden="true" />
       <span className="long">{label}</span><span className="short">{SHORT[status] ?? label}</span>
     </button>

@@ -2,15 +2,16 @@ import type { ReactNode } from 'react';
 import { CATEGORIES, RESTAURANT_ICON } from '../domain/constants';
 import type { Item, Placement, Status } from '../domain/types';
 import { StatusPill } from './ui';
+import { mapsLink } from '../domain/maps';
 
 export const itemIcon = (it: Item) => (it.kind === 'restaurant' ? RESTAURANT_ICON : CATEGORIES[it.category || 'other'].icon);
 export const sizeLabel = (it: Item) =>
   it.kind !== 'activity' ? '' : it.size === 'full' ? (it.includesEvening ? 'Full day + eve' : 'Full day') : it.size === 'half' ? '½ day' : '';
 
 /** One item as a compact card. Used in day lanes, the ideas list and location pages. */
-export function ItemCard({ item, placement, onOpen, onStatus, onMenu, onChosen, dim, extra, className }: {
+export function ItemCard({ item, placement, onOpen, onStatus, onMenu, onChosen, dim, extra, className, area }: {
   item: Item; placement?: Placement; onOpen: () => void; onStatus: (s: Status) => void; onMenu?: () => void;
-  onChosen?: () => void; dim?: boolean; extra?: ReactNode; className?: string;
+  onChosen?: () => void; dim?: boolean; extra?: ReactNode; className?: string; area?: string;
 }) {
   const size = sizeLabel(item);
   return (
@@ -23,8 +24,9 @@ export function ItemCard({ item, placement, onOpen, onStatus, onMenu, onChosen, 
           {item.mustDo && <span className="ic-star" title="Must do">★</span>}
           {item.title || 'Untitled'}
         </span>
-        {(size || item.place?.name || extra) && (
+        {(
           <span className="ic-sub">
+            <MapLink href={mapsLink(item.place, item.title, area)} pinned={!!item.place?.mapsUrl || item.place?.lat != null} />
             {size && <span className={'ic-size ' + item.size}>{size}</span>}
             {item.place?.name && item.place.name !== item.title && <span className="ic-place">{item.place.name}</span>}
             {extra}
@@ -45,5 +47,17 @@ export function ItemCard({ item, placement, onOpen, onStatus, onMenu, onChosen, 
           onClick={(e) => { e.stopPropagation(); onMenu(); }} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>⋯</button>
       )}
     </div>
+  );
+}
+
+/** Small "Map" link that opens Google Maps (exact place if linked, otherwise a search). */
+export function MapLink({ href, pinned, label = 'Map' }: { href: string; pinned?: boolean; label?: string }) {
+  return (
+    <a className={'maplink' + (pinned ? ' pinned' : '')} href={href} target="_blank" rel="noreferrer"
+      onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}
+      title={pinned ? 'Open this place in Google Maps' : 'Search Google Maps'}>
+      <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M8 15s5-4.6 5-8.5A5 5 0 0 0 3 6.5C3 10.4 8 15 8 15z" fill="none" stroke="currentColor" strokeWidth="1.6" /><circle cx="8" cy="6.5" r="1.8" fill="currentColor" /></svg>
+      {label}
+    </a>
   );
 }

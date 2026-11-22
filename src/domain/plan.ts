@@ -172,3 +172,20 @@ export function daySummary(doc: TripDoc, date: string) {
     }
   return { slots, meals, unslotted, load: slotLoad(doc, date) };
 }
+
+const DAY_ORDER: Lane['slot' | 'meal'][] = ['breakfast', 'morning', 'lunch', 'afternoon', 'dinner', 'evening'];
+/**
+ * A day's stops in the order you'd go: breakfast, morning, lunch, afternoon, dinner, evening, then
+ * anything without a slot. For meals, the picked place (or the first option).
+ */
+export function dayStops(doc: TripDoc, date: string): Entry[] {
+  const out: Entry[] = [];
+  for (const k of DAY_ORDER) {
+    const lane: Lane = k === 'breakfast' || k === 'lunch' || k === 'dinner' ? { date, meal: k } : { date, slot: k as Slot };
+    const list = laneEntries(doc, lane);
+    if (lane.meal) { const pick = list.find((e) => e.placement.chosen) ?? list[0]; if (pick) out.push(pick); }
+    else out.push(...list);
+  }
+  out.push(...laneEntries(doc, { date }));
+  return out;
+}

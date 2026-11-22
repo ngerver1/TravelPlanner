@@ -2,6 +2,8 @@ import { addDays, diffDays, fmtLong, fmtShort } from '../domain/dates';
 import { flightLabel, nightsOf, type Derived } from '../domain/derive';
 import type { Flight, Stay, Status } from '../domain/types';
 import { LocChip, StatusPill } from './ui';
+import { MapLink } from './ItemCard';
+import { mapsLink } from '../domain/maps';
 
 export interface PanelActions {
   addStay: (from?: string, to?: string) => void;
@@ -45,7 +47,7 @@ export function StaysPanel({ dv, actions }: { dv: Derived; actions: PanelActions
           <div className="card-row"><b>{s.name || 'Untitled stay'}</b><StatusPill small value={s.status} onChange={(st: Status) => actions.patchStay(s.id, { status: st })} /></div>
           <div className="card-row muted small">
             <span>{locOf(s) ? <LocChip loc={locOf(s)} colorOf={colorOf} size="sm" /> : 'No location'}</span>
-            <span>{fmtShort(s.checkIn)} → {fmtShort(s.checkOut)} · {nightsOf(s)} night{nightsOf(s) === 1 ? '' : 's'}</span>
+            <span>{fmtShort(s.checkIn)} → {fmtShort(s.checkOut)} · {nightsOf(s)} night{nightsOf(s) === 1 ? '' : 's'} <MapLink href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, locOf(s)?.name)} pinned={!!s.place?.mapsUrl} /></span>
           </div>
           {(s.cost || s.conf || s.link) && (
             <div className="card-row small muted">
