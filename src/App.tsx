@@ -13,6 +13,9 @@ import { DayForm, FlightForm, ItemForm, RangeLocForm, StayForm, type FlightDraft
 import { FlightsPanel, StaysPanel, type PanelActions } from './components/panels';
 import { MoveSheet } from './components/MoveSheet';
 import { TripSettings } from './components/TripSettings';
+import { SyncChip } from './components/SyncChip';
+import { useSync } from './sync/useSync';
+import { downloadJson, exportName } from './views/Settings';
 import { LocationNames } from './components/LocationSelect';
 import { applyTheme, loadTheme, type Theme } from './theme';
 import { OverviewView, Legend, Summary } from './views/Overview';
@@ -56,7 +59,9 @@ function itemDraft(doc: TripDoc, it: Item, pi: number): ItemDraft {
 const PLAN_VIEWS: [PlanView, string][] = [['calendar', 'Calendar'], ['overview', 'Overview'], ['day', 'Day']];
 
 export default function App() {
-  const { doc, update, replace, undo, storageOk } = useTripStore();
+  const { doc, update, replace, undo, load, setRev, storageOk } = useTripStore();
+  const sync = useSync({ doc, load, setRev });
+  const [bannerHidden, setBannerHidden] = useState(() => { try { return localStorage.getItem('tripPlanner.syncBannerHidden') === '1'; } catch { return false; } });
   const [route, go] = useRoute();
   const [modal, setModal] = useState<ModalState>(null);
   const [toastMsg, setToastMsg] = useState<{ msg: string; undo?: boolean } | null>(null);
@@ -350,16 +355,23 @@ export default function App() {
     <div className={'app page-' + page + (page === 'plan' ? ' view-' + route.view : '')}>
       <header className="top" ref={headerRef}>
         <TripSettings trip={doc.trip} onChange={(p) => update((x) => { x.trip = { ...x.trip, ...p }; })} />
+        <SyncChip status={sync.status} onClick={() => navTo({ page: 'settings' })} />
       </header>
 
       <main>
         {!storageOk && <div className="alert bad"><b>{syncText}</b></div>}
+        {sync.status === 'local' && !bannerHidden && page === 'plan' && hasDates && (
+          <div className="sync-banner">
+            <span>Your trip is only on this device. <button className="link" onClick={() => navTo({ page: 'settings' })}>Set up sync</button> to see it on your phone and laptop.</span>
+            <button className="icon sm" aria-label="Hide" onClick={() => { setBannerHidden(true); try { localStorage.setItem('tripPlanner.syncBannerHidden', '1'); } catch { /* ignore */ } }}>✕</button>
+          </div>
+        )}
         {page === 'plan' && planPage()}
         {page === 'locations' && <LocationsList doc={doc} dv={dv} actions={locActions} />}
         {page === 'location' && <LocationPage key={route.id} doc={doc} dv={dv} id={route.id} actions={locActions} plan={plan} onBack={() => navTo({ page: 'locations' })} />}
         {page === 'stays' && <div className="page"><h2 className="page-h">Stays</h2>{dv.overlaps.length > 0 && warnings}<StaysPanel dv={dv} actions={panelActions} /></div>}
         {page === 'flights' && <div className="page"><h2 className="page-h">Flights</h2><FlightsPanel dv={dv} actions={panelActions} /></div>}
-        {page === 'settings' && <SettingsPage doc={doc} toast={toast} theme={theme} onTheme={setTheme} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
+        {page === 'settings' && <SettingsPage doc={doc} toast={toast} theme={theme} onTheme={setTheme} sync={sync} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
       </main>
 
       <nav className="bottombar" aria-label="Menu">
@@ -431,6 +443,27 @@ export default function App() {
             <p>Location: <b>{locationName(doc, v.locationId) || '—'}{v.toLocationId ? ' → ' + locationName(doc, v.toLocationId) : ''}</b></p>
             {v.notes && <p className="pre">{v.notes}</p>}
             <p className="muted small">This day is outside the trip dates. Extend the trip to bring it back, or clear it if you no longer need it.</p>
+          </Modal>
+        );
+      })()}
+      {sync.conflict && (() => {
+        const r = sync.conflict.remote;
+        const when = (t: number) => (t ? new Date(t).toLocaleString('en-AU', { dateStyle: 'medium', timeStyle: 'short' }) : 'unknown');
+        const sum = (d: TripDoc) => `${d.stays.length} stays · ${d.flights.length} flights · ${d.items.length} ideas`;
+        return (
+          <Modal title="Changed on two devices" onClose={() => undefined}
+            footer={<>
+              <button className="btn ghost" onClick={() => { downloadJson(exportName(doc, '-this-device'), JSON.stringify(doc, null, 2)); downloadJson(exportName(r, '-other-device'), JSON.stringify(r, null, 2)); }}>Download both</button>
+              <span className="grow" />
+              <button className="btn" onClick={() => sync.resolve('theirs')}>Use the other device’s</button>
+              <button className="btn primary" onClick={() => sync.resolve('mine')}>Keep this device’s</button>
+            </>}>
+            <p>This trip was changed on another device while this one also had unsaved changes. Nothing has been overwritten yet: choose which version to keep.</p>
+            <div className="conflict-cmp">
+              <div><b>This device</b><span className="muted small">Last change {when(doc.updatedAt)}</span><span className="small">{sum(doc)}</span></div>
+              <div><b>Other device</b><span className="muted small">Saved {when(r.updatedAt)}</span><span className="small">{sum(r)}</span></div>
+            </div>
+            <p className="muted small">The version you don’t keep is replaced. To keep both, download both first; either file can be imported later from Settings.</p>
           </Modal>
         );
       })()}

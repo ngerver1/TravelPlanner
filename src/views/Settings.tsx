@@ -4,6 +4,8 @@ import { readTripFile, type FileKind } from '../domain/migrate';
 import type { TripDoc } from '../domain/types';
 import type { Theme } from '../theme';
 import { Seg } from '../components/ui';
+import { SyncSettings } from './SyncSettings';
+import type { Sync } from '../sync/useSync';
 
 export function downloadJson(filename: string, json: string) {
   const blob = new Blob([json], { type: 'application/json' });
@@ -20,8 +22,8 @@ export function downloadJson(filename: string, json: string) {
 export const exportName = (doc: TripDoc, suffix = '') =>
   `${(doc.trip.name || 'trip').replace(/[^\w-]+/g, '-').toLowerCase()}${suffix}-${todayStr()}.json`;
 
-export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, onTheme }: {
-  doc: TripDoc; onImport: (d: TripDoc) => void; toast: (m: string) => void; status: string; statusOk: boolean; theme: Theme; onTheme: (t: Theme) => void;
+export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, onTheme, sync }: {
+  doc: TripDoc; onImport: (d: TripDoc) => void; toast: (m: string) => void; status: string; statusOk: boolean; theme: Theme; onTheme: (t: Theme) => void; sync: Sync;
 }) {
   const json = useMemo(() => JSON.stringify(doc, null, 2), [doc]);
   const [paste, setPaste] = useState('');
@@ -52,8 +54,9 @@ export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, on
       <h2 className="page-h">Settings</h2>
       <h4>Appearance</h4>
       <Seg value={theme} onChange={onTheme} options={[['system', 'Match my phone'], ['light', 'Light'], ['dark', 'Dark']]} />
-      <h4>Saving</h4>
-      <p className={'small ' + (statusOk ? 'muted' : 'alert bad')}>{status}. Syncing between your phone and laptop comes in the next update.</p>
+      <h4>Sync between devices</h4>
+      <SyncSettings sync={sync} doc={doc} />
+      {!statusOk && <p className="alert bad small">{status}</p>}
       <h4>Back up (export)</h4>
       <div className="row gap wrap">
         <button className="btn primary" onClick={() => { downloadJson(exportName(doc), json); toast('Exported'); }}>Download JSON</button>

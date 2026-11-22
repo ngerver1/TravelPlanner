@@ -11,8 +11,8 @@ Live site, once set up: `https://ngerver1.github.io/TravelPlanner/`
 | Phase | What | State |
 | --- | --- | --- |
 | 1 | Foundation: calendar, flights, stays, warnings, export/import, v1 import | **Done** |
-| 3 | Locations with ideas lists, Day planner with drag and drop, undo, phone layout | **Done** (built before 2) |
-| 2 | Gist sync between devices | Next |
+| 3 | Locations with ideas lists, Day planner with drag and drop, undo, phone layout | **Done** |
+| 2 | Sync between phone and laptop through a secret GitHub Gist | **Done** |
 | 4 | Google Places search and maps | Later |
 | 5 | Train/bus legs, travel times, flight number lookup | Later |
 
@@ -57,6 +57,56 @@ In **Day** view, the ideas for that day's location sit beside the day (on a phon
   **Over capacity**, but nothing is ever blocked.
 - Places to eat can be options on several days. Tap the circle on one to make it the pick for that meal.
 
+## Syncing your phone and laptop
+
+The trip is saved in a **secret Gist** (a single file, `trip.json`) on your GitHub account.
+Each device keeps its own copy too, so the app works offline and catches up when it's back online.
+
+### 1. Create a token (once)
+
+1. On your laptop, sign in to GitHub and open
+   [github.com/settings/tokens/new?scopes=gist](https://github.com/settings/tokens/new?scopes=gist&description=Trip%20Planner).
+   (That's **Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token (classic)**.)
+2. **Note:** `Trip Planner`.
+3. **Expiration:** pick a date after you get home from the trip. (When it expires the app says
+   "Token invalid"; just make a new one.)
+4. **Scopes:** tick **gist** only. Nothing else.
+5. Click **Generate token** and copy it (it starts with `ghp_`). GitHub shows it only once.
+   You can paste it into a note on your phone for step 2, then delete the note.
+
+### 2. Connect each device
+
+1. Open the app → **⚙ Settings → Sync between devices**.
+2. Paste the token and tap **Connect**.
+3. First device: tap **Create a new secret Gist with this trip**.
+   Other devices: tap the trip in the list ("Trips already in your Gists").
+   If both the device and the Gist have a trip, it asks which one to keep.
+
+That's it. The little status in the top right shows:
+
+| Status | Meaning |
+| --- | --- |
+| **Saved** (green dot) | In step with the Gist. |
+| **Syncing…** | Saving (about 2 seconds after your last change) or checking for changes. |
+| **Offline** | No connection. Changes are kept on this device and sent when you're back online. |
+| **Conflict** | You changed the trip on two devices without them syncing in between. The app asks which version to keep and never overwrites without asking. **Download both** keeps a copy of each. |
+| **Token invalid** | The token expired or was deleted. Settings → Disconnect, then connect with a new token. |
+| **This device** / **On this device only** | Sync isn't set up on this device. |
+
+The app checks for changes from other devices when you open it and whenever you come back to it.
+
+### Good to know
+
+- **A secret Gist is unlisted, not private.** It doesn't show on your profile or in searches,
+  but anyone who has its exact web address can read it, including booking confirmation numbers.
+  Don't share the Gist's link.
+- **The token stays on the device** where you pasted it (in the browser's storage). It is never
+  in the app's code, the website address or the Gist. Use **Disconnect this device** to remove it.
+- **It's single-user.** Sharing the trip with someone else would mean giving them a token to your
+  GitHub account, so don't. Shared editing would need a different setup later.
+- Clearing the browser's data removes the token and the local copy; the Gist still has the trip.
+  Reconnect and pick it from the list.
+
 ## Moving your trip over from v1
 
 1. In the old (v1) planner, click **⇅ Backup → Export JSON** and save the file.
@@ -81,8 +131,9 @@ What the conversion does:
 changes, or every so often while you're travelling. Importing a file always asks before
 replacing anything.
 
-Your data lives in this browser only (until phase 2). Clearing the browser's site data,
-or using a private window, means starting empty, so keep a backup.
+Without sync, your data lives in that browser only: clearing the browser's site data, or using a
+private window, means starting empty. With sync set up, the Gist has a copy, but a downloaded
+backup is still worth keeping before big changes.
 
 ## Things that never happen
 
@@ -117,7 +168,7 @@ Layout:
 
 - `src/domain/`: types, derive logic (auto location, nights, overlaps, out-of-range,
   colours), v1 migration, normalisation. No React. Unit tested with Vitest.
-- `src/sync/`: local storage (Gist sync arrives in phase 2).
+- `src/sync/`: local storage, the Gist client (`gist.ts`), sync rules (`decide.ts`, tested) and the sync hook (`useSync.ts`).
 - `src/domain/plan.ts`: placing, moving, swapping, ordering and slot capacity.
 - `src/views/`: Month (Calendar), Overview, DayView, Locations, Settings.
 - `src/components/`: chips, pills, forms, panels, dialogs.
