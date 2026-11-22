@@ -2,7 +2,6 @@ import { useMemo, useRef, useState } from 'react';
 import { fmtShort, todayStr } from '../domain/dates';
 import { readTripFile, type FileKind } from '../domain/migrate';
 import type { TripDoc } from '../domain/types';
-import { Modal } from './ui';
 
 export function downloadJson(filename: string, json: string) {
   const blob = new Blob([json], { type: 'application/json' });
@@ -19,8 +18,8 @@ export function downloadJson(filename: string, json: string) {
 export const exportName = (doc: TripDoc, suffix = '') =>
   `${(doc.trip.name || 'trip').replace(/[^\w-]+/g, '-').toLowerCase()}${suffix}-${todayStr()}.json`;
 
-export function BackupDialog({ doc, onImport, onClose, toast, status, statusOk }: {
-  doc: TripDoc; onImport: (d: TripDoc) => void; onClose: () => void; toast: (m: string) => void; status: string; statusOk: boolean;
+export function SettingsPage({ doc, onImport, toast, status, statusOk }: {
+  doc: TripDoc; onImport: (d: TripDoc) => void; toast: (m: string) => void; status: string; statusOk: boolean;
 }) {
   const json = useMemo(() => JSON.stringify(doc, null, 2), [doc]);
   const [paste, setPaste] = useState('');
@@ -47,7 +46,8 @@ export function BackupDialog({ doc, onImport, onClose, toast, status, statusOk }
   };
   const p = pending?.doc;
   return (
-    <Modal title="Settings" onClose={onClose} wide>
+    <div className="page settings-page">
+      <h2 className="page-h">Settings</h2>
       <h4>Saving</h4>
       <p className={'small ' + (statusOk ? 'muted' : 'alert bad')}>{status}. Syncing between your phone and laptop comes in the next update.</p>
       <h4>Back up (export)</h4>
@@ -74,9 +74,9 @@ export function BackupDialog({ doc, onImport, onClose, toast, status, statusOk }
             “{p.trip.name}” · {p.trip.start ? `${fmtShort(p.trip.start)} – ${fmtShort(p.trip.end)}` : 'no dates'} · {p.flights.length} flights, {p.stays.length} stays, {p.items.length} items, {p.locations.length} locations.
             {' '}Your current trip on this device will be overwritten. Download it first if you want to keep it.
           </div>
-          <div className="row gap"><button className="btn danger" onClick={() => { onImport(p); onClose(); }}>Replace trip</button><button className="btn ghost" onClick={() => setPending(null)}>Cancel</button></div>
+          <div className="row gap"><button className="btn danger" onClick={() => { onImport(p); setPending(null); setPaste(''); }}>Replace trip</button><button className="btn ghost" onClick={() => setPending(null)}>Cancel</button></div>
         </div>
       )}
-    </Modal>
+    </div>
   );
 }

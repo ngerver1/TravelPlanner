@@ -1,7 +1,7 @@
 import { DateInput, TimeInput } from './inputs';
 import { addDays, diffDays, fmt, isDate } from '../domain/dates';
-import { CATEGORIES, MEALS, MEAL_LABEL, RESTAURANT_ICON } from '../domain/constants';
-import type { ActivityCategory, Flight, ItemKind, Meal, Stay, Status } from '../domain/types';
+import { CATEGORIES, MEALS, MEAL_LABEL, RESTAURANT_ICON, SIZES, SIZE_LABEL } from '../domain/constants';
+import type { ActivityCategory, Flight, ItemKind, ItemSize, Meal, Stay, Status } from '../domain/types';
 import type { DayInfo } from '../domain/derive';
 import { ConfirmDel, Field, LocDisplay, Modal, Seg, StatusSelect, useForm, type ColorOf } from './ui';
 
@@ -77,65 +77,97 @@ export function StayForm({ initial, onSave, onDelete, onClose }: {
 }
 
 // ---------- item (activity or restaurant) ----------
-export interface ItemDraft extends Record<string, unknown> {
+export interface ItemDraft {
   _new?: boolean;
   id: string;
   kind: ItemKind;
   title: string;
   locationName: string;
   category: ActivityCategory;
+  size: ItemSize;
+  includesEvening: boolean;
+  meals: Meal[];
+  cuisine: string;
+  booking: string;
   status: Status;
+  mustDo: boolean;
+  done: boolean;
   placeName: string;
   link: string;
   notes: string;
-  /** The placement being edited (-1: none / add one if a date is set). */
+  /** The placement being edited (-1: none; a date then adds one). */
   pi: number;
   date: string;
   time: string;
   meal: Meal;
+  /** Read-only summary of other placements. */
+  elsewhere: string[];
 }
 
 export function ItemForm({ initial, trip, onSave, onDelete, onClose }: {
   initial: ItemDraft; trip: { start: string; end: string }; onSave: (f: ItemDraft) => void; onDelete: () => void; onClose: () => void;
 }) {
   const [f, setF, bind] = useForm(initial);
+  const set = <K extends keyof ItemDraft>(k: K, v: ItemDraft[K]) => setF((p) => ({ ...p, [k]: v }));
   const outside = f.date && (!isDate(trip.start) || f.date < trip.start || f.date > trip.end);
-  const placedElsewhere = initial.pi >= 0 && !f.date;
+  const placed = initial.pi >= 0;
   return (
-    <Modal title={initial._new ? 'Add item' : 'Edit item'} onClose={onClose}
+    <Modal title={initial._new ? 'Add idea' : 'Edit'} onClose={onClose}
       footer={<Footer isNew={initial._new} onDelete={onDelete} onClose={onClose} onSave={() => onSave(f)} disabled={!f.title.trim()} />}>
       <div className="grid2">
-        <Field label="Title" span><input {...bind('title')} autoFocus /></Field>
+        <Field label="Title" span><input {...bind('title')} autoFocus={initial._new} /></Field>
         <Field label="Type" span>
-          <Seg value={f.kind} onChange={(k) => setF((p) => ({ ...p, kind: k }))} options={[['activity', '🎟 Thing to do'], ['restaurant', `${RESTAURANT_ICON} Place to eat`]]} />
+          <Seg value={f.kind} onChange={(k) => set('kind', k)} options={[['activity', '🎟 Thing to do'], ['restaurant', `${RESTAURANT_ICON} Place to eat`]]} />
         </Field>
-        {f.kind === 'activity' ? (
+        <Field label="Status" span><StatusSelect value={f.status} onChange={(s) => set('status', s)} /></Field>
+        <Field label="Flags" span>
+          <div className="row gap wrap">
+            <button type="button" className={'btn sm' + (f.mustDo ? ' on' : '')} onClick={() => set('mustDo', !f.mustDo)}>★ Must do</button>
+            <button type="button" className={'btn sm' + (f.done ? ' on' : '')} onClick={() => set('done', !f.done)}>✓ Done</button>
+          </div>
+        </Field>
+        {f.kind === 'activity' ? (<>
+          <Field label="How long" span>
+            <div className="row gap wrap">
+              <Seg value={f.size} onChange={(v) => set('size', v)} options={SIZES.map((z) => [z, SIZE_LABEL[z]] as [ItemSize, string])} />
+              {f.size === 'full' && <label className="check"><input type="checkbox" checked={f.includesEvening} onChange={(e) => set('includesEvening', e.target.checked)} /> includes the evening</label>}
+            </div>
+          </Field>
           <Field label="Category" span>
             <div className="seg">{(Object.keys(CATEGORIES) as ActivityCategory[]).map((k) => (
-              <button type="button" key={k} className={f.category === k ? 'on' : ''} onClick={() => setF((p) => ({ ...p, category: k }))}>{CATEGORIES[k].icon} {CATEGORIES[k].label}</button>
+              <button type="button" key={k} className={f.category === k ? 'on' : ''} onClick={() => set('category', k)}>{CATEGORIES[k].icon} {CATEGORIES[k].label}</button>
             ))}</div>
           </Field>
-        ) : (
-          <Field label="Meal" span hint="Which meal on this day">
-            <Seg value={f.meal} onChange={(m) => setF((p) => ({ ...p, meal: m }))} options={MEALS.map((m) => [m, MEAL_LABEL[m]] as [Meal, string])} />
+        </>) : (<>
+          <Field label="Good for" span hint="Leave all off if it suits any meal">
+            <div className="seg">{MEALS.map((m) => (
+              <button type="button" key={m} className={f.meals.includes(m) ? 'on' : ''}
+                onClick={() => set('meals', f.meals.includes(m) ? f.meals.filter((x) => x !== m) : [...f.meals, m])}>{MEAL_LABEL[m]}</button>
+            ))}</div>
           </Field>
-        )}
-        <Field label="Day" hint={placedElsewhere ? 'Empty: goes back to the ideas list' : outside ? 'Outside the trip dates' : 'Leave empty to keep it as an idea'}>
+          <Field label="Cuisine"><input {...bind('cuisine')} /></Field>
+          <Field label="Booking"><input {...bind('booking')} placeholder="e.g. booked 19:00, ref 1234" /></Field>
+        </>)}
+        <Field label="Location" hint="Whose list of ideas it belongs to"><input list="known-locs" {...bind('locationName')} /></Field>
+        <Field label="Place"><input {...bind('placeName')} /></Field>
+        <Field label="Link" span><input {...bind('link')} placeholder="https://" inputMode="url" /></Field>
+        <Field label="Notes" span><textarea rows={3} {...bind('notes')} /></Field>
+        <div className="field span sub-h"><span>{placed ? 'On this day' : 'Put it on a day (optional)'}</span></div>
+        <Field label="Day" hint={placed && !f.date ? 'Empty: goes back to the ideas list' : outside ? 'Outside the trip dates' : ''}>
           <DateInput {...bind('date')} />
         </Field>
         <Field label="Time (optional)"><TimeInput {...bind('time')} /></Field>
-        <Field label="Location" hint="Whose list of ideas it belongs to"><input list="known-locs" {...bind('locationName')} /></Field>
-        <Field label="Place"><input {...bind('placeName')} /></Field>
-        <Field label="Status" span><StatusSelect value={f.status} onChange={(s) => setF((p) => ({ ...p, status: s }))} /></Field>
-        <Field label="Link" span><input {...bind('link')} placeholder="https://" inputMode="url" /></Field>
-        <Field label="Notes" span><textarea rows={3} {...bind('notes')} /></Field>
+        {f.kind === 'restaurant' && f.date && (
+          <Field label="Meal" span><Seg value={f.meal} onChange={(m) => set('meal', m)} options={MEALS.map((m) => [m, MEAL_LABEL[m]] as [Meal, string])} /></Field>
+        )}
+        {f.elsewhere.length > 0 && <p className="muted small span">Also an option on: {f.elsewhere.join(', ')}</p>}
       </div>
     </Modal>
   );
 }
 
 // ---------- locations ----------
-export interface RangeDraft extends Record<string, unknown> { from: string; to: string; loc: string; loc2: string; clear?: boolean }
+export interface RangeDraft { from: string; to: string; loc: string; loc2: string; clear?: boolean }
 
 export function RangeLocForm({ initial, trip, onApply, onClose }: {
   initial: RangeDraft; trip: { start: string; end: string }; onApply: (f: RangeDraft) => void; onClose: () => void;
@@ -162,7 +194,7 @@ export function RangeLocForm({ initial, trip, onApply, onClose }: {
   );
 }
 
-export interface DayDraft extends Record<string, unknown> { loc: string; loc2: string; notes: string }
+export interface DayDraft { loc: string; loc2: string; notes: string }
 
 export function DayForm({ date, info, onSave, onReset, onClose, colorOf }: {
   date: string; info: DayInfo; onSave: (f: DayDraft) => void; onReset: () => void; onClose: () => void; colorOf: ColorOf;

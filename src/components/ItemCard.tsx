@@ -1,0 +1,49 @@
+import type { ReactNode } from 'react';
+import { CATEGORIES, RESTAURANT_ICON } from '../domain/constants';
+import type { Item, Placement, Status } from '../domain/types';
+import { StatusPill } from './ui';
+
+export const itemIcon = (it: Item) => (it.kind === 'restaurant' ? RESTAURANT_ICON : CATEGORIES[it.category || 'other'].icon);
+export const sizeLabel = (it: Item) =>
+  it.kind !== 'activity' ? '' : it.size === 'full' ? (it.includesEvening ? 'Full day + eve' : 'Full day') : it.size === 'half' ? '½ day' : '';
+
+/** One item as a compact card. Used in day lanes, the ideas list and location pages. */
+export function ItemCard({ item, placement, onOpen, onStatus, onMenu, onChosen, dim, extra, className }: {
+  item: Item; placement?: Placement; onOpen: () => void; onStatus: (s: Status) => void; onMenu?: () => void;
+  onChosen?: () => void; dim?: boolean; extra?: ReactNode; className?: string;
+}) {
+  const size = sizeLabel(item);
+  return (
+    <div className={'icard' + (dim ? ' dim' : '') + (item.done ? ' done' : '') + (placement?.chosen ? ' chosen' : '') + (className ? ' ' + className : '')}
+      onClick={onOpen} role="button" tabIndex={-1}>
+      <span className="ic-i" aria-hidden="true">{itemIcon(item)}</span>
+      <span className="ic-main">
+        <span className="ic-title">
+          {placement?.time && <span className="ic-time">{placement.time}</span>}
+          {item.mustDo && <span className="ic-star" title="Must do">★</span>}
+          {item.title || 'Untitled'}
+        </span>
+        {(size || item.place?.name || extra) && (
+          <span className="ic-sub">
+            {size && <span className={'ic-size ' + item.size}>{size}</span>}
+            {item.place?.name && item.place.name !== item.title && <span className="ic-place">{item.place.name}</span>}
+            {extra}
+          </span>
+        )}
+      </span>
+      {onChosen && (
+        <button type="button" className={'ic-pick' + (placement?.chosen ? ' on' : '')} title={placement?.chosen ? 'The pick for this meal (tap to clear)' : 'Make this the pick for this meal'}
+          aria-label="Pick for this meal" onClick={(e) => { e.stopPropagation(); onChosen(); }} onPointerDown={(e) => e.stopPropagation()}>
+          {placement?.chosen ? '✓' : '○'}
+        </button>
+      )}
+      <span onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+        <StatusPill small value={item.status} onChange={onStatus} />
+      </span>
+      {onMenu && (
+        <button type="button" className="ic-menu" aria-label="Move to…" title="Move to…"
+          onClick={(e) => { e.stopPropagation(); onMenu(); }} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>⋯</button>
+      )}
+    </div>
+  );
+}

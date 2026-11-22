@@ -52,6 +52,10 @@ export interface Derived {
   colorOf: (l: LocRef | Location | string | null | undefined) => Swatch;
   locById: Map<string, Location>;
   known: string[];
+  /** Locations in trip order (first day there), then any others. */
+  locOrder: Location[];
+  /** Trip days at each location (either end of a travel day counts). */
+  locDays: Map<string, string[]>;
   stats: Stats;
 }
 
@@ -249,8 +253,19 @@ export function derive(doc: TripDoc): Derived {
 
   const known = [...new Set(doc.locations.map((l) => l.name))].sort((a, b) => a.localeCompare(b));
 
+  const locDays = new Map<string, string[]>();
+  for (const d of dates)
+    for (const r of [info[d].loc?.a, info[d].loc?.b]) {
+      if (!r?.id) continue;
+      const l = locDays.get(r.id) || [];
+      if (l[l.length - 1] !== d) l.push(d);
+      locDays.set(r.id, l);
+    }
+  const first = (id: string) => locDays.get(id)?.[0] ?? '9999';
+  const locOrder = [...doc.locations].sort((a, b) => first(a.id).localeCompare(first(b.id)) || order.indexOf(a) - order.indexOf(b));
+
   return {
-    dates, info, flights, stays, overlaps, outside, fit, uncovered, colorOf, locById, known,
+    dates, info, flights, stays, overlaps, outside, fit, uncovered, colorOf, locById, known, locOrder, locDays,
     stats: { nights, booked, plane, none, tentative, unbooked: nights - booked - plane, noLoc, flights: tripFlights.length, flightsBooked },
   };
 }
