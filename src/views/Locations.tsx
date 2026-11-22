@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { fmt, fmtShort, addDays } from '../domain/dates';
 import { MEAL_LABEL, SLOT_LABEL } from '../domain/constants';
-import { HUES, swatch } from '../domain/colors';
+import { HUES, PICKER, swatch } from '../domain/colors';
 import type { Derived } from '../domain/derive';
 import type { Item, ItemKind, ItemSize, Location, Stay, TripDoc } from '../domain/types';
 import { ItemCard } from '../components/ItemCard';
@@ -86,7 +86,7 @@ export function LocationPage({ doc, dv, id, actions, plan, onBack }: {
           onBlur={() => name.trim() && name.trim() !== loc.name && actions.patch(id, { name: name.trim() })}
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} aria-label="Location name" />
         <div className="swatches" role="group" aria-label="Colour">
-          {HUES.map((h, i) => <button key={h} type="button" className={'sw' + (loc.colorIndex === i ? ' on' : '')} style={{ background: swatch(h).solid }} onClick={() => actions.patch(id, { colorIndex: i })} aria-label={`Colour ${i + 1}`} />)}
+          {PICKER.map((i) => <button key={i} type="button" className={'sw' + (loc.colorIndex === i ? ' on' : '')} style={{ background: swatch(HUES[i]).solid }} onClick={() => actions.patch(id, { colorIndex: i })} aria-label={`Colour ${i + 1}`} />)}
           {loc.colorIndex != null && <button type="button" className="link sm" onClick={() => actions.patch(id, { colorIndex: undefined })}>auto</button>}
         </div>
       </div>

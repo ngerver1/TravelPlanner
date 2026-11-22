@@ -8,9 +8,8 @@ import { CATEGORIES, MEALS, MEAL_LABEL, SLOTS, SLOT_LABEL } from '../domain/cons
 import { flightLabel, type DayInfo, type Derived } from '../domain/derive';
 import { fits, laneEntries, laneKey, overCapacity, parseLaneKey, slotLoad, swappable, type Entry, type Lane, type Ref } from '../domain/plan';
 import type { ActivityCategory, Flight, Item, ItemKind, ItemSize, Meal, Status, Stay, TripDoc } from '../domain/types';
-import { InlineLoc } from '../components/InlineLoc';
 import { ItemCard, itemIcon } from '../components/ItemCard';
-import { LocChip, Modal, StatusPill, cssVars } from '../components/ui';
+import { LocChip, LocDisplay, Modal, StatusPill, cssVars } from '../components/ui';
 
 export type DropTarget = { type: 'lane'; lane: Lane; index?: number } | { type: 'pool' } | { type: 'date'; date: string } | { type: 'swap'; with: Ref };
 
@@ -172,16 +171,18 @@ function DayHeader({ x, dv, date, idx, actions }: { x: DayInfo; dv: Derived; dat
         <button className="icon nav" disabled={!next} onClick={() => next && actions.goDay(next)} aria-label="Next day">›</button>
       </div>
       <div className="dv-meta">
-        <InlineLoc info={x} colorOf={dv.colorOf} onSet={(a, b) => actions.setDayLoc(date, a, b)} onReset={() => actions.setDayLoc(date, '', '')} />
+        <button type="button" className="loc-btn" onClick={() => actions.editDay(date)} aria-label="Change location">
+          <LocDisplay loc={x.loc} colorOf={dv.colorOf} size="lg" /><span className="caret" aria-hidden="true">▾</span>
+        </button>
         <span className="dv-stay">
           {n.kind === 'end' ? <span className="night end">Trip ends</span>
             : n.kind === 'plane' ? <span className="night plane">✈ Night on plane</span>
             : n.kind === 'none' ? <button className="night none" onClick={() => actions.addStay(date, addDays(date, 1), x.loc?.b?.id ? x.loc.b.name : x.loc?.a.id ? x.loc.a.name : '')}>NO STAY · add</button>
             : <span className="staybit" onClick={() => actions.editStay(n.stay)}>🛏 {n.stay.name || 'Stay'} <StatusPill small value={n.stay.status} onChange={(s) => actions.patchStay(n.stay.id, { status: s })} /></span>}
-          <button className="icon sm" title="Day notes & location" aria-label="Day notes and location" onClick={() => actions.editDay(date)}>⋯</button>
         </span>
       </div>
-      {x.notes && <p className="iday-notes" onClick={() => actions.editDay(date)}>{x.notes}</p>}
+      {x.notes ? <p className="iday-notes" onClick={() => actions.editDay(date)}>{x.notes}</p>
+        : <button type="button" className="link note-add" onClick={() => actions.editDay(date)}>+ Add a note</button>}
     </header>
   );
 }

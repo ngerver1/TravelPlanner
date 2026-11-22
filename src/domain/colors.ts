@@ -3,7 +3,12 @@
 export interface Swatch { bg: string; border: string; fg: string; solid: string }
 
 export const HUES = [212, 348, 152, 28, 268, 188, 4, 96, 300, 46, 236, 168, 322, 128];
-export const NEUTRAL: Swatch = { bg: '#eef1f5', border: '#cfd6e0', fg: '#475467', solid: '#98a2b3' };
+// light-dark() picks the right value for the current colour scheme (light or dark mode).
+export const NEUTRAL: Swatch = {
+  bg: 'light-dark(#eef1f5, #262c38)', border: 'light-dark(#cfd6e0, #3a4252)', fg: 'light-dark(#475467, #b8c0cc)', solid: '#98a2b3',
+};
+/** The colours offered in a location's colour picker (indices into HUES): well apart from each other. */
+export const PICKER = [0, 1, 2, 3, 4, 5, 9, 7];
 
 export function hash(s: string): number {
   let h = 2166136261;
@@ -12,9 +17,9 @@ export function hash(s: string): number {
 }
 export function swatch(h: number): Swatch {
   return {
-    bg: `hsl(${h} 75% 94%)`,
-    border: `hsl(${h} 50% 78%)`,
-    fg: `hsl(${h} 55% 30%)`,
+    bg: `light-dark(hsl(${h} 75% 94%), hsl(${h} 30% 20%))`,
+    border: `light-dark(hsl(${h} 50% 78%), hsl(${h} 35% 38%))`,
+    fg: `light-dark(hsl(${h} 55% 30%), hsl(${h} 70% 80%))`,
     solid: `hsl(${h} 58% 52%)`,
   };
 }

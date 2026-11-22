@@ -41,7 +41,6 @@ export function OverviewView({ doc, dv, onDay, onAddStay }: { doc: TripDoc; dv: 
                 </div>
                 <div className="cd-loc">
                   {x.loc ? <LocDisplay loc={x.loc} colorOf={colorOf} size="sm" /> : <span className="loc unplanned sm">No location</span>}
-                  {x.loc?.manual && <span className="tag manual tiny" title="Set by hand">M</span>}
                 </div>
                 {flights.length > 0 && (
                   <div className="cd-flights">
@@ -99,7 +98,6 @@ export function Legend() {
       <span><i className="dot st-planned" /> planned</span>
       <span><i className="dot st-idea" /> idea</span>
       <span><i className="dot none" /> no stay</span>
-      <span><span className="tag manual tiny">M</span> location set by hand</span>
       <span className="slots-key"><i className="on" /><i /><i /> morning · afternoon · evening filled</span>
       <span className="meals-key"><i className="chosen" /><i className="options" /><i /> meal picked · options · nothing</span>
       <span>Tap a day to plan it</span>

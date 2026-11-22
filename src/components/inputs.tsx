@@ -29,7 +29,9 @@ export function DateInput({ value, onChange, min, max, className, ...rest }: {
           else { const iso = parseDMY(t); if (iso) emit(onChange, iso); }
         }}
         onBlur={() => { if (bad) setText(fmtDMY(value)); }} />
-      <button type="button" className="dt-pick" onClick={openPicker} aria-label="Pick a date" tabIndex={-1}>📅</button>
+      <button type="button" className="dt-pick" onClick={openPicker} aria-label="Pick a date" tabIndex={-1}>
+        <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="12" rx="2" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M1.5 6.5h13M5 1v3M11 1v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+      </button>
       <input ref={picker} type="date" className="dt-native" tabIndex={-1} aria-hidden="true" value={value} min={min} max={max}
         onChange={(e) => { setText(fmtDMY(e.target.value)); emit(onChange, e.target.value); }} />
     </span>

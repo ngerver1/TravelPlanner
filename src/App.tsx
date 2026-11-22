@@ -13,6 +13,8 @@ import { DayForm, FlightForm, ItemForm, RangeLocForm, StayForm, type FlightDraft
 import { FlightsPanel, StaysPanel, type PanelActions } from './components/panels';
 import { MoveSheet } from './components/MoveSheet';
 import { TripSettings } from './components/TripSettings';
+import { LocationNames } from './components/LocationSelect';
+import { applyTheme, loadTheme, type Theme } from './theme';
 import { OverviewView, Legend, Summary } from './views/Overview';
 import { MonthView } from './views/Month';
 import { DayView, type DropTarget, type PlanActions } from './views/DayView';
@@ -68,6 +70,8 @@ export default function App() {
   const [lastDay, setLastDay] = useState<string>('');
 
   const dv = useMemo(() => derive(doc), [doc]);
+  const [theme, setThemeState] = useState<Theme>(loadTheme);
+  const setTheme = (t: Theme) => { setThemeState(t); applyTheme(t); };
   // Expose the sticky header's height so the day strip can stick just below it.
   const headerRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -309,6 +313,11 @@ export default function App() {
     );
     const view = route.page === 'plan' ? route.view : 'calendar';
     return (<>
+      <div className="plan-bar">
+        <nav className="vtabs" aria-label="Plan view">
+          {PLAN_VIEWS.map(([v, l]) => <button key={v} className={view === v ? 'on' : ''} onClick={() => goPlan(v)}>{l}</button>)}
+        </nav>
+      </div>
       {view !== 'day' && warnings}
       {isEmpty && (
         <div className="welcome">
@@ -337,15 +346,10 @@ export default function App() {
   const moveItem = modal?.type === 'move' ? doc.items.find((i) => i.id === modal.itemId) : undefined;
 
   return (
+    <LocationNames.Provider value={dv.known}>
     <div className={'app page-' + page + (page === 'plan' ? ' view-' + route.view : '')}>
-      <datalist id="known-locs">{dv.known.map((k) => <option key={k} value={k} />)}</datalist>
       <header className="top" ref={headerRef}>
         <TripSettings trip={doc.trip} onChange={(p) => update((x) => { x.trip = { ...x.trip, ...p }; })} />
-        {page === 'plan' && hasDates && (
-          <nav className="vtabs" aria-label="Plan view">
-            {PLAN_VIEWS.map(([v, l]) => <button key={v} className={route.view === v ? 'on' : ''} onClick={() => goPlan(v)}>{l}</button>)}
-          </nav>
-        )}
       </header>
 
       <main>
@@ -355,7 +359,7 @@ export default function App() {
         {page === 'location' && <LocationPage key={route.id} doc={doc} dv={dv} id={route.id} actions={locActions} plan={plan} onBack={() => navTo({ page: 'locations' })} />}
         {page === 'stays' && <div className="page"><h2 className="page-h">Stays</h2>{dv.overlaps.length > 0 && warnings}<StaysPanel dv={dv} actions={panelActions} /></div>}
         {page === 'flights' && <div className="page"><h2 className="page-h">Flights</h2><FlightsPanel dv={dv} actions={panelActions} /></div>}
-        {page === 'settings' && <SettingsPage doc={doc} toast={toast} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
+        {page === 'settings' && <SettingsPage doc={doc} toast={toast} theme={theme} onTheme={setTheme} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
       </main>
 
       <nav className="bottombar" aria-label="Menu">
@@ -437,5 +441,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </LocationNames.Provider>
   );
 }

@@ -3,7 +3,8 @@ import { addDays, diffDays, fmt, isDate } from '../domain/dates';
 import { CATEGORIES, MEALS, MEAL_LABEL, RESTAURANT_ICON, SIZES, SIZE_LABEL } from '../domain/constants';
 import type { ActivityCategory, Flight, ItemKind, ItemSize, Meal, Stay, Status } from '../domain/types';
 import type { DayInfo } from '../domain/derive';
-import { ConfirmDel, Field, LocDisplay, Modal, Seg, StatusSelect, useForm, type ColorOf } from './ui';
+import { ConfirmDel, Field, Modal, Seg, StatusSelect, useForm } from './ui';
+import { LocationSelect } from './LocationSelect';
 
 const Footer = ({ isNew, onDelete, onClose, onSave, disabled, deleteLabel }: {
   isNew?: boolean; onDelete: () => void; onClose: () => void; onSave: () => void; disabled?: boolean; deleteLabel?: string;
@@ -60,7 +61,7 @@ export function StayForm({ initial, onSave, onDelete, onClose }: {
       footer={<Footer isNew={initial._new} onDelete={onDelete} onClose={onClose} onSave={() => onSave(f)} disabled={!f.checkIn || !f.checkOut || n < 1} />}>
       <div className="grid2">
         <Field label="Name" span><input {...bind('name')} placeholder="Hotel / apartment" autoFocus /></Field>
-        <Field label="Location" hint="City or area: sets the day's location"><input list="known-locs" {...bind('locationName')} /></Field>
+        <Field label="Location" hint="City or area: sets the day's location"><LocationSelect {...bind('locationName')} /></Field>
         <Field label="Address"><input {...bind('address')} /></Field>
         <Field label="Check-in"><DateInput {...bind('checkIn')} onChange={(e) => { const v = e.target.value; setF((p) => ({ ...p, checkIn: v, checkOut: !p.checkOut || p.checkOut <= v ? (v ? addDays(v, 1) : '') : p.checkOut })); }} /></Field>
         <Field label="Check-out" hint={n > 0 ? `${n} night${n > 1 ? 's' : ''}` : f.checkIn && f.checkOut ? 'Check-out must be after check-in' : ''}><DateInput {...bind('checkOut')} /></Field>
@@ -148,7 +149,7 @@ export function ItemForm({ initial, trip, onSave, onDelete, onClose }: {
           <Field label="Cuisine"><input {...bind('cuisine')} /></Field>
           <Field label="Booking"><input {...bind('booking')} placeholder="e.g. booked 19:00, ref 1234" /></Field>
         </>)}
-        <Field label="Location" hint="Whose list of ideas it belongs to"><input list="known-locs" {...bind('locationName')} /></Field>
+        <Field label="Location" hint="Whose list of ideas it belongs to"><LocationSelect {...bind('locationName')} emptyLabel="— Choose —" /></Field>
         <Field label="Place"><input {...bind('placeName')} /></Field>
         <Field label="Link" span><input {...bind('link')} placeholder="https://" inputMode="url" /></Field>
         <Field label="Notes" span><textarea rows={3} {...bind('notes')} /></Field>
@@ -186,8 +187,8 @@ export function RangeLocForm({ initial, trip, onApply, onClose }: {
       <div className="grid2">
         <Field label="From"><DateInput {...bind('from')} min={trip.start} max={trip.end} /></Field>
         <Field label="To"><DateInput {...bind('to')} min={trip.start} max={trip.end} /></Field>
-        <Field label="Location"><input list="known-locs" {...bind('loc')} autoFocus /></Field>
-        <Field label="Travelling to (optional)" hint="For travel days, e.g. Sapporo → Tokyo"><input list="known-locs" {...bind('loc2')} /></Field>
+        <Field label="Location"><LocationSelect {...bind('loc')} emptyLabel="— Choose —" /></Field>
+        <Field label="Travelling to (optional)" hint="For travel days, e.g. Sapporo → Tokyo"><LocationSelect {...bind('loc2')} emptyLabel="— Not travelling —" /></Field>
       </div>
       <p className="muted small">These days become manual. “Reset range to auto” goes back to locations worked out from your stays and flights.</p>
     </Modal>
@@ -196,23 +197,27 @@ export function RangeLocForm({ initial, trip, onApply, onClose }: {
 
 export interface DayDraft { loc: string; loc2: string; notes: string }
 
-export function DayForm({ date, info, onSave, onReset, onClose, colorOf }: {
-  date: string; info: DayInfo; onSave: (f: DayDraft) => void; onReset: () => void; onClose: () => void; colorOf: ColorOf;
+export function DayForm({ date, info, onSave, onReset, onClose }: {
+  date: string; info: DayInfo; onSave: (f: DayDraft) => void; onReset: () => void; onClose: () => void; colorOf?: unknown;
 }) {
   const m = info.loc?.manual ? info.loc : null;
   const [f, , bind] = useForm<DayDraft>({ loc: m?.a.name || '', loc2: m?.b?.name || '', notes: info.notes || '' });
+  const auto = info.auto ? info.auto.a.name + (info.auto.b ? ' → ' + info.auto.b.name : '') : '';
   return (
     <Modal title={fmt(date, { weekday: 'long', day: 'numeric', month: 'long' })} onClose={onClose}
       footer={<>
-        {info.loc?.manual && <button className="btn ghost" onClick={onReset}>Reset location to auto</button>}
+        {m && <button className="btn ghost" onClick={onReset}>Reset to automatic</button>}
         <span className="grow" />
         <button className="btn ghost" onClick={onClose}>Cancel</button>
         <button className="btn primary" onClick={() => onSave(f)}>Save</button>
       </>}>
-      <p className="muted small">Auto location: {info.auto ? <LocDisplay loc={info.auto} colorOf={colorOf} size="sm" /> : 'none (add a stay or flight)'}</p>
       <div className="grid2">
-        <Field label="Location (leave empty for auto)"><input list="known-locs" {...bind('loc')} /></Field>
-        <Field label="Travelling to (optional)"><input list="known-locs" {...bind('loc2')} /></Field>
+        <Field label="Location" hint={auto ? `Automatic: ${auto} (from your stays and flights)` : 'Nothing automatic yet: add a stay or flight, or choose one'}>
+          <LocationSelect {...bind('loc')} emptyLabel={auto ? `Automatic (${auto})` : '— None —'} />
+        </Field>
+        <Field label="Travelling to (optional)" hint="For travel days, e.g. Sapporo → Tokyo">
+          <LocationSelect {...bind('loc2')} emptyLabel="— Not travelling —" />
+        </Field>
         <Field label="Notes" span><textarea rows={3} {...bind('notes')} /></Field>
       </div>
     </Modal>
