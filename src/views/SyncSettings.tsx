@@ -58,8 +58,12 @@ export function SyncSettings({ sync, doc }: { sync: Sync; doc: TripDoc }) {
           ))}
         </div>
       </>)}
+      {gists !== null && gists.length === 0 && (
+        <p className="small">No trips in your Gists yet. If your trip is on another device, connect there first and create the Gist there, then tap <b>Check again</b> here.</p>
+      )}
       <div className="row gap wrap">
-        <button className="btn primary" disabled={busy} onClick={() => run(sync.create)}>Create a new secret Gist{localHasTrip ? ' with this trip' : ''}</button>
+        {gists !== null && <button className="btn" disabled={busy} onClick={() => run(async () => setGists(await sync.list()))}>Check again</button>}
+        <button className={'btn' + (localHasTrip ? ' primary' : '')} disabled={busy} onClick={() => run(sync.create)}>Create a new secret Gist{localHasTrip ? ' with this trip' : ' (empty trip)'}</button>
         <button className="btn ghost" onClick={sync.disconnect}>Use a different token</button>
       </div>
       {choice && (
