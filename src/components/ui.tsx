@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode, type CSSProperties, type MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { STATUSES, STATUS_LABEL } from '../domain/constants';
 import type { Status } from '../domain/types';
 import type { DayLoc, LocRef, Night, Derived } from '../domain/derive';
@@ -47,14 +48,16 @@ export function Modal({ title, onClose, children, footer, wide }: {
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, [onClose]);
-  return (
+  // Rendered at the page level so no parent (e.g. the blurred sticky header) can clip it.
+  return createPortal(
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={'modal ' + (wide ? 'wide' : '')} role="dialog" aria-label={title}>
         <div className="modal-h"><h3>{title}</h3><button className="icon" onClick={onClose} aria-label="Close">✕</button></div>
         <div className="modal-b">{children}</div>
         {footer && <div className="modal-f">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
