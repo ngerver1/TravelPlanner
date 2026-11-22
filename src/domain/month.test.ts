@@ -1,14 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { barsInWeek, monthsCovering, packLanes } from './month';
+import { barsInWeek, packLanes, weeksCovering } from './month';
 import { range } from './dates';
 
 describe('month view layout', () => {
-  it('covers whole months with Monday-start weeks', () => {
-    const m = monthsCovering('2027-01-22', '2027-02-11');
-    expect(m.map((x) => x.key)).toEqual(['2027-01', '2027-02']);
-    expect(m[0].weeks[0][0]).toBe('2026-12-28'); // Mon before 1 Jan 2027 (a Friday)
-    expect(m[0].weeks.at(-1)!.includes('2027-01-31')).toBe(true);
-    expect(m[1].weeks[0][0]).toBe('2027-02-01');
+  it('gives continuous weeks across a month boundary', () => {
+    const w = weeksCovering('2027-01-29', '2027-02-02');
+    expect(w.map((x) => x[0])).toEqual(['2027-01-25', '2027-02-01']);
   });
 
   it('packs back-to-back stays in one lane and overlaps in another', () => {

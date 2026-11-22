@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { fmt, todayStr } from '../domain/dates';
 import { STATUS_LABEL } from '../domain/constants';
 import { flightLabel, type Derived } from '../domain/derive';
-import { barsInWeek, monthBars, monthsCovering, type MonthBarItem } from '../domain/month';
+import { barsInWeek, monthBars, weeksCovering, type MonthBarItem } from '../domain/month';
 import type { Flight, Stay } from '../domain/types';
 import { cssVars } from '../components/ui';
 
@@ -13,7 +13,7 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
 }) {
   const { dates, colorOf, locById } = dv;
   const start = dates[0], end = dates[dates.length - 1];
-  const months = useMemo(() => monthsCovering(start, end), [start, end]);
+  const weeks = useMemo(() => weeksCovering(start, end), [start, end]);
   const bars = useMemo(() => monthBars(dv.stays, dv.uncovered), [dv.stays, dv.uncovered]);
   const lanes = Math.max(1, ...bars.map((b) => b.lane + 1));
   const flightsOn = useMemo(() => {
@@ -42,17 +42,15 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
 
   return (
     <div className="mv">
-      {months.map((m) => (
-        <section key={m.key} className="mv-month">
-          <h3 className="mv-title">{fmt(m.first, { month: 'long', year: 'numeric' })}</h3>
+      <section className="mv-month">
           <div className="mv-head">{WEEKDAYS.map((d) => <div key={d}>{d}</div>)}</div>
-          {m.weeks.map((wk) => {
+          {weeks.map((wk) => {
             const wb = barsInWeek(bars, wk);
-            const quiet = !wk.some(inTrip) && wb.length === 0 && !wk.some((d) => flightsOn.has(d));
             return (
-              <div key={wk[0]} className={'mv-week' + (quiet ? ' quiet' : '')} style={{ gridTemplateRows: quiet ? `auto` : `auto repeat(${lanes}, var(--lane)) minmax(var(--frow), auto)` }}>
+              <div key={wk[0]} className="mv-week" style={{ gridTemplateRows: `auto repeat(${lanes}, var(--lane)) minmax(var(--frow), auto)` }}>
                 {wk.map((d, i) => {
-                  const other = d.slice(0, 7) !== m.key;
+                  const other = !inTrip(d);
+                  const showMonth = d === start || d.endsWith('-01');
                   const x = dv.info[d];
                   const c = x?.loc ? colorOf(x.loc.a) : null;
                   const col = `${2 * i + 1} / span 2`;
@@ -62,7 +60,7 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
                       style={cssVars({ gridColumn: col, '--dc': c?.solid })}
                       onClick={() => inTrip(d) && onDay(d)} onKeyDown={(e) => e.key === 'Enter' && inTrip(d) && onDay(d)} />,
                     <div key={'l' + d} className={'mv-label' + (other ? ' other' : '') + (inTrip(d) ? ' trip' : ' off') + (d === t ? ' today' : '')} style={{ gridColumn: col }}>
-                      <span className="mv-num">{fmt(d, { day: 'numeric' })}</span>
+                      <span className="mv-num">{fmt(d, { day: 'numeric' })}{showMonth && <span className="mv-mon"> {fmt(d, { month: 'short' })}</span>}</span>
                       {!other && x?.loc && <span className="mv-loc" style={{ color: c!.fg }}>{x.loc.a.name}{x.loc.b ? ' → ' + x.loc.b.name : ''}</span>}
                     </div>,
                   ];
@@ -80,7 +78,7 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
                   );
                 })}
                 {wk.map((d, i) => {
-                  const fl = d.slice(0, 7) === m.key ? flightsOn.get(d) : undefined;
+                  const fl = flightsOn.get(d);
                   if (!fl) return null;
                   return (
                     <div key={'f' + d} className="mv-flights" style={{ gridColumn: `${2 * i + 1} / span 2`, gridRow: lanes + 2 }}>
@@ -97,8 +95,7 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
               </div>
             );
           })}
-        </section>
-      ))}
+      </section>
       <div className="legend small muted">
         <span><i className="mv-key st-booked" /> booked stay</span>
         <span><i className="mv-key st-planned" /> planned</span>

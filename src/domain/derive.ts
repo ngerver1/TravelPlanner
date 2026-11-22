@@ -98,6 +98,15 @@ function context(doc: TripDoc) {
         const lf = dep.length ? dep[dep.length - 1] : arr[arr.length - 1];
         to = lf ? code(lf.to) : null;
       }
+    } else if (!from && !to && !plane) {
+      // No stay and no flight today: assume I'm still where my last flight landed,
+      // unless a stay has checked out since that flight arrived.
+      const landed = flights.filter((f) => isDate(f.arrDate) && f.arrDate < d && f.to.trim());
+      const lastFlight = landed[landed.length - 1];
+      if (lastFlight) {
+        const lastCheckout = validStays.reduce((m, s) => (s.checkOut < d && s.checkOut > m ? s.checkOut : m), '');
+        if (lastFlight.arrDate >= lastCheckout) to = code(lastFlight.to);
+      }
     }
     let auto: DayInfo['auto'] = null;
     if (from && to && !sameLoc(from, to)) auto = { a: from, b: to };

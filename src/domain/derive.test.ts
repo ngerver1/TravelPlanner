@@ -66,6 +66,30 @@ describe('auto location', () => {
     expect(locLabel(v.info['2027-01-02'].auto)).toBe('Sapporo');
   });
 
+  it('after a flight, assumes I am at its destination until the next stay or flight', () => {
+    const d = doc('2027-01-01', '2027-01-06', ['Tokyo']);
+    d.flights = [
+      flight({ from: 'BNE', to: 'HKG', depDate: '2027-01-01', arrDate: '2027-01-01' }),
+      flight({ from: 'HKG', to: 'NRT', depDate: '2027-01-04', arrDate: '2027-01-04' }),
+    ];
+    d.stays = [stay({ locationId: 'tokyo', checkIn: '2027-01-05', checkOut: '2027-01-06' })];
+    const v = derive(d);
+    expect(locLabel(v.info['2027-01-02'].loc)).toBe('HKG');
+    expect(locLabel(v.info['2027-01-03'].loc)).toBe('HKG');
+    expect(locLabel(v.info['2027-01-04'].loc)).toBe('HKG → NRT');
+    expect(locLabel(v.info['2027-01-05'].loc)).toBe('Tokyo');
+    expect(v.info['2027-01-03'].night.kind).toBe('none'); // still flagged as no stay
+  });
+
+  it('does not carry a flight forward past a later checkout', () => {
+    const d = doc('2027-01-01', '2027-01-05', ['Rusutsu']);
+    d.flights = [flight({ from: 'HKG', to: 'CTS', depDate: '2027-01-01', arrDate: '2027-01-01' })];
+    d.stays = [stay({ locationId: 'rusutsu', checkIn: '2027-01-01', checkOut: '2027-01-03' })];
+    const v = derive(d);
+    expect(locLabel(v.info['2027-01-03'].loc)).toBe('Rusutsu');
+    expect(v.info['2027-01-04'].loc).toBeNull();
+  });
+
   it('a day with nothing is unplanned', () => {
     const v = derive(doc('2027-01-01', '2027-01-02'));
     expect(v.info['2027-01-01'].loc).toBeNull();

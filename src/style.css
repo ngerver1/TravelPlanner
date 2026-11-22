@@ -280,7 +280,6 @@ ul.uncov li{display:flex;justify-content:space-between;align-items:center;paddin
 .mv-day{grid-row:1/-1;border-left:1px solid var(--line);min-width:0;background:#fff}
 .mv-week .mv-day:nth-child(13){border-right:1px solid var(--line)}
 .mv-label{grid-row:1;padding:3px 5px 1px;display:flex;flex-direction:column;gap:1px;min-width:0;pointer-events:none;position:relative}
-.mv-week.quiet{min-height:30px}
 .mv-day.trip{cursor:pointer;box-shadow:inset 0 3px 0 var(--dc,transparent)}
 .mv-day.trip:hover{background:#f8f9fb}
 .mv-day.off{background:#f7f8fa}
@@ -288,6 +287,8 @@ ul.uncov li{display:flex;justify-content:space-between;align-items:center;paddin
 .mv-label.other .mv-num{color:#c0c5cf}
 .mv-label.today .mv-num{background:var(--accent);color:#fff;border-radius:9px;padding:0 6px}
 .mv-num{font-weight:700;font-size:12.5px;align-self:flex-start}
+.mv-mon{color:var(--accent);font-weight:600}
+.mv-label.today .mv-mon{color:#fff}
 .mv-label.off:not(.other) .mv-num{color:var(--muted);font-weight:500}
 .mv-loc{font-size:10.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mv-bar{position:relative;z-index:1;margin:0 1px;border:1.5px solid var(--bbd);background:var(--bbg);color:var(--bfg);border-radius:999px;font-size:11px;font-weight:600;padding:0 7px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;min-width:0;line-height:17px}

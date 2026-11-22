@@ -5,26 +5,14 @@ import type { Stay } from './types';
 
 export interface BarSpan<T> { item: T; start: string; end: string; lane: number } // start/end are the days the bar's ends sit on
 export interface WeekBar<T> { item: T; lane: number; from: number; to: number; openLeft: boolean; openRight: boolean } // grid lines 1..15
-export interface MonthBlock { key: string; first: string; weeks: string[][] }
 
-/** Calendar months (Monday-start weeks) covering a..b. */
-export function monthsCovering(a: string, b: string): MonthBlock[] {
+/** Continuous Monday-start weeks from the week of a to the week of b. */
+export function weeksCovering(a: string, b: string): string[][] {
   if (!isDate(a) || !isDate(b) || a > b) return [];
-  const out: MonthBlock[] = [];
-  for (let m = a.slice(0, 7) + '-01'; m <= b; ) {
-    const next = addMonth(m);
-    const last = addDays(next, -1);
-    const weeks: string[][] = [];
-    for (let w = addDays(m, -((dow(m) + 6) % 7)); w <= last; w = addDays(w, 7)) weeks.push(range(w, addDays(w, 6)));
-    out.push({ key: m.slice(0, 7), first: m, weeks });
-    m = next;
-  }
-  return out;
+  const weeks: string[][] = [];
+  for (let w = addDays(a, -((dow(a) + 6) % 7)); w <= b; w = addDays(w, 7)) weeks.push(range(w, addDays(w, 6)));
+  return weeks;
 }
-const addMonth = (m: string) => {
-  const y = +m.slice(0, 4), mo = +m.slice(5, 7);
-  return mo === 12 ? `${y + 1}-01-01` : `${y}-${String(mo + 1).padStart(2, '0')}-01`;
-};
 
 /** Greedy lane packing. Bars touching at the same day (check-out/check-in) share a lane. */
 export function packLanes<T>(spans: { item: T; start: string; end: string }[]): BarSpan<T>[] {
