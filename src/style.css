@@ -301,6 +301,9 @@ ul.uncov li{display:flex;justify-content:space-between;align-items:center;paddin
 .mv-bar span{display:block;overflow:hidden;text-overflow:ellipsis}
 .mv-bar.ol{border-top-left-radius:0;border-bottom-left-radius:0;border-left-width:0;margin-left:0}
 .mv-bar.or{border-top-right-radius:0;border-bottom-right-radius:0;border-right-width:0;margin-right:0}
+.mv-bar.st-booked,.mv-key.st-booked{--bbg:var(--good-bg);--bbd:var(--good);--bfg:var(--good)}
+.mv-bar.st-planned,.mv-key.st-planned{--bbg:var(--warn-bg);--bbd:var(--warn);--bfg:var(--warn)}
+.mv-bar.st-idea,.mv-key.st-idea{--bbg:var(--idea-bg);--bbd:var(--idea);--bfg:var(--idea)}
 .mv-bar.st-planned{border-style:dashed}
 .mv-bar.st-idea{border-style:dotted}
 .mv-bar.st-booked::after{content:"✓";position:absolute;right:6px;top:0;font-size:10px}
@@ -310,7 +313,7 @@ ul.uncov li{display:flex;justify-content:space-between;align-items:center;paddin
 .mv-flights{position:relative;z-index:1;display:flex;flex-direction:column;gap:2px;padding:0 3px;min-width:0}
 .mv-fl{border:0;text-align:left;font-size:10.5px;border-radius:5px;padding:1px 5px;background:var(--flight-bg);color:var(--flight-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid var(--sc);cursor:pointer;min-width:0}
 .mv-fl .short{display:none}
-.mv-key{display:inline-block;width:22px;height:10px;border-radius:6px;border:1.5px solid var(--muted);vertical-align:middle;margin-right:3px;background:var(--soft)}
+.mv-key{display:inline-block;width:22px;height:10px;border-radius:6px;border:1.5px solid var(--bbd,var(--muted));background:var(--bbg,var(--soft));vertical-align:middle;margin-right:3px}
 .mv-key.st-planned{border-style:dashed}
 .mv-key.st-idea{border-style:dotted}
 .mv-key.gap{border:1.5px dashed var(--bad-line);background:var(--bad-stripe)}

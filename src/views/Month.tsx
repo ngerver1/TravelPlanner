@@ -28,16 +28,9 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
   const t = todayStr();
   const inTrip = (d: string) => d >= start && d <= end;
 
-  const barStyle = (it: MonthBarItem) => {
-    if (it.kind === 'gap') return undefined;
-    const l = it.stay.locationId ? locById.get(it.stay.locationId) : undefined;
-    const c = colorOf(l ? { id: l.id, name: l.name } : null);
-    return cssVars({ '--bbg': c.bg, '--bfg': c.fg, '--bbd': c.solid });
-  };
   const barText = (it: MonthBarItem) => {
     if (it.kind === 'gap') return 'NO STAY';
-    const l = it.stay.locationId ? locById.get(it.stay.locationId)?.name : '';
-    return [it.stay.name || 'Stay', l].filter(Boolean).join(' · ');
+    return it.stay.name || 'Stay';
   };
 
   return (
@@ -68,10 +61,11 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
                 {wb.map((b) => {
                   const it = b.item;
                   const cls = 'mv-bar' + (it.kind === 'gap' ? ' gap' : ` st-${it.stay.status}`) + (b.openLeft ? ' ol' : '') + (b.openRight ? ' or' : '');
-                  const title = it.kind === 'gap' ? 'No stay booked: click to add one' : `${barText(it)} · ${STATUS_LABEL[it.stay.status]}`;
+                  const where = it.kind === 'stay' && it.stay.locationId ? locById.get(it.stay.locationId)?.name : '';
+                  const title = it.kind === 'gap' ? 'No stay booked: click to add one' : `${barText(it)}${where ? ' · ' + where : ''} · ${STATUS_LABEL[it.stay.status]}`;
                   return (
                     <button key={(it.kind === 'gap' ? 'g' + it.from : it.stay.id) + wk[0]} type="button" className={cls} title={title}
-                      style={{ ...barStyle(it), gridColumn: `${b.from} / ${b.to}`, gridRow: b.lane + 2 }}
+                      style={{ gridColumn: `${b.from} / ${b.to}`, gridRow: b.lane + 2 }}
                       onClick={() => (it.kind === 'gap' ? onAddStay(it.from, it.to) : onStay(it.stay))}>
                       {(!b.openLeft || b.to - b.from >= 4) && <span>{barText(it)}</span>}
                     </button>
@@ -97,11 +91,11 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
           })}
       </section>
       <div className="legend small muted">
-        <span><i className="mv-key st-booked" /> booked stay</span>
+        <span><i className="mv-key st-booked" /> stay booked</span>
         <span><i className="mv-key st-planned" /> planned</span>
         <span><i className="mv-key st-idea" /> idea</span>
         <span><i className="mv-key gap" /> no stay</span>
-        <span>Bar colour = location · tap a bar or flight to edit, a day to open it</span>
+        <span>Stripe above each day = its location · tap a bar or flight to edit, a day to open it</span>
       </div>
     </div>
   );
