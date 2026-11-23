@@ -103,7 +103,7 @@ export function LocationPage({ doc, dv, id, actions, plan, onBack }: {
           <a className="btn" href={mapsLink(undefined, loc.name)} target="_blank" rel="noreferrer">Open {loc.name} in Google Maps ↗</a>
         </div>
         {stays.map((s: Stay) => (
-          <div key={s.id} className="card" onClick={() => plan.editStay(s)}>
+          <div key={s.id} className="card" onClick={() => plan.openStay(s)}>
             <div className="card-row"><b>🛏 {s.name || 'Untitled stay'}</b><StatusPill small value={s.status} onChange={(st) => plan.patchStay(s.id, { status: st })} /></div>
             <div className="muted small">{fmtShort(s.checkIn)} → {fmtShort(s.checkOut)} <MapLink href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, loc.name)} pinned={!!s.place?.mapsUrl} /></div>
           </div>

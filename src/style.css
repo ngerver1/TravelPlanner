@@ -631,3 +631,4 @@ a.btn{text-decoration:none;color:inherit}
 .iv-v a{color:var(--accent)}
 .iv-days{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
 .iv-url{word-break:break-all}
+.mono-ish{font-variant-numeric:tabular-nums;letter-spacing:.02em}

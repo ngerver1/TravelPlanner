@@ -8,10 +8,11 @@ import { fmtPrice } from '../domain/money';
 
 export interface PanelActions {
   addStay: (from?: string, to?: string) => void;
-  editStay: (s: Stay) => void;
+  /** Show a stay (read-only view with Edit). */
+  openStay: (s: Stay) => void;
   patchStay: (id: string, p: Partial<Stay>) => void;
   addFlight: (d?: string) => void;
-  editFlight: (f: Flight) => void;
+  openFlight: (f: Flight) => void;
   patchFlight: (id: string, p: Partial<Flight>) => void;
 }
 
@@ -44,7 +45,7 @@ export function StaysPanel({ dv, actions }: { dv: Derived; actions: PanelActions
       <h4>All stays ({stays.length})</h4>
       {stays.length === 0 && <p className="muted small">No stays yet. Each stay fills in the location for the nights it covers.</p>}
       {stays.map((s) => (
-        <div key={s.id} className="card" onClick={() => actions.editStay(s)}>
+        <div key={s.id} className="card" onClick={() => actions.openStay(s)}>
           <div className="card-row"><b>{s.name || 'Untitled stay'}</b><StatusPill small value={s.status} onChange={(st: Status) => actions.patchStay(s.id, { status: st })} /></div>
           <div className="card-row muted small">
             <span>{locOf(s) ? <LocChip loc={locOf(s)} colorOf={colorOf} size="sm" /> : 'No location'}</span>
@@ -69,7 +70,7 @@ export function FlightsPanel({ dv, actions }: { dv: Derived; actions: PanelActio
       <div className="panel-actions"><button className="btn primary" onClick={() => actions.addFlight()}>+ Add flight</button></div>
       {flights.length === 0 && <p className="muted small">No flights yet. Times are local to each airport; an overnight flight shows on both days.</p>}
       {flights.map((f) => (
-        <div key={f.id} className="card" onClick={() => actions.editFlight(f)}>
+        <div key={f.id} className="card" onClick={() => actions.openFlight(f)}>
           <div className="card-row"><b>✈ {flightLabel(f)} {f.from || '?'} → {f.to || '?'}</b><StatusPill small value={f.status} onChange={(s) => actions.patchFlight(f.id, { status: s })} /></div>
           <div className="card-row muted small">
             <span>{f.airline}</span>

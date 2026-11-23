@@ -16,6 +16,7 @@ import { DayForm, FlightForm, ItemForm, RangeLocForm, StayForm, type FlightDraft
 import { FlightsPanel, StaysPanel, type PanelActions } from './components/panels';
 import { MoveSheet } from './components/MoveSheet';
 import { ItemView } from './components/ItemView';
+import { FlightView, StayView } from './components/BookingViews';
 import { TripSettings } from './components/TripSettings';
 import { SyncChip } from './components/SyncChip';
 import { useSync } from './sync/useSync';
@@ -38,6 +39,8 @@ type ModalState =
   | { type: 'outday'; date: string }
   | { type: 'move'; itemId: string; pi: number; date?: string }
   | { type: 'view'; itemId: string; pi: number }
+  | { type: 'viewStay'; id: string }
+  | { type: 'viewFlight'; id: string }
   | { type: 'relocate'; itemId: string; ids: string[] }
   | null;
 
@@ -142,6 +145,8 @@ export default function App() {
   const addStay = (from?: string, to?: string, locName = '') => setModal({ type: 'stay', v: { _new: true, priceDraft: fromMoney(undefined, home), id: uid(), name: '', locationName: locName, address: '', checkIn: from || '', checkOut: to || (from ? addDays(from, 1) : ''), checkInTime: '', checkOutTime: '', status: 'planned', conf: '', cost: '', link: '', notes: '', mapsUrl: '' } });
   const editStay = (s: Stay) => { const { locationId, place, price, ...rest } = s; setModal({ type: 'stay', v: { ...rest, priceDraft: fromMoney(price, home), mapsUrl: place?.mapsUrl || '', locationName: locationName(doc, locationId) } }); };
   const patchStay = (id: string, p: Partial<Stay>) => update((x) => { x.stays = x.stays.map((s) => (s.id === id ? { ...s, ...p } : s)); });
+  const openStay = (s: Stay) => setModal({ type: 'viewStay', id: s.id });
+  const openFlight = (f: Flight) => setModal({ type: 'viewFlight', id: f.id });
   const editFlight = (f: Flight) => setModal({ type: 'flight', v: { ...f, priceDraft: fromMoney(f.price, home) } });
   const patchFlight = (id: string, p: Partial<Flight>) => update((x) => { x.flights = x.flights.map((f) => (f.id === id ? { ...f, ...p } : f)); });
 
@@ -186,7 +191,7 @@ export default function App() {
   const plan: PlanActions = {
     goDay, setDayLoc,
     editDay: (d) => setModal({ type: 'day', date: d }),
-    addStay, editStay, patchStay, editFlight, patchFlight,
+    addStay, openStay, patchStay, openFlight, patchFlight,
     editItem: (it, pi) => setModal({ type: 'item', v: itemDraft(doc, it, pi) }),
     viewItem: (it, pi) => setModal({ type: 'view', itemId: it.id, pi }),
     // New ideas always open the full editor (prefilled); nothing is added until Save.
@@ -201,7 +206,7 @@ export default function App() {
     setChosen: (ref, chosen) => update((x) => setChosen(x, ref, chosen)),
   };
 
-  const panelActions: PanelActions = { addStay: (f, t) => addStay(f, t), editStay, patchStay, addFlight: newFlight, editFlight, patchFlight };
+  const panelActions: PanelActions = { addStay: (f, t) => addStay(f, t), openStay, patchStay, addFlight: newFlight, openFlight, patchFlight };
 
   const locActions: LocationActions = {
     open: (id) => go({ page: 'location', id }),
@@ -362,7 +367,7 @@ export default function App() {
       )}
       {view === 'calendar' && (<>
         <Summary s={dv.stats} />
-        <MonthView dv={dv} onDay={goDay} onStay={editStay} onFlight={editFlight} onAddStay={(from, to) => addStay(from, addDays(to, 1))} />
+        <MonthView dv={dv} onDay={goDay} onStay={openStay} onFlight={openFlight} onAddStay={(from, to) => addStay(from, addDays(to, 1))} />
       </>)}
       {view === 'overview' && (<>
         <Summary s={dv.stats} />
@@ -398,7 +403,7 @@ export default function App() {
         {page === 'stays' && <div className="page"><h2 className="page-h">Stays</h2>{dv.overlaps.length > 0 && warnings}<StaysPanel dv={dv} actions={panelActions} /></div>}
         {page === 'flights' && <div className="page"><h2 className="page-h">Flights</h2><FlightsPanel dv={dv} actions={panelActions} /></div>}
         {page === 'costs' && <CostsPage doc={doc} dv={dv} update={update} onOpen={(ref) => {
-          if (ref.type === 'stay') editStay(ref.stay); else if (ref.type === 'flight') editFlight(ref.flight); else plan.viewItem(ref.item, ref.pi);
+          if (ref.type === 'stay') openStay(ref.stay); else if (ref.type === 'flight') openFlight(ref.flight); else plan.viewItem(ref.item, ref.pi);
         }} />}
         {page === 'settings' && <SettingsPage doc={doc} toast={toast} theme={theme} onTheme={setTheme} sync={sync} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
       </main>
@@ -435,6 +440,19 @@ export default function App() {
             onStatus={(s) => plan.patchItem(it.id, { status: s })}
             onGoDay={(d) => { close(); goDay(d); }} />
         );
+      })()}
+      {modal?.type === 'viewStay' && (() => {
+        const s = doc.stays.find((x) => x.id === modal.id);
+        if (!s) return null;
+        const l = s.locationId ? dv.locById.get(s.locationId) : undefined;
+        return <StayView stay={s} location={l ? { id: l.id, name: l.name } : undefined} colorOf={dv.colorOf} onClose={close}
+          onEdit={() => editStay(s)} onStatus={(st) => patchStay(s.id, { status: st })} onGoDay={(d) => { close(); if (dv.info[d]) goDay(d); }} />;
+      })()}
+      {modal?.type === 'viewFlight' && (() => {
+        const f = doc.flights.find((x) => x.id === modal.id);
+        if (!f) return null;
+        return <FlightView flight={f} onClose={close} onEdit={() => editFlight(f)} onStatus={(st) => patchFlight(f.id, { status: st })}
+          onGoDay={(d) => { close(); if (dv.info[d]) goDay(d); }} />;
       })()}
       {modal?.type === 'relocate' && (() => {
         const it = doc.items.find((i) => i.id === modal.itemId);

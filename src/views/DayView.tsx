@@ -19,9 +19,10 @@ export interface PlanActions {
   setDayLoc: (d: string, a: string, b: string) => void;
   editDay: (d: string) => void;
   addStay: (from?: string, to?: string, locationName?: string) => void;
-  editStay: (s: Stay) => void;
+  /** Show a stay (read-only view with Edit). */
+  openStay: (s: Stay) => void;
   patchStay: (id: string, p: Partial<Stay>) => void;
-  editFlight: (f: Flight) => void;
+  openFlight: (f: Flight) => void;
   patchFlight: (id: string, p: Partial<Flight>) => void;
   editItem: (it: Item, pi: number) => void;
   /** Read-only view with clickable links. */
@@ -197,7 +198,7 @@ function DayHeader({ x, dv, date, idx, actions, directions: dir }: { x: DayInfo;
           {n.kind === 'end' ? <span className="night end">Trip ends</span>
             : n.kind === 'plane' ? <span className="night plane">✈ Night on plane</span>
             : n.kind === 'none' ? <button className="night none" onClick={() => actions.addStay(date, addDays(date, 1), x.loc?.b?.id ? x.loc.b.name : x.loc?.a.id ? x.loc.a.name : '')}>NO STAY · add</button>
-            : <span className="staybit" onClick={() => actions.editStay(n.stay)}>🛏 {n.stay.name || 'Stay'} <StatusPill small value={n.stay.status} onChange={(s) => actions.patchStay(n.stay.id, { status: s })} /></span>}
+            : <span className="staybit" onClick={() => actions.openStay(n.stay)}>🛏 {n.stay.name || 'Stay'} <StatusPill small value={n.stay.status} onChange={(s) => actions.patchStay(n.stay.id, { status: s })} /></span>}
         </span>
       </div>
       <div className="dv-links">
@@ -211,10 +212,10 @@ function DayHeader({ x, dv, date, idx, actions, directions: dir }: { x: DayInfo;
 
 function DayTimeline({ x, dv, actions }: { x: DayInfo; dv: Derived; actions: PlanActions }) {
   const rows: { key: string; t: string; node: ReactNode; onClick: () => void; status: Status; set: (s: Status) => void }[] = [];
-  for (const f of x.arr) rows.push({ key: 'a' + f.id, t: f.arrTime, node: <>✈ <b>{flightLabel(f)}</b> arrives {f.to} <span className="muted">· from {f.from}, left {fmtShort(f.depDate)} {f.depTime}</span></>, onClick: () => actions.editFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
-  for (const s of x.checkOuts) rows.push({ key: 'o' + s.id, t: s.checkOutTime, node: <>🛏 Check out: <b>{s.name || 'Stay'}</b></>, onClick: () => actions.editStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
-  for (const s of x.checkIns) rows.push({ key: 'i' + s.id, t: s.checkInTime, node: <>🛏 Check in: <b>{s.name || 'Stay'}</b>{s.address && <span className="muted"> · {s.address}</span>} <MapLink href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, dv.locById.get(s.locationId || '')?.name)} pinned={!!s.place?.mapsUrl} /></>, onClick: () => actions.editStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
-  for (const f of x.dep) rows.push({ key: 'd' + f.id, t: f.depTime, node: <>✈ <b>{flightLabel(f)} {f.from || '?'} → {f.to || '?'}</b> <span className="muted">dep {f.depTime || '?'} · arr {f.arrTime || '?'}{f.arrDate !== f.depDate ? ` (${fmtShort(f.arrDate)})` : ''}{f.conf ? ` · ${f.conf}` : ''}</span></>, onClick: () => actions.editFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
+  for (const f of x.arr) rows.push({ key: 'a' + f.id, t: f.arrTime, node: <>✈ <b>{flightLabel(f)}</b> arrives {f.to} <span className="muted">· from {f.from}, left {fmtShort(f.depDate)} {f.depTime}</span></>, onClick: () => actions.openFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
+  for (const s of x.checkOuts) rows.push({ key: 'o' + s.id, t: s.checkOutTime, node: <>🛏 Check out: <b>{s.name || 'Stay'}</b></>, onClick: () => actions.openStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
+  for (const s of x.checkIns) rows.push({ key: 'i' + s.id, t: s.checkInTime, node: <>🛏 Check in: <b>{s.name || 'Stay'}</b>{s.address && <span className="muted"> · {s.address}</span>} <MapLink href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, dv.locById.get(s.locationId || '')?.name)} pinned={!!s.place?.mapsUrl} /></>, onClick: () => actions.openStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
+  for (const f of x.dep) rows.push({ key: 'd' + f.id, t: f.depTime, node: <>✈ <b>{flightLabel(f)} {f.from || '?'} → {f.to || '?'}</b> <span className="muted">dep {f.depTime || '?'} · arr {f.arrTime || '?'}{f.arrDate !== f.depDate ? ` (${fmtShort(f.arrDate)})` : ''}{f.conf ? ` · ${f.conf}` : ''}</span></>, onClick: () => actions.openFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
   if (!rows.length) return null;
   rows.sort((p, q) => (p.t || '99').localeCompare(q.t || '99'));
   return (
