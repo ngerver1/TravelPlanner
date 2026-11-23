@@ -1,7 +1,7 @@
 import { DateInput, TimeInput } from './inputs';
 import { addDays, diffDays, fmt, isDate } from '../domain/dates';
 import { CATEGORIES, MEALS, MEAL_LABEL, RESTAURANT_ICON, SIZES, SIZE_LABEL } from '../domain/constants';
-import type { ActivityCategory, Flight, ItemKind, ItemSize, Meal, Stay, Status } from '../domain/types';
+import type { ActivityCategory, Flight, ItemKind, ItemSize, Meal, Slot, Stay, Status } from '../domain/types';
 import type { DayInfo } from '../domain/derive';
 import { ConfirmDel, Field, Modal, Seg, StatusSelect, useForm } from './ui';
 import { LocationSelect } from './LocationSelect';
@@ -105,6 +105,8 @@ export interface ItemDraft {
   date: string;
   time: string;
   meal: Meal;
+  /** Slot to use when placing a new idea from a slot's "+" (unless a time says otherwise). */
+  slot?: Slot;
   /** Read-only summary of other placements. */
   elsewhere: string[];
 }
@@ -120,7 +122,7 @@ export function ItemForm({ initial, trip, onSave, onDelete, onClose }: {
     <Modal title={initial._new ? 'Add idea' : 'Edit'} onClose={onClose}
       footer={<Footer isNew={initial._new} onDelete={onDelete} onClose={onClose} onSave={() => onSave(f)} disabled={!f.title.trim()} />}>
       <div className="grid2">
-        <Field label="Title" span><input {...bind('title')} autoFocus={initial._new} /></Field>
+        <Field label="Title" span><input {...bind('title')} autoFocus={initial._new && !initial.title} /></Field>
         <Field label="Type" span>
           <Seg value={f.kind} onChange={(k) => set('kind', k)} options={[['activity', '🎟 Thing to do'], ['restaurant', `${RESTAURANT_ICON} Place to eat`]]} />
         </Field>

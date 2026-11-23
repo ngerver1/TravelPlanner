@@ -5,7 +5,7 @@ import { UNASSIGNED, mealFromTime, slotFromTime } from './domain/constants';
 import { derive, locationOn } from './domain/derive';
 import { ensureLocation, locationName } from './domain/locations';
 import { fits, moveToDate, placeAt, setChosen, swap, unplace, type Lane, type Ref } from './domain/plan';
-import type { Flight, Item, ItemKind, ItemSize, Place, Placement, Stay, TripDoc } from './domain/types';
+import type { Flight, Item, Place, Placement, Stay, TripDoc } from './domain/types';
 import { parseMapsUrl } from './domain/maps';
 import { useTripStore } from './store';
 import { useRoute, type PlanView, type Route } from './router';
@@ -175,28 +175,17 @@ export default function App() {
     checkLocation(it.id, date);
   };
 
-  const quickIdea = ({ locationId, kind, title, lane, size }: { locationId: string; kind: ItemKind; title: string; lane?: Lane; size?: ItemSize }) => {
-    const id = uid();
-    update((x) => {
-      x.items.push(kind === 'restaurant'
-        ? { id, locationId, kind, title, status: 'idea', placements: [] }
-        : { id, locationId, kind, title, status: 'idea', category: 'activity', size: size || 'half', placements: [] });
-      if (lane) placeAt(x, { itemId: id, pi: -1 }, lane);
-    });
-    toast(`Added “${title}”${lane ? ' to ' + fmtLong(lane.date) : ''}`, true);
-  };
-
   const plan: PlanActions = {
     goDay, setDayLoc,
     editDay: (d) => setModal({ type: 'day', date: d }),
     addStay, editStay, patchStay, editFlight, patchFlight,
     editItem: (it, pi) => setModal({ type: 'item', v: itemDraft(doc, it, pi) }),
-    newIdea: ({ locationId, kind, date }) => setModal({ type: 'item', v: {
-      _new: true, id: uid(), kind, title: '', locationName: locationName(doc, locationId), category: 'other', size: 'half', includesEvening: false,
+    // New ideas always open the full editor (prefilled); nothing is added until Save.
+    newIdea: ({ locationId, kind, title, lane }) => setModal({ type: 'item', v: {
+      _new: true, id: uid(), kind, title: title || '', locationName: locationName(doc, locationId), category: 'activity', size: 'half', includesEvening: false,
       meals: [], cuisine: '', booking: '', status: 'idea', mustDo: false, done: false, placeName: '', placeAddress: '', mapsUrl: '', link: '', notes: '',
-      pi: -1, date: date || '', time: '', meal: 'lunch', elsewhere: [],
+      pi: -1, date: lane?.date || '', time: '', meal: lane?.meal || 'lunch', slot: lane?.slot, elsewhere: [],
     } }),
-    quickIdea,
     patchItem: (id, p) => update((x) => { x.items = x.items.map((i) => (i.id === id ? { ...i, ...p } : i)); }),
     moveMenu: (it, pi, date) => setModal({ type: 'move', itemId: it.id, pi, date }),
     drop,
@@ -280,7 +269,7 @@ export default function App() {
       let lane: Lane;
       if (f.kind === 'restaurant') lane = { date: f.date, meal: f.meal };
       else {
-        const slot = f.time ? slotFromTime(f.time) : p?.slot;
+        const slot = f.time ? slotFromTime(f.time) : (p?.slot ?? f.slot);
         lane = slot ? { date: f.date, slot } : { date: f.date };
       }
       const changed = !p || p.date !== lane.date || p.meal !== lane.meal || p.slot !== lane.slot;

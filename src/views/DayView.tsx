@@ -7,7 +7,7 @@ import { addDays, fmt, fmtShort } from '../domain/dates';
 import { CATEGORIES, MEALS, MEAL_LABEL, SLOTS, SLOT_LABEL } from '../domain/constants';
 import { flightLabel, type DayInfo, type Derived } from '../domain/derive';
 import { dayStops, fits, laneEntries, laneKey, overCapacity, parseLaneKey, slotLoad, swappable, type Entry, type Lane, type Ref } from '../domain/plan';
-import type { ActivityCategory, Flight, Item, ItemKind, ItemSize, Meal, Status, Stay, TripDoc } from '../domain/types';
+import type { ActivityCategory, Flight, Item, ItemKind, Meal, Status, Stay, TripDoc } from '../domain/types';
 import { ItemCard, MapLink, itemIcon } from '../components/ItemCard';
 import { MAX_WAYPOINTS, directionsLink, mapsLink, placeQuery } from '../domain/maps';
 import { LocChip, LocDisplay, Modal, StatusPill, cssVars } from '../components/ui';
@@ -24,8 +24,8 @@ export interface PlanActions {
   editFlight: (f: Flight) => void;
   patchFlight: (id: string, p: Partial<Flight>) => void;
   editItem: (it: Item, pi: number) => void;
-  newIdea: (p: { locationId?: string; kind: ItemKind; date?: string }) => void;
-  quickIdea: (p: { locationId: string; kind: ItemKind; title: string; lane?: Lane; size?: ItemSize }) => void;
+  /** Open the editor for a new idea (prefilled). */
+  newIdea: (p: { locationId?: string; kind: ItemKind; title?: string; lane?: Lane }) => void;
   patchItem: (id: string, p: Partial<Item>) => void;
   moveMenu: (it: Item, pi: number, date?: string) => void;
   drop: (ref: Ref, target: DropTarget) => void;
@@ -310,8 +310,8 @@ function Pool({ doc, dv, date, locIds, actions, onClose }: { doc: TripDoc; dv: D
   const loc = tab ? dv.locById.get(tab) : undefined;
   const add = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !tab) return;
-    actions.quickIdea({ locationId: tab, kind: kind === 'restaurant' ? 'restaurant' : 'activity', title: title.trim() });
+    if (!tab) return;
+    actions.newIdea({ locationId: tab, kind: kind === 'restaurant' ? 'restaurant' : 'activity', title: title.trim() });
     setTitle('');
   };
   return (
@@ -345,7 +345,7 @@ function Pool({ doc, dv, date, locIds, actions, onClose }: { doc: TripDoc; dv: D
         </div>
         <form className="pool-add" onSubmit={add}>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={kind === 'restaurant' ? `+ Place to eat in ${loc?.name}` : `+ Thing to do in ${loc?.name}`} />
-          {title.trim() && <button className="btn sm primary" type="submit">Add</button>}
+          <button className="btn sm primary" type="submit">Add</button>
         </form>
         <div className="pool-list">
           {items.map((i) => (
@@ -372,9 +372,9 @@ function LanePicker({ doc, dv, lane, locIds, actions, onClose }: { doc: TripDoc;
   return (
     <Modal title={`Add to ${label}, ${fmt(lane.date, { weekday: 'short', day: 'numeric', month: 'short' })}`} onClose={onClose}>
       {locIds[0] && (
-        <form className="row gap" onSubmit={(e) => { e.preventDefault(); if (title.trim()) { actions.quickIdea({ locationId: locIds[0], kind, title: title.trim(), lane }); onClose(); } }}>
+        <form className="row gap" onSubmit={(e) => { e.preventDefault(); onClose(); actions.newIdea({ locationId: locIds[0], kind, title: title.trim(), lane }); }}>
           <input className="grow" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`New ${kind === 'restaurant' ? 'place to eat' : 'thing to do'}…`} autoFocus />
-          <button className="btn primary" disabled={!title.trim()}>Add</button>
+          <button className="btn primary">New…</button>
         </form>
       )}
       <h4>From your ideas</h4>

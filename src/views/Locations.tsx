@@ -3,7 +3,7 @@ import { fmt, fmtShort, addDays } from '../domain/dates';
 import { MEAL_LABEL, SLOT_LABEL } from '../domain/constants';
 import { HUES, PICKER, swatch } from '../domain/colors';
 import type { Derived } from '../domain/derive';
-import type { Item, ItemKind, ItemSize, Location, Stay, TripDoc } from '../domain/types';
+import type { Item, ItemKind, Location, Stay, TripDoc } from '../domain/types';
 import { ItemCard, MapLink } from '../components/ItemCard';
 import { mapsLink } from '../domain/maps';
 import { ConfirmDel, StatusPill, cssVars } from '../components/ui';
@@ -125,24 +125,17 @@ export function LocationPage({ doc, dv, id, actions, plan, onBack }: {
 
 function PoolSection({ title, kind, items, locId, plan, defaultDate, area }: { title: string; kind: ItemKind; items: Item[]; locId: string; plan: PlanActions; defaultDate?: string; area: string }) {
   const [t, setT] = useState('');
-  const [size, setSize] = useState<ItemSize>('half');
   const sorted = [...items].sort((a, b) => Number(!!b.mustDo) - Number(!!a.mustDo) || Number(a.placements.length > 0) - Number(b.placements.length > 0));
   return (
     <section className="lp-sec pool-sec">
       <h3>{title} <span className="muted small">({items.length})</span></h3>
       <form className="pool-add" onSubmit={(e) => {
         e.preventDefault();
-        if (!t.trim()) return;
-        plan.quickIdea({ locationId: locId, kind, title: t.trim(), ...(kind === 'activity' ? { size } : {}) });
+        plan.newIdea({ locationId: locId, kind, title: t.trim() });
         setT('');
       }}>
         <input value={t} onChange={(e) => setT(e.target.value)} placeholder={kind === 'activity' ? '+ Add a thing to do' : '+ Add a place to eat'} />
-        {kind === 'activity' && (
-          <select value={size} onChange={(e) => setSize(e.target.value as ItemSize)} aria-label="How long">
-            <option value="quick">Quick</option><option value="half">½ day</option><option value="full">Full day</option>
-          </select>
-        )}
-        <button className="btn sm primary" disabled={!t.trim()}>Add</button>
+        <button className="btn sm primary">Add</button>
       </form>
       <div className="pool-list">
         {sorted.map((i) => {
