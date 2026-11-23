@@ -116,7 +116,8 @@ export function DayView({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived;
   return (
     <AreaNames.Provider value={areaNames}>
     <DndContext sensors={sensors} collisionDetection={collide} onDragStart={onStart} onDragEnd={onEnd} onDragCancel={() => setDragging(null)}>
-      <div className={'dayview' + (poolOpen ? ' pool-open' : '') + (dragging ? ' is-dragging' : '')}>
+      <div className={'dayview' + (poolOpen ? ' pool-open' : '') + (dragging ? ' is-dragging' : '')}
+        style={x.endLoc ? cssVars({ '--day-c': dv.colorOf(x.endLoc).solid }) : undefined}>
         <DateStrip dv={dv} current={date} onPick={actions.goDay} />
         <div className="dv-body">
           <aside className="pool" aria-label="Ideas">

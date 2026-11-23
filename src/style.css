@@ -382,7 +382,8 @@ main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .cd-marks{display:flex;align-items:center;gap:8px}
 .cd-marks .slots,.slots-key{display:inline-flex;gap:2px}
 .cd-marks .slots i,.slots-key i{display:inline-block;width:14px;height:6px;border-radius:3px;background:var(--line)}
-.cd-marks .slots i.on,.slots-key i.on{background:var(--accent-solid)}
+.cd-marks .slots i.on{background:var(--c2,var(--ink2))}
+.slots-key i.on{background:var(--ink2)}
 .cd-marks .slots i.over{background:var(--warn)}
 .cd-marks .meals,.meals-key{display:inline-flex;gap:3px}
 .cd-marks .meals i,.meals-key i{display:inline-block;width:7px;height:7px;border-radius:50%;border:1.5px solid var(--faint)}
@@ -428,7 +429,7 @@ main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 /* ===== item card ===== */
 .icard{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 6px 6px 9px;cursor:pointer;min-height:44px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .icard:hover{border-color:var(--line2)}
-.icard.full{border-left:4px solid var(--accent)}
+.icard.full{border-left:4px solid var(--day-c,var(--ink2))}
 .icard.dim{opacity:.5}
 .icard.chosen{border-color:var(--good);box-shadow:0 0 0 1px var(--good) inset}
 .icard.done .ic-title{text-decoration:line-through;color:var(--muted)}
@@ -440,7 +441,7 @@ main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .ic-star{color:#e0a100;margin-right:4px}
 .ic-sub{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:11.5px;color:var(--muted)}
 .ic-size{font-weight:650;font-size:10.5px;border-radius:5px;padding:0 5px;background:var(--soft)}
-.ic-size.full{background:var(--accent-bg);color:var(--accent)}
+.ic-size.full{background:var(--soft);color:var(--ink)}
 .ic-pick{border:1.5px solid var(--line2);background:var(--card);border-radius:50%;width:28px;height:28px;cursor:pointer;color:var(--muted);flex:none;font-weight:700}
 .ic-pick.on{background:var(--good);border-color:var(--good);color:#fff}
 .ic-menu{border:0;background:none;cursor:pointer;color:var(--muted);font-size:18px;width:34px;height:34px;border-radius:8px;flex:none}
