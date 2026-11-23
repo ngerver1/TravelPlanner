@@ -111,8 +111,8 @@ export interface ItemDraft {
   elsewhere: string[];
 }
 
-export function ItemForm({ initial, trip, onSave, onDelete, onClose }: {
-  initial: ItemDraft; trip: { start: string; end: string }; onSave: (f: ItemDraft) => void; onDelete: () => void; onClose: () => void;
+export function ItemForm({ initial, trip, onSave, onDelete, onClose, onMove }: {
+  initial: ItemDraft; trip: { start: string; end: string }; onSave: (f: ItemDraft) => void; onDelete: () => void; onClose: () => void; onMove?: () => void;
 }) {
   const [f, setF, bind] = useForm(initial);
   const set = <K extends keyof ItemDraft>(k: K, v: ItemDraft[K]) => setF((p) => ({ ...p, [k]: v }));
@@ -120,7 +120,10 @@ export function ItemForm({ initial, trip, onSave, onDelete, onClose }: {
   const placed = initial.pi >= 0;
   return (
     <Modal title={initial._new ? 'Add idea' : 'Edit'} onClose={onClose}
-      footer={<Footer isNew={initial._new} onDelete={onDelete} onClose={onClose} onSave={() => onSave(f)} disabled={!f.title.trim()} />}>
+      footer={<>
+        {!initial._new && onMove && <button className="btn" onClick={onMove} title="Move to another day, slot or meal (unsaved edits here are discarded)">Move to…</button>}
+        <Footer isNew={initial._new} onDelete={onDelete} onClose={onClose} onSave={() => onSave(f)} disabled={!f.title.trim()} />
+      </>}>
       <div className="grid2">
         <Field label="Title" span><input {...bind('title')} autoFocus={initial._new && !initial.title} /></Field>
         <Field label="Type" span>

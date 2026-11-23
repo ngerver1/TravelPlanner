@@ -1,7 +1,7 @@
 // Placing items on days: lanes (slots, meals, unslotted), moves, swaps, ordering and slot capacity.
 // All operations mutate the given (draft) document.
 import type { Item, Meal, Placement, Slot, TripDoc } from './types';
-import { SLOTS } from './constants';
+import { SLOTS, mealFromTime, slotFromTime } from './constants';
 
 /** A lane on a day: a slot (activities), a meal (restaurants), or neither = "on this day, no slot yet". */
 export interface Lane { date: string; slot?: Slot; meal?: Meal }
@@ -39,6 +39,8 @@ function insertAt(doc: TripDoc, target: Placement, lane: Lane, index?: number) {
   target.date = lane.date;
   if (lane.meal) { target.meal = lane.meal; delete target.slot; }
   else { delete target.meal; delete target.chosen; if (lane.slot) target.slot = lane.slot; else delete target.slot; }
+  // A fixed time that no longer fits the new slot or meal is dropped (e.g. 13:00 moved to evening).
+  if (target.time && ((lane.slot && slotFromTime(target.time) !== lane.slot) || (lane.meal && mealFromTime(target.time) !== lane.meal))) delete target.time;
   const i = index == null || index < 0 || index > others.length ? others.length : index;
   others.splice(i, 0, target);
   renumber(others);

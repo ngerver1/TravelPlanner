@@ -52,7 +52,7 @@ In **Day** view, the ideas for that day's location sit beside the day (on a phon
 - **Drop onto another item** to swap them (half-day and full-day things), or to put it just before it.
 - **Drop onto a date** in the strip at the top to move it to that day.
 - **Drop back onto the ideas** to take it off the day. Nothing is deleted.
-- Don't want to drag? Use **+** on a slot or meal, or **⋯** on any item ("Move to…").
+- Don't want to drag? Use **+** on a slot or meal, or the **⇄ Move** button on any item. **⋯** (or tapping the item) opens the full editor.
 - Adding an idea (on a location page, in the ideas list, or with **+**) opens the full editor, already filled in; nothing is added until you press **Save**.
 - Every move shows a message with **Undo** (the last 20 changes can be undone).
 - A full-day item fills morning and afternoon; a slot with too much in it is marked

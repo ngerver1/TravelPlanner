@@ -146,3 +146,15 @@ describe('day stops', () => {
     expect(dayStops(d, D1).map((e) => e.item.id)).toEqual(['b', 'm', 'l2', 'a', 'e', 'u']);
   });
 });
+
+describe('times when moving', () => {
+  it('drops a time that no longer fits the new slot, keeps one that does', () => {
+    const d = trip(act('a'), act('b'));
+    d.items[0].placements = [{ date: D1, slot: 'afternoon', order: 0, time: '13:00' }];
+    d.items[1].placements = [{ date: D1, slot: 'evening', order: 0, time: '19:00' }];
+    placeAt(d, { itemId: 'a', pi: 0 }, { date: D1, slot: 'evening' });
+    placeAt(d, { itemId: 'b', pi: 0 }, { date: D2, slot: 'evening' });
+    expect(d.items[0].placements[0].time).toBeUndefined();
+    expect(d.items[1].placements[0].time).toBe('19:00');
+  });
+});

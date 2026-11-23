@@ -273,7 +273,7 @@ function DnDCard({ entry, actions, dim }: { entry: Entry; actions: PlanActions; 
     <div ref={setRef} {...drag.attributes} {...drag.listeners} className={'dnd' + (drag.isDragging ? ' dragging' : '') + (drop.isOver ? ' over' : '')}>
       <ItemCard item={entry.item} placement={entry.placement} className={entry.item.size === 'full' ? 'full' : ''} dim={dim} area={area}
         onOpen={() => actions.editItem(entry.item, entry.pi)} onStatus={(s) => actions.patchItem(entry.item.id, { status: s })}
-        onMenu={() => actions.moveMenu(entry.item, entry.pi)}
+        onMove={() => actions.moveMenu(entry.item, entry.pi)}
         onChosen={entry.placement.meal ? () => actions.setChosen(ref, !entry.placement.chosen) : undefined} />
     </div>
   );
@@ -284,7 +284,7 @@ function PoolCard({ item, extra, actions, date }: { item: Item; extra?: ReactNod
   return (
     <div ref={drag.setNodeRef} {...drag.attributes} {...drag.listeners} className={'dnd' + (drag.isDragging ? ' dragging' : '')}>
       <ItemCard item={item} extra={extra} area={useContext(AreaNames).get(item.locationId)} onOpen={() => actions.editItem(item, -1)} onStatus={(s) => actions.patchItem(item.id, { status: s })}
-        onMenu={() => actions.moveMenu(item, -1, date)} />
+        onMove={() => actions.moveMenu(item, -1, date)} />
     </div>
   );
 }

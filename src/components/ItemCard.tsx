@@ -9,8 +9,8 @@ export const sizeLabel = (it: Item) =>
   it.kind !== 'activity' ? '' : it.size === 'full' ? (it.includesEvening ? 'Full day + eve' : 'Full day') : it.size === 'half' ? '½ day' : '';
 
 /** One item as a compact card. Used in day lanes, the ideas list and location pages. */
-export function ItemCard({ item, placement, onOpen, onStatus, onMenu, onChosen, dim, extra, className, area }: {
-  item: Item; placement?: Placement; onOpen: () => void; onStatus: (s: Status) => void; onMenu?: () => void;
+export function ItemCard({ item, placement, onOpen, onStatus, onMove, onChosen, dim, extra, className, area }: {
+  item: Item; placement?: Placement; onOpen: () => void; onStatus: (s: Status) => void; onMove?: () => void;
   onChosen?: () => void; dim?: boolean; extra?: ReactNode; className?: string; area?: string;
 }) {
   const size = sizeLabel(item);
@@ -42,10 +42,14 @@ export function ItemCard({ item, placement, onOpen, onStatus, onMenu, onChosen, 
       <span onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
         <StatusPill small value={item.status} onChange={onStatus} />
       </span>
-      {onMenu && (
-        <button type="button" className="ic-menu" aria-label="Move to…" title="Move to…"
-          onClick={(e) => { e.stopPropagation(); onMenu(); }} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>⋯</button>
+      {onMove && (
+        <button type="button" className="ic-menu" aria-label="Move to another day or slot" title="Move to…"
+          onClick={(e) => { e.stopPropagation(); onMove(); }} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 5h9M9.5 2.5 12 5 9.5 7.5M13 11H4M6.5 8.5 4 11l2.5 2.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </button>
       )}
+      <button type="button" className="ic-menu" aria-label="Edit" title="Edit"
+        onClick={(e) => { e.stopPropagation(); onOpen(); }} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>⋯</button>
     </div>
   );
 }

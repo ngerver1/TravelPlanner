@@ -395,7 +395,8 @@ export default function App() {
 
       {modal?.type === 'flight' && <FlightForm initial={modal.v} onClose={close} onSave={saveFlight} onDelete={() => delEntity('flights', modal.v.id)} />}
       {modal?.type === 'stay' && <StayForm initial={modal.v} onClose={close} onSave={saveStay} onDelete={() => delEntity('stays', modal.v.id)} />}
-      {modal?.type === 'item' && <ItemForm initial={modal.v} trip={doc.trip} onClose={close} onSave={saveItem} onDelete={() => delEntity('items', modal.v.id)} />}
+      {modal?.type === 'item' && <ItemForm initial={modal.v} trip={doc.trip} onClose={close} onSave={saveItem} onDelete={() => delEntity('items', modal.v.id)}
+        onMove={() => setModal({ type: 'move', itemId: modal.v.id, pi: modal.v.pi, date: modal.v.date || undefined })} />}
       {modal?.type === 'move' && moveItem && (
         <MoveSheet item={moveItem} pi={modal.pi} dates={dv.dates} defaultDate={modal.date || dayDate} onClose={close}
           onEdit={() => setModal({ type: 'item', v: itemDraft(doc, moveItem, modal.pi) })}
