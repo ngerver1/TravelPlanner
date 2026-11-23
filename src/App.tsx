@@ -15,6 +15,7 @@ import { Modal } from './components/ui';
 import { DayForm, FlightForm, ItemForm, RangeLocForm, StayForm, type FlightDraft, type ItemDraft, type RangeDraft, type StayDraft } from './components/forms';
 import { FlightsPanel, StaysPanel, type PanelActions } from './components/panels';
 import { MoveSheet } from './components/MoveSheet';
+import { ItemView } from './components/ItemView';
 import { TripSettings } from './components/TripSettings';
 import { SyncChip } from './components/SyncChip';
 import { useSync } from './sync/useSync';
@@ -36,6 +37,7 @@ type ModalState =
   | { type: 'day'; date: string }
   | { type: 'outday'; date: string }
   | { type: 'move'; itemId: string; pi: number; date?: string }
+  | { type: 'view'; itemId: string; pi: number }
   | { type: 'relocate'; itemId: string; ids: string[] }
   | null;
 
@@ -186,6 +188,7 @@ export default function App() {
     editDay: (d) => setModal({ type: 'day', date: d }),
     addStay, editStay, patchStay, editFlight, patchFlight,
     editItem: (it, pi) => setModal({ type: 'item', v: itemDraft(doc, it, pi) }),
+    viewItem: (it, pi) => setModal({ type: 'view', itemId: it.id, pi }),
     // New ideas always open the full editor (prefilled); nothing is added until Save.
     newIdea: ({ locationId, kind, title, lane }) => setModal({ type: 'item', v: {
       _new: true, id: uid(), kind, title: title || '', locationName: locationName(doc, locationId), category: 'activity', size: 'half', includesEvening: false,
@@ -395,7 +398,7 @@ export default function App() {
         {page === 'stays' && <div className="page"><h2 className="page-h">Stays</h2>{dv.overlaps.length > 0 && warnings}<StaysPanel dv={dv} actions={panelActions} /></div>}
         {page === 'flights' && <div className="page"><h2 className="page-h">Flights</h2><FlightsPanel dv={dv} actions={panelActions} /></div>}
         {page === 'costs' && <CostsPage doc={doc} dv={dv} update={update} onOpen={(ref) => {
-          if (ref.type === 'stay') editStay(ref.stay); else if (ref.type === 'flight') editFlight(ref.flight); else plan.editItem(ref.item, ref.pi);
+          if (ref.type === 'stay') editStay(ref.stay); else if (ref.type === 'flight') editFlight(ref.flight); else plan.viewItem(ref.item, ref.pi);
         }} />}
         {page === 'settings' && <SettingsPage doc={doc} toast={toast} theme={theme} onTheme={setTheme} sync={sync} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
       </main>
@@ -421,6 +424,18 @@ export default function App() {
           onUnplace={() => { close(); drop({ itemId: moveItem.id, pi: modal.pi }, { type: 'pool' }); }}
           onMove={(lane) => { close(); drop({ itemId: moveItem.id, pi: modal.pi }, { type: 'lane', lane }); }} />
       )}
+      {modal?.type === 'view' && (() => {
+        const it = doc.items.find((i) => i.id === modal.itemId);
+        if (!it) return null;
+        const l = dv.locById.get(it.locationId);
+        return (
+          <ItemView item={it} location={l ? { id: l.id, name: l.name } : undefined} colorOf={dv.colorOf} onClose={close}
+            onEdit={() => setModal({ type: 'item', v: itemDraft(doc, it, modal.pi) })}
+            onMove={() => setModal({ type: 'move', itemId: it.id, pi: modal.pi })}
+            onStatus={(s) => plan.patchItem(it.id, { status: s })}
+            onGoDay={(d) => { close(); goDay(d); }} />
+        );
+      })()}
       {modal?.type === 'relocate' && (() => {
         const it = doc.items.find((i) => i.id === modal.itemId);
         if (!it) return null;

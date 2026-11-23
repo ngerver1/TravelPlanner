@@ -141,7 +141,7 @@ function PoolSection({ title, kind, items, locId, plan, defaultDate, area }: { t
         {sorted.map((i) => {
           const where = placedLabel(i);
           return (
-            <ItemCard key={i.id} item={i} area={area} onOpen={() => plan.editItem(i, -1)} onStatus={(s) => plan.patchItem(i.id, { status: s })}
+            <ItemCard key={i.id} item={i} area={area} onOpen={() => plan.viewItem(i, -1)} onEdit={() => plan.editItem(i, -1)} onStatus={(s) => plan.patchItem(i.id, { status: s })}
               onMove={() => plan.moveMenu(i, kind === 'activity' && i.placements.length ? 0 : -1, defaultDate)}
               extra={where.length
                 ? <button type="button" className="ic-used link" onClick={(e) => { e.stopPropagation(); plan.goDay(i.placements[0].date); }}>{where.join(', ')}</button>

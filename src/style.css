@@ -617,3 +617,17 @@ a.btn{text-decoration:none;color:inherit}
   .cost-lines .pill{display:none}
   .bottombar button{font-size:10px}
 }
+
+/* item view */
+.iv-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.iv-icon{font-size:20px}
+.iv-flag{font-size:12px;font-weight:650;border-radius:6px;padding:1px 7px;background:var(--soft)}
+.iv-links{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.iv-links .btn{min-height:40px}
+.iv-rows{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.iv-row{display:grid;grid-template-columns:90px minmax(0,1fr);gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.iv-l{color:var(--muted);font-size:12.5px;padding-top:1px}
+.iv-v{min-width:0;overflow-wrap:anywhere}
+.iv-v a{color:var(--accent)}
+.iv-days{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.iv-url{word-break:break-all}

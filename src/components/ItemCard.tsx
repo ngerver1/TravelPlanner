@@ -10,8 +10,8 @@ export const sizeLabel = (it: Item) =>
   it.kind !== 'activity' ? '' : it.size === 'full' ? (it.includesEvening ? 'Full day + eve' : 'Full day') : it.size === 'half' ? '½ day' : '';
 
 /** One item as a compact card. Used in day lanes, the ideas list and location pages. */
-export function ItemCard({ item, placement, onOpen, onStatus, onMove, onChosen, dim, extra, className, area }: {
-  item: Item; placement?: Placement; onOpen: () => void; onStatus: (s: Status) => void; onMove?: () => void;
+export function ItemCard({ item, placement, onOpen, onEdit, onStatus, onMove, onChosen, dim, extra, className, area }: {
+  item: Item; placement?: Placement; onOpen: () => void; onEdit?: () => void; onStatus: (s: Status) => void; onMove?: () => void;
   onChosen?: () => void; dim?: boolean; extra?: ReactNode; className?: string; area?: string;
 }) {
   const size = sizeLabel(item);
@@ -51,7 +51,7 @@ export function ItemCard({ item, placement, onOpen, onStatus, onMove, onChosen, 
         </button>
       )}
       <button type="button" className="ic-menu" aria-label="Edit" title="Edit"
-        onClick={(e) => { e.stopPropagation(); onOpen(); }} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>⋯</button>
+        onClick={(e) => { e.stopPropagation(); (onEdit ?? onOpen)(); }} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>⋯</button>
     </div>
   );
 }

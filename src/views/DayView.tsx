@@ -24,6 +24,8 @@ export interface PlanActions {
   editFlight: (f: Flight) => void;
   patchFlight: (id: string, p: Partial<Flight>) => void;
   editItem: (it: Item, pi: number) => void;
+  /** Read-only view with clickable links. */
+  viewItem: (it: Item, pi: number) => void;
   /** Open the editor for a new idea (prefilled). */
   newIdea: (p: { locationId?: string; kind: ItemKind; title?: string; lane?: Lane }) => void;
   patchItem: (id: string, p: Partial<Item>) => void;
@@ -253,7 +255,7 @@ function LaneBox({ lane, label, hint, doc, actions, onAdd, warn, ghosts, compact
         <button type="button" className="lane-add" onClick={() => onAdd(lane)} aria-label={`Add to ${label}`}>+</button>
       </div>
       <div className="lane-items">
-        {ghosts?.map((g) => <div key={'g' + g.item.id} className="icard ghost" onClick={() => actions.editItem(g.item, g.pi)}>↑ {g.item.title} <span className="muted">(full day)</span></div>)}
+        {ghosts?.map((g) => <div key={'g' + g.item.id} className="icard ghost" onClick={() => actions.viewItem(g.item, g.pi)}>↑ {g.item.title} <span className="muted">(full day)</span></div>)}
         {entries.map((e) => (
           <DnDCard key={e.item.id + ':' + e.pi} entry={e} actions={actions} dim={anyChosen && !e.placement.chosen} />
         ))}
@@ -272,7 +274,7 @@ function DnDCard({ entry, actions, dim }: { entry: Entry; actions: PlanActions; 
   return (
     <div ref={setRef} {...drag.attributes} {...drag.listeners} className={'dnd' + (drag.isDragging ? ' dragging' : '') + (drop.isOver ? ' over' : '')}>
       <ItemCard item={entry.item} placement={entry.placement} className={entry.item.size === 'full' ? 'full' : ''} dim={dim} area={area}
-        onOpen={() => actions.editItem(entry.item, entry.pi)} onStatus={(s) => actions.patchItem(entry.item.id, { status: s })}
+        onOpen={() => actions.viewItem(entry.item, entry.pi)} onEdit={() => actions.editItem(entry.item, entry.pi)} onStatus={(s) => actions.patchItem(entry.item.id, { status: s })}
         onMove={() => actions.moveMenu(entry.item, entry.pi)}
         onChosen={entry.placement.meal ? () => actions.setChosen(ref, !entry.placement.chosen) : undefined} />
     </div>
@@ -283,7 +285,7 @@ function PoolCard({ item, extra, actions, date }: { item: Item; extra?: ReactNod
   const drag = useDraggable({ id: `pool:${item.id}` });
   return (
     <div ref={drag.setNodeRef} {...drag.attributes} {...drag.listeners} className={'dnd' + (drag.isDragging ? ' dragging' : '')}>
-      <ItemCard item={item} extra={extra} area={useContext(AreaNames).get(item.locationId)} onOpen={() => actions.editItem(item, -1)} onStatus={(s) => actions.patchItem(item.id, { status: s })}
+      <ItemCard item={item} extra={extra} area={useContext(AreaNames).get(item.locationId)} onOpen={() => actions.viewItem(item, -1)} onEdit={() => actions.editItem(item, -1)} onStatus={(s) => actions.patchItem(item.id, { status: s })}
         onMove={() => actions.moveMenu(item, -1, date)} />
     </div>
   );
