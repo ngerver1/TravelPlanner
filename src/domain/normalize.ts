@@ -1,15 +1,16 @@
 // Coerce anything (stored or imported) into a valid v2 TripDoc. Never throws.
 import { isDate, isTime } from './dates';
 import { uid } from './ids';
+import { isCurrency, parseCost } from './money';
 import { CATEGORIES, MEALS, SIZES, SLOTS, STATUSES } from './constants';
 import type {
-  ActivityCategory, DayOverride, Flight, Item, Location, Meal, Place, Placement, Slot, Status, Stay, TransportLeg, TripDoc,
+  ActivityCategory, DayOverride, Flight, Item, Location, Meal, Money, Place, Placement, Rates, Slot, Status, Stay, TransportLeg, TripDoc,
 } from './types';
 
 export function emptyDoc(): TripDoc {
   return {
     schema: 2, rev: 0, updatedAt: 0,
-    trip: { name: 'My trip', start: '', end: '' },
+    trip: { name: 'My trip', start: '', end: '', currency: 'AUD', people: 1 },
     locations: [], days: {}, items: [], flights: [], stays: [], legs: [],
   };
 }
@@ -21,6 +22,15 @@ export const str = (v: unknown) => (v == null ? '' : String(v));
 const optStr = (v: unknown) => (str(v).trim() ? str(v) : undefined);
 export const status = (v: unknown): Status => (STATUSES.includes(v as Status) ? (v as Status) : 'idea');
 const num = (v: unknown) => (typeof v === 'number' && isFinite(v) ? v : undefined);
+
+export function normMoney(v: unknown): Money | undefined {
+  if (!obj(v)) return undefined;
+  const amount = num(v.amount);
+  if (amount == null || amount < 0 || !isCurrency(v.currency)) return undefined;
+  const m: Money = { amount, currency: v.currency };
+  if (v.perPerson === true) m.perPerson = true;
+  return m;
+}
 
 export function normPlace(v: unknown): Place | undefined {
   if (!obj(v)) return undefined;
@@ -73,10 +83,20 @@ export function normalizeDoc(raw: unknown): TripDoc {
       name: str(t.name) || base.trip.name,
       start: isDate(t.start) ? t.start : '',
       end: isDate(t.end) ? t.end : '',
+      currency: isCurrency(t.currency) ? t.currency : 'AUD',
+      people: Math.min(50, Math.max(1, Math.floor(num(t.people) ?? 1))),
     },
     locations: [], days: {}, items: [], flights: [], stays: [], legs: [],
   };
   if (doc.trip.start && doc.trip.end && doc.trip.end < doc.trip.start) doc.trip.end = doc.trip.start;
+  const home = doc.trip.currency!;
+  if (obj(raw.rates) && isCurrency(raw.rates.base) && obj(raw.rates.rates)) {
+    const r: Rates = { base: raw.rates.base, date: str(raw.rates.date), rates: {} };
+    for (const [k, v] of Object.entries(raw.rates.rates)) if (isCurrency(k) && typeof v === 'number' && v > 0 && isFinite(v)) r.rates[k] = v;
+    const manual = arr(raw.rates.manual).filter(isCurrency);
+    if (manual.length) r.manual = manual;
+    doc.rates = r;
+  }
 
   const seen = new Set<string>();
   for (const l of arr(raw.locations)) {
@@ -102,7 +122,7 @@ export function normalizeDoc(raw: unknown): TripDoc {
     }
   }
 
-  for (const f of arr(raw.flights)) if (obj(f)) doc.flights.push(normFlight(f));
+  for (const f of arr(raw.flights)) if (obj(f)) { const fl = normFlight(f); const p = normMoney(f.price); if (p) fl.price = p; doc.flights.push(fl); }
 
   for (const s of arr(raw.stays)) {
     if (!obj(s)) continue;
@@ -122,6 +142,8 @@ export function normalizeDoc(raw: unknown): TripDoc {
     };
     const lid = locOk(s.locationId);
     if (lid) stay.locationId = lid;
+    const price = normMoney(s.price) ?? (stay.cost.trim() ? parseCost(stay.cost, home) : null);
+    if (price) { stay.price = price; if (!s.price) stay.cost = ''; }
     const place = normPlace(s.place);
     if (place) stay.place = place;
     doc.stays.push(stay);
@@ -151,7 +173,8 @@ export function normalizeDoc(raw: unknown): TripDoc {
     if (place) item.place = place;
     if (optStr(i.link)) item.link = str(i.link);
     if (optStr(i.notes)) item.notes = str(i.notes);
-    if (optStr(i.cost)) item.cost = str(i.cost);
+    const price = normMoney(i.price) ?? (optStr(i.cost) ? parseCost(str(i.cost), home) : null);
+    if (price) item.price = price;
     if (i.mustDo === true) item.mustDo = true;
     if (i.done === true) item.done = true;
     if (kind === 'activity') {

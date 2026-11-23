@@ -123,6 +123,27 @@ No Google account or key needed for any of this:
   in order (breakfast, morning, lunch, afternoon, dinner, evening) → tonight's stay. Google Maps
   takes up to 9 stops in between.
 
+## Costs
+
+- **Prices:** stays, flights, things to do and places to eat each have an optional **amount and currency**
+  (in their editors). Flights, things to do and food can be **per person**; stays are for the whole stay.
+- **💰 Costs** (bottom bar) shows:
+  - the **trip total** in your home currency, split into booked / planned / idea;
+  - totals **by type** (stays, flights, things to do, food) and **by location**;
+  - every costed thing, with its original price;
+  - what has **no cost yet**, and ideas not on a day (not counted).
+  - **Download CSV** gives a spreadsheet of everything in the total.
+- **Home currency and travellers** are set at the top of the Costs page. "Per person" prices are
+  multiplied by the number of travellers.
+- **Exchange rates** come from the European Central Bank's daily reference rates (via Frankfurter, free,
+  no key, nothing personal sent). They're fetched when a new currency appears, or with **Update rates**.
+  You can type your own rate over any of them (e.g. what your card actually charged); yours are kept
+  when rates update. Rates are saved with the trip, so they sync to your other devices.
+- **What counts:** stays, flights, things to do that are on a day, and places to eat on days where
+  they're the pick (or the only option for that meal).
+- Old text costs (like "HK$4,200" on a v1 stay) were converted to amounts automatically; anything that
+  couldn't be read is kept as a note in the stay's editor.
+
 ## Moving your trip over from v1
 
 1. In the old (v1) planner, click **⇅ Backup → Export JSON** and save the file.

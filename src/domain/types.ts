@@ -11,7 +11,9 @@ export interface TripDoc {
   schema: 2;
   rev: number;
   updatedAt: number;
-  trip: { name: string; start: string; end: string }; // YYYY-MM-DD ('' until set)
+  trip: { name: string; start: string; end: string; currency?: string; people?: number }; // dates YYYY-MM-DD ('' until set); currency = home currency for cost totals
+  /** Exchange rates for cost totals: 1 unit of `base` = rates[X] units of X. */
+  rates?: Rates;
   locations: Location[];
   days: Record<string, DayOverride>; // keyed by date, may sit outside the trip range
   items: Item[];
@@ -19,6 +21,9 @@ export interface TripDoc {
   stays: Stay[];
   legs: TransportLeg[]; // phase 4; always present so it slots in without a migration
 }
+
+export interface Money { amount: number; currency: string; perPerson?: boolean }
+export interface Rates { base: string; date: string; rates: Record<string, number>; manual?: string[] }
 
 export interface Location {
   id: string;
@@ -50,8 +55,7 @@ export interface Item {
   place?: Place;
   link?: string;
   notes?: string;
-  /** Free text, e.g. "¥3,000 pp". */
-  cost?: string;
+  price?: Money;
   status: Status;
   mustDo?: boolean;
   done?: boolean;
@@ -88,6 +92,7 @@ export interface Flight {
   status: Status;
   conf: string;
   notes: string;
+  price?: Money;
 }
 
 export interface Stay {
@@ -102,7 +107,9 @@ export interface Stay {
   checkOutTime: string;
   status: Status;
   conf: string;
+  /** Old free-text cost that couldn't be read as an amount (kept as a note). */
   cost: string;
+  price?: Money;
   link: string;
   notes: string;
 }

@@ -185,5 +185,5 @@ export function readTripFile(raw: unknown): { doc: TripDoc; from: FileKind } {
   if (raw.schema === 2) return { doc: normalizeDoc(raw), from: 'v2' };
   if (typeof raw.schema === 'number' && raw.schema > 2) throw new Error(`This file is from a newer version of the app (schema ${raw.schema}).`);
   if (!obj(raw.trip)) throw new Error('Not a trip file (no "trip" section).');
-  return { doc: migrateV1(normalizeV1(raw)), from: 'v1' };
+  return { doc: normalizeDoc(migrateV1(normalizeV1(raw))), from: 'v1' };
 }

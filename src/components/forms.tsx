@@ -6,6 +6,7 @@ import type { DayInfo } from '../domain/derive';
 import { ConfirmDel, Field, Modal, Seg, StatusSelect, useForm } from './ui';
 import { LocationSelect } from './LocationSelect';
 import { parseMapsUrl } from '../domain/maps';
+import { MoneyField, type MoneyDraft } from './MoneyField';
 
 const Footer = ({ isNew, onDelete, onClose, onSave, disabled, deleteLabel }: {
   isNew?: boolean; onDelete: () => void; onClose: () => void; onSave: () => void; disabled?: boolean; deleteLabel?: string;
@@ -19,7 +20,7 @@ const Footer = ({ isNew, onDelete, onClose, onSave, disabled, deleteLabel }: {
 );
 
 // ---------- flight ----------
-export type FlightDraft = Flight & { _new?: boolean };
+export type FlightDraft = Flight & { _new?: boolean; priceDraft: MoneyDraft };
 
 export function FlightForm({ initial, onSave, onDelete, onClose }: {
   initial: FlightDraft; onSave: (f: FlightDraft) => void; onDelete: () => void; onClose: () => void;
@@ -43,6 +44,7 @@ export function FlightForm({ initial, onSave, onDelete, onClose }: {
         <Field label="Arrival time (local)"><TimeInput {...bind('arrTime')} /></Field>
         <Field label="Status" span><StatusSelect value={f.status} onChange={(s) => setF((p) => ({ ...p, status: s }))} /></Field>
         <Field label="Confirmation #"><input {...bind('conf')} /></Field>
+        <MoneyField label="Price (optional)" value={f.priceDraft} onChange={(v) => setF((p) => ({ ...p, priceDraft: v }))} />
         <Field label="Notes" span><textarea rows={2} {...bind('notes')} /></Field>
       </div>
     </Modal>
@@ -50,7 +52,7 @@ export function FlightForm({ initial, onSave, onDelete, onClose }: {
 }
 
 // ---------- stay ----------
-export type StayDraft = Omit<Stay, 'locationId' | 'place'> & { locationName: string; mapsUrl: string; _new?: boolean };
+export type StayDraft = Omit<Stay, 'locationId' | 'place' | 'price'> & { locationName: string; mapsUrl: string; priceDraft: MoneyDraft; _new?: boolean };
 
 export function StayForm({ initial, onSave, onDelete, onClose }: {
   initial: StayDraft; onSave: (s: StayDraft) => void; onDelete: () => void; onClose: () => void;
@@ -71,7 +73,8 @@ export function StayForm({ initial, onSave, onDelete, onClose }: {
         <Field label="Check-out time (optional)"><TimeInput {...bind('checkOutTime')} /></Field>
         <Field label="Status" span><StatusSelect value={f.status} onChange={(s) => setF((p) => ({ ...p, status: s }))} /></Field>
         <Field label="Confirmation #"><input {...bind('conf')} /></Field>
-        <Field label="Cost"><input {...bind('cost')} /></Field>
+        <MoneyField label="Price for the whole stay (optional)" allowPerPerson={false} value={f.priceDraft} onChange={(v) => setF((p) => ({ ...p, priceDraft: v }))}
+          hint={f.cost ? `Old note: ${f.cost}` : undefined} />
         <Field label="Link" span><input {...bind('link')} placeholder="https://" inputMode="url" /></Field>
         <Field label="Notes" span><textarea rows={2} {...bind('notes')} /></Field>
       </div>
@@ -91,7 +94,7 @@ export interface ItemDraft {
   includesEvening: boolean;
   meals: Meal[];
   cuisine: string;
-  cost: string;
+  price: MoneyDraft;
   booking: string;
   status: Status;
   mustDo: boolean;
@@ -159,7 +162,7 @@ export function ItemForm({ initial, trip, onSave, onDelete, onClose, onMove }: {
           <Field label="Cuisine"><input {...bind('cuisine')} /></Field>
           <Field label="Booking"><input {...bind('booking')} placeholder="e.g. booked 19:00, ref 1234" /></Field>
         </>)}
-        <Field label="Cost (optional)" hint="Free text, e.g. ¥3,000 pp"><input {...bind('cost')} /></Field>
+        <MoneyField label="Cost (optional)" value={f.price} onChange={(v) => set('price', v)} hint={f.kind === 'restaurant' ? 'Roughly what a meal costs' : undefined} />
         <Field label="Location" hint="Whose list of ideas it belongs to"><LocationSelect {...bind('locationName')} emptyLabel="— Choose —" /></Field>
         <MapsLinkField value={f.mapsUrl} onChange={(url, parsed) => setF((p) => ({
           ...p, mapsUrl: url,

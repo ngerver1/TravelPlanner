@@ -7,8 +7,8 @@ import { Seg } from '../components/ui';
 import { SyncSettings } from './SyncSettings';
 import type { Sync } from '../sync/useSync';
 
-export function downloadJson(filename: string, json: string) {
-  const blob = new Blob([json], { type: 'application/json' });
+export function downloadJson(filename: string, json: string, type = 'application/json') {
+  const blob = new Blob([json], { type });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

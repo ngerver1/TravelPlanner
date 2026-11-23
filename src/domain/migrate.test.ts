@@ -44,7 +44,7 @@ describe('v1 migration', () => {
   it('detects a v1 file and produces schema 2', () => {
     expect(from).toBe('v1');
     expect(doc.schema).toBe(2);
-    expect(doc.trip).toEqual(V1_FILE.trip);
+    expect(doc.trip).toMatchObject(V1_FILE.trip);
   });
 
   it('creates one location per distinct name (case-insensitive) plus Unassigned', () => {
@@ -94,7 +94,7 @@ describe('v1 migration', () => {
     ]);
     expect(item('i1')).toMatchObject({ status: 'idea', notes: 'n1', link: 'https://l1' });
     expect(item('i3').status).toBe('booked');
-    expect(doc.stays.find((s) => s.id === 's1')).toMatchObject({ conf: 'H1', cost: 'HK$2,000', link: 'https://example.com', notes: 'quiet room', address: '1 Road' });
+    expect(doc.stays.find((s) => s.id === 's1')).toMatchObject({ conf: 'H1', price: { amount: 2000, currency: 'HKD' }, cost: '', link: 'https://example.com', notes: 'quiet room', address: '1 Road' });
   });
 
   it('derives the same day locations v1 showed', () => {

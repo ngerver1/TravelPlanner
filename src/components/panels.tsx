@@ -4,6 +4,7 @@ import type { Flight, Stay, Status } from '../domain/types';
 import { LocChip, StatusPill } from './ui';
 import { MapLink } from './ItemCard';
 import { mapsLink } from '../domain/maps';
+import { fmtPrice } from '../domain/money';
 
 export interface PanelActions {
   addStay: (from?: string, to?: string) => void;
@@ -49,9 +50,9 @@ export function StaysPanel({ dv, actions }: { dv: Derived; actions: PanelActions
             <span>{locOf(s) ? <LocChip loc={locOf(s)} colorOf={colorOf} size="sm" /> : 'No location'}</span>
             <span>{fmtShort(s.checkIn)} → {fmtShort(s.checkOut)} · {nightsOf(s)} night{nightsOf(s) === 1 ? '' : 's'} <MapLink href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, locOf(s)?.name)} pinned={!!s.place?.mapsUrl} /></span>
           </div>
-          {(s.cost || s.conf || s.link) && (
+          {(s.price || s.cost || s.conf || s.link) && (
             <div className="card-row small muted">
-              <span>{[s.cost, s.conf && `#${s.conf}`].filter(Boolean).join(' · ')}</span>
+              <span>{[s.price ? fmtPrice(s.price) : s.cost, s.conf && `#${s.conf}`].filter(Boolean).join(' · ')}</span>
               {s.link && <a href={s.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="lnk">link ↗</a>}
             </div>
           )}
@@ -74,7 +75,7 @@ export function FlightsPanel({ dv, actions }: { dv: Derived; actions: PanelActio
             <span>{f.airline}</span>
             <span>{fmtLong(f.depDate)} {f.depTime} → {f.arrDate && f.arrDate !== f.depDate ? fmtShort(f.arrDate) + ' ' : ''}{f.arrTime}</span>
           </div>
-          {f.conf && <div className="card-row small muted"><span>#{f.conf}</span></div>}
+          {(f.conf || f.price) && <div className="card-row small muted"><span>{[f.price && fmtPrice(f.price), f.conf && `#${f.conf}`].filter(Boolean).join(' · ')}</span></div>}
         </div>
       ))}
     </div>

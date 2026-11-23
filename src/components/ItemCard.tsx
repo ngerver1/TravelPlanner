@@ -3,6 +3,7 @@ import { CATEGORIES, RESTAURANT_ICON } from '../domain/constants';
 import type { Item, Placement, Status } from '../domain/types';
 import { StatusPill } from './ui';
 import { mapsLink } from '../domain/maps';
+import { fmtPrice } from '../domain/money';
 
 export const itemIcon = (it: Item) => (it.kind === 'restaurant' ? RESTAURANT_ICON : CATEGORIES[it.category || 'other'].icon);
 export const sizeLabel = (it: Item) =>
@@ -28,7 +29,7 @@ export function ItemCard({ item, placement, onOpen, onStatus, onMove, onChosen, 
           <span className="ic-sub">
             <MapLink href={mapsLink(item.place, item.title, area)} pinned={!!item.place?.mapsUrl || item.place?.lat != null} />
             {size && <span className={'ic-size ' + item.size}>{size}</span>}
-            {item.cost && <span className="ic-cost">{item.cost}</span>}
+            {item.price && <span className="ic-cost">{fmtPrice(item.price)}</span>}
             {item.place?.name && item.place.name !== item.title && <span className="ic-place">{item.place.name}</span>}
             {extra}
           </span>
