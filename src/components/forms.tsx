@@ -91,6 +91,7 @@ export interface ItemDraft {
   includesEvening: boolean;
   meals: Meal[];
   cuisine: string;
+  cost: string;
   booking: string;
   status: Status;
   mustDo: boolean;
@@ -158,6 +159,7 @@ export function ItemForm({ initial, trip, onSave, onDelete, onClose, onMove }: {
           <Field label="Cuisine"><input {...bind('cuisine')} /></Field>
           <Field label="Booking"><input {...bind('booking')} placeholder="e.g. booked 19:00, ref 1234" /></Field>
         </>)}
+        <Field label="Cost (optional)" hint="Free text, e.g. ¥3,000 pp"><input {...bind('cost')} /></Field>
         <Field label="Location" hint="Whose list of ideas it belongs to"><LocationSelect {...bind('locationName')} emptyLabel="— Choose —" /></Field>
         <MapsLinkField value={f.mapsUrl} onChange={(url, parsed) => setF((p) => ({
           ...p, mapsUrl: url,

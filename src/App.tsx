@@ -66,7 +66,7 @@ function itemDraft(doc: TripDoc, it: Item, pi: number): ItemDraft {
   return {
     id: it.id, kind: it.kind, title: it.title, locationName: locationName(doc, it.locationId),
     category: it.category || 'other', size: it.size || 'half', includesEvening: !!it.includesEvening,
-    meals: it.meals || [], cuisine: it.cuisine || '', booking: it.booking || '',
+    meals: it.meals || [], cuisine: it.cuisine || '', cost: it.cost || '', booking: it.booking || '',
     status: it.status, mustDo: !!it.mustDo, done: !!it.done,
     placeName: it.place?.name && it.place.name !== it.title ? it.place.name : '', placeAddress: it.place?.address || '', mapsUrl: it.place?.mapsUrl || '',
     link: it.link || '', notes: it.notes || '',
@@ -183,7 +183,7 @@ export default function App() {
     // New ideas always open the full editor (prefilled); nothing is added until Save.
     newIdea: ({ locationId, kind, title, lane }) => setModal({ type: 'item', v: {
       _new: true, id: uid(), kind, title: title || '', locationName: locationName(doc, locationId), category: 'activity', size: 'half', includesEvening: false,
-      meals: [], cuisine: '', booking: '', status: 'idea', mustDo: false, done: false, placeName: '', placeAddress: '', mapsUrl: '', link: '', notes: '',
+      meals: [], cuisine: '', cost: '', booking: '', status: 'idea', mustDo: false, done: false, placeName: '', placeAddress: '', mapsUrl: '', link: '', notes: '',
       pi: -1, date: lane?.date || '', time: '', meal: lane?.meal || 'lunch', slot: lane?.slot, elsewhere: [],
     } }),
     patchItem: (id, p) => update((x) => { x.items = x.items.map((i) => (i.id === id ? { ...i, ...p } : i)); }),
@@ -237,6 +237,7 @@ export default function App() {
       if (place && (f.placeName.trim() || f.placeAddress.trim() || f.mapsUrl.trim() || it.place?.lat != null)) it.place = place; else delete it.place;
       if (f.link.trim()) it.link = f.link.trim(); else delete it.link;
       if (f.notes.trim()) it.notes = f.notes; else delete it.notes;
+      if (f.cost.trim()) it.cost = f.cost.trim(); else delete it.cost;
 
       // Kind change: convert placements (activities keep only the one being edited, or the first).
       if (it.kind !== f.kind) {

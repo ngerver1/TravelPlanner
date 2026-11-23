@@ -151,6 +151,7 @@ export function normalizeDoc(raw: unknown): TripDoc {
     if (place) item.place = place;
     if (optStr(i.link)) item.link = str(i.link);
     if (optStr(i.notes)) item.notes = str(i.notes);
+    if (optStr(i.cost)) item.cost = str(i.cost);
     if (i.mustDo === true) item.mustDo = true;
     if (i.done === true) item.done = true;
     if (kind === 'activity') {

@@ -50,6 +50,8 @@ export interface Item {
   place?: Place;
   link?: string;
   notes?: string;
+  /** Free text, e.g. "¥3,000 pp". */
+  cost?: string;
   status: Status;
   mustDo?: boolean;
   done?: boolean;
