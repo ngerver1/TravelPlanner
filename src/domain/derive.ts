@@ -15,6 +15,41 @@ export type Night =
   | { kind: 'plane'; flight: Flight }
   | { kind: 'none' };
 
+/** A part of the day: at the first place (a), in the air, or at the second place (b). */
+export interface DaySegment { at: 'a' | 'b' | 'air'; from: number; to: number }
+
+const frac = (t: string | undefined) => (t && /^\d\d:\d\d$/.test(t) ? (Number(t.slice(0, 2)) * 60 + Number(t.slice(3))) / 1440 : null);
+
+/**
+ * Split a day by time: until the first flight leaves you're at `a`, then in the air, then at `b` from
+ * when the last flight lands. Overnight flights fill the rest of (or the start of) the day with "air".
+ * With no flight times, a travel day splits at the checkout time if known, else early (mostly destination).
+ */
+export function daySegments(loc: { a: LocRef; b: LocRef | null } | null, dep: Flight[], arr: Flight[], d: string, checkOutTime?: string): DaySegment[] {
+  if (!loc) return [];
+  const segs: DaySegment[] = [];
+  const push = (at: DaySegment['at'], from: number, to: number) => { if (to - from > 0.001) segs.push({ at, from, to }); };
+  const inbound = arr[0]; // overnight flight landing today
+  const first = dep[0], last = dep[dep.length - 1];
+  const after: DaySegment['at'] = loc.b ? 'b' : 'a';
+  if (!first) {
+    if (inbound) { const t = frac(inbound.arrTime) ?? 0.2; push('air', 0, t); push(after, t, 1); return segs; }
+    if (!loc.b) return [{ at: 'a', from: 0, to: 1 }];
+    const t = frac(checkOutTime) ?? 0.25;
+    push('a', 0, t); push('b', t, 1);
+    return segs;
+  }
+  let start = 0;
+  if (inbound) { const t = frac(inbound.arrTime) ?? 0.15; push('air', 0, t); start = t; }
+  const leave = Math.max(start, frac(first.depTime) ?? 0.4);
+  push('a', start, leave);
+  if (last.arrDate && last.arrDate !== d) { push('air', leave, 1); return segs; }
+  const land = Math.max(leave, frac(last.arrTime) ?? Math.min(1, leave + 0.15));
+  push('air', leave, land);
+  push(after, land, 1);
+  return segs;
+}
+
 export interface DayEntry { item: Item; placement: Placement; pi: number }
 
 export interface DayInfo {
@@ -22,6 +57,8 @@ export interface DayInfo {
   loc: DayLoc | null;
   /** Where you end the day (for colouring): tonight's stay, else the place you travel to, else where you are. */
   endLoc: LocRef | null;
+  /** How the day splits between places, as fractions of the day (00:00 → 24:00), from flight times. */
+  segments: DaySegment[];
   auto: { a: LocRef; b: LocRef | null } | null;
   tonight: Stay[];
   last: Stay[];
@@ -165,8 +202,9 @@ export function derive(doc: TripDoc): Derived {
     const endLoc: LocRef | null = !c.loc ? null
       : stayLoc && (sameLoc(c.loc.a, { id: stayLoc.id, name: stayLoc.name }) || sameLoc(c.loc.b, { id: stayLoc.id, name: stayLoc.name })) ? { id: stayLoc.id, name: stayLoc.name }
       : c.loc.b?.id ? c.loc.b : c.loc.a.id ? c.loc.a : c.loc.b ?? c.loc.a;
+    const lastOut = validStays.filter((s) => s.checkOut === d).map((s) => s.checkOutTime).filter(Boolean).sort().pop();
     info[d] = {
-      date: d, loc: c.loc, endLoc, auto: c.auto, tonight: c.tonight, last: c.last, dep: c.dep, arr: c.arr, plane: c.plane,
+      date: d, loc: c.loc, endLoc, segments: daySegments(c.loc, c.dep, c.arr, d, lastOut), auto: c.auto, tonight: c.tonight, last: c.last, dep: c.dep, arr: c.arr, plane: c.plane,
       night, entries, notes: c.dd.notes || '',
       checkIns: validStays.filter((s) => s.checkIn === d),
       checkOuts: validStays.filter((s) => s.checkOut === d),

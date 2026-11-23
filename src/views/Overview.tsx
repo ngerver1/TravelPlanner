@@ -3,7 +3,7 @@ import { flightLabel, type Derived } from '../domain/derive';
 import type { Flight, TripDoc } from '../domain/types';
 import { daySummary } from '../domain/plan';
 import { MEALS, SLOTS, SLOT_LABEL, MEAL_LABEL } from '../domain/constants';
-import { LocDisplay, NightBadge, cssVars } from '../components/ui';
+import { LocDisplay, NightBadge, cssVars, dayStripe } from '../components/ui';
 
 export const flightChipText = (f: Flight, d: string) => {
   if (f.depDate === d) return `${f.flightNo || flightLabel(f)} ${f.from || '?'}→${f.to || '?'}${f.depTime ? ' ' + f.depTime : ''}`;
@@ -33,7 +33,7 @@ export function OverviewView({ doc, dv, onDay, onAddStay }: { doc: TripDoc; dv: 
             const flights = [...x.arr, ...x.dep];
             return (
               <div key={d} className={'cal-day' + (x.loc ? '' : ' unplanned') + (d === t ? ' today' : '')}
-                style={c1 ? cssVars({ '--c1': x.loc?.b ? c1.solid : end!.solid, '--c2': end!.solid, '--cbg': end!.bg }) : undefined}
+                style={c1 ? cssVars({ '--c2': end!.solid, '--cbg': end!.bg, '--stripe': dayStripe(x, colorOf, 'to bottom') }) : undefined}
                 onClick={() => onDay(d)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onDay(d)}>
                 <div className="cd-top">
                   <span className="cd-date"><span className="cd-dow">{fmt(d, { weekday: 'short' })}</span> {fmt(d, { day: 'numeric' })}{showMonth && <span className="cd-month"> {fmt(d, { month: 'short' })}</span>}</span>

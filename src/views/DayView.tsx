@@ -10,7 +10,7 @@ import { dayStops, fits, laneEntries, laneKey, overCapacity, parseLaneKey, slotL
 import type { ActivityCategory, Flight, Item, ItemKind, Meal, Status, Stay, TripDoc } from '../domain/types';
 import { ItemCard, MapLink, itemIcon } from '../components/ItemCard';
 import { MAX_WAYPOINTS, directionsLink, mapsLink, placeQuery } from '../domain/maps';
-import { LocChip, LocDisplay, Modal, StatusPill, cssVars } from '../components/ui';
+import { LocChip, LocDisplay, Modal, StatusPill, cssVars, dayStripe } from '../components/ui';
 
 export type DropTarget = { type: 'lane'; lane: Lane; index?: number } | { type: 'pool' } | { type: 'date'; date: string } | { type: 'swap'; with: Ref };
 
@@ -158,12 +158,10 @@ function DateStrip({ dv, current, onPick }: { dv: Derived; current: string; onPi
 function DateChip({ d, on, dv, onPick }: { d: string; on: boolean; dv: Derived; onPick: (d: string) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: 'date:' + d });
   const loc = dv.info[d].loc;
-  const end = dv.info[d].endLoc;
-  const c2 = end ? dv.colorOf(end) : null;
-  const c = loc?.b ? dv.colorOf(loc.a) : c2;
+  const stripe = dayStripe(dv.info[d], dv.colorOf, 'to right');
   return (
     <button ref={setNodeRef} type="button" className={'dchip' + (on ? ' on' : '') + (isOver ? ' over' : '') + (loc ? '' : ' unplanned')}
-      style={c ? cssVars({ '--c1': c.solid, '--c2': c2!.solid }) : undefined} onClick={() => onPick(d)} title={loc ? loc.a.name + (loc.b ? ' → ' + loc.b.name : '') : 'No location'}>
+      style={stripe ? cssVars({ '--stripe': stripe }) : undefined} onClick={() => onPick(d)} title={loc ? loc.a.name + (loc.b ? ' → ' + loc.b.name : '') : 'No location'}>
       <span>{fmt(d, { weekday: 'short' })}</span><b>{fmt(d, { day: 'numeric' })}</b>
     </button>
   );

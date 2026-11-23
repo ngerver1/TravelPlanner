@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { derive, locLabel } from './derive';
+import { derive, locLabel, daySegments } from './derive';
 import { doc, stay, flight } from './testutil';
 import { NEUTRAL } from './colors';
 
@@ -195,5 +195,24 @@ describe('trip with no dates yet', () => {
     expect(v.dates).toEqual([]);
     expect(v.stats.nights).toBe(0);
     expect(v.outside).toEqual([]);
+  });
+});
+
+describe('day split by flight times', () => {
+  const r = (x: { at: string; from: number; to: number }[]) => x.map((s) => `${s.at} ${s.from.toFixed(2)}-${s.to.toFixed(2)}`);
+  const A = { name: 'Sapporo', id: 's' }, B = { name: 'Hong Kong', id: 'h' };
+  it('splits at departure and arrival times', () => {
+    const f = flight({ depDate: '2027-01-28', depTime: '16:05', arrDate: '2027-01-28', arrTime: '21:00' });
+    expect(r(daySegments({ a: A, b: B }, [f], [], '2027-01-28'))).toEqual(['a 0.00-0.67', 'air 0.67-0.88', 'b 0.88-1.00']);
+  });
+  it('an overnight flight is in the air for the rest of the day, and the start of the next', () => {
+    const f = flight({ depDate: '2027-01-23', depTime: '23:55', arrDate: '2027-01-24', arrTime: '05:10' });
+    expect(r(daySegments({ a: B, b: { name: 'CTS' } }, [f], [], '2027-01-23'))).toEqual(['a 0.00-1.00', 'air 1.00-1.00']);
+    expect(r(daySegments({ a: A, b: null }, [], [f], '2027-01-24'))).toEqual(['air 0.00-0.22', 'a 0.22-1.00']);
+  });
+  it('without flights, a travel day splits at checkout (or early), a normal day is one place', () => {
+    expect(r(daySegments({ a: A, b: B }, [], [], 'x', '10:00'))).toEqual(['a 0.00-0.42', 'b 0.42-1.00']);
+    expect(r(daySegments({ a: A, b: B }, [], [], 'x'))).toEqual(['a 0.00-0.25', 'b 0.25-1.00']);
+    expect(r(daySegments({ a: A, b: null }, [], [], 'x'))).toEqual(['a 0.00-1.00']);
   });
 });

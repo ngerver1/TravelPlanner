@@ -119,3 +119,12 @@ export function NightBadge({ night, onClick }: { night: Night; onClick?: (e: Mou
 }
 
 export const cssVars = (v: Record<string, string | undefined>) => v as CSSProperties;
+
+/** CSS gradient for a day's stripe: each place's colour for the share of the day spent there (grey = in the air). */
+export function dayStripe(info: { loc: DayLoc | null; segments: { at: 'a' | 'b' | 'air'; from: number; to: number }[] } | undefined, colorOf: ColorOf, dir: 'to bottom' | 'to right'): string | undefined {
+  if (!info?.loc || !info.segments.length) return undefined;
+  const loc = info.loc;
+  const col = (at: 'a' | 'b' | 'air') => (at === 'air' ? 'var(--faint)' : colorOf(at === 'b' && loc.b ? loc.b : loc.a).solid);
+  const stops = info.segments.map((s) => `${col(s.at)} ${(s.from * 100).toFixed(1)}% ${(s.to * 100).toFixed(1)}%`);
+  return `linear-gradient(${dir}, ${stops.join(', ')})`;
+}

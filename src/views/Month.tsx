@@ -4,7 +4,7 @@ import { STATUS_LABEL } from '../domain/constants';
 import { flightLabel, type Derived } from '../domain/derive';
 import { barsInWeek, monthBars, weeksCovering, type MonthBarItem } from '../domain/month';
 import type { Flight, Stay } from '../domain/types';
-import { cssVars } from '../components/ui';
+import { cssVars, dayStripe } from '../components/ui';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -46,12 +46,11 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
                   const showMonth = d === start || d.endsWith('-01');
                   const x = dv.info[d];
                   const c = x?.endLoc ? colorOf(x.endLoc) : null;
-                  const c0 = x?.loc?.b ? colorOf(x.loc.a) : c;
                   const col = `${2 * i + 1} / span 2`;
                   return [
                     <div key={d} role="button" tabIndex={other || !inTrip(d) ? -1 : 0} aria-label={fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })}
                       className={'mv-day' + (other ? ' other' : '') + (inTrip(d) ? ' trip' : ' off')}
-                      style={cssVars({ gridColumn: col, '--dc': c?.solid, '--dc0': c0?.solid })}
+                      style={cssVars({ gridColumn: col, '--dc': c?.solid, '--stripe': dayStripe(x, colorOf, 'to right') })}
                       onClick={() => inTrip(d) && onDay(d)} onKeyDown={(e) => e.key === 'Enter' && inTrip(d) && onDay(d)} />,
                     <div key={'l' + d} className={'mv-label' + (other ? ' other' : '') + (inTrip(d) ? ' trip' : ' off') + (d === t ? ' today' : '')} style={{ gridColumn: col }}>
                       <span className="mv-num">{fmt(d, { day: 'numeric' })}{showMonth && <span className="mv-mon"> {fmt(d, { month: 'short' })}</span>}</span>
