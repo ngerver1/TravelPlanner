@@ -157,8 +157,9 @@ function DateStrip({ dv, current, onPick }: { dv: Derived; current: string; onPi
 function DateChip({ d, on, dv, onPick }: { d: string; on: boolean; dv: Derived; onPick: (d: string) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: 'date:' + d });
   const loc = dv.info[d].loc;
-  const c = loc ? dv.colorOf(loc.a) : null;
-  const c2 = loc?.b ? dv.colorOf(loc.b) : c;
+  const end = dv.info[d].endLoc;
+  const c2 = end ? dv.colorOf(end) : null;
+  const c = loc?.b ? dv.colorOf(loc.a) : c2;
   return (
     <button ref={setNodeRef} type="button" className={'dchip' + (on ? ' on' : '') + (isOver ? ' over' : '') + (loc ? '' : ' unplanned')}
       style={c ? cssVars({ '--c1': c.solid, '--c2': c2!.solid }) : undefined} onClick={() => onPick(d)} title={loc ? loc.a.name + (loc.b ? ' → ' + loc.b.name : '') : 'No location'}>

@@ -20,6 +20,8 @@ export interface DayEntry { item: Item; placement: Placement; pi: number }
 export interface DayInfo {
   date: string;
   loc: DayLoc | null;
+  /** Where you end the day (for colouring): tonight's stay, else the place you travel to, else where you are. */
+  endLoc: LocRef | null;
   auto: { a: LocRef; b: LocRef | null } | null;
   tonight: Stay[];
   last: Stay[];
@@ -159,8 +161,12 @@ export function derive(doc: TripDoc): Derived {
     const entries = (byDate.get(d) || []).sort(
       (p, q) => (p.placement.time || '99:99').localeCompare(q.placement.time || '99:99') || p.placement.order - q.placement.order,
     );
+    const stayLoc = c.tonight[0]?.locationId ? locById.get(c.tonight[0].locationId) : undefined;
+    const endLoc: LocRef | null = !c.loc ? null
+      : stayLoc && (sameLoc(c.loc.a, { id: stayLoc.id, name: stayLoc.name }) || sameLoc(c.loc.b, { id: stayLoc.id, name: stayLoc.name })) ? { id: stayLoc.id, name: stayLoc.name }
+      : c.loc.b?.id ? c.loc.b : c.loc.a.id ? c.loc.a : c.loc.b ?? c.loc.a;
     info[d] = {
-      date: d, loc: c.loc, auto: c.auto, tonight: c.tonight, last: c.last, dep: c.dep, arr: c.arr, plane: c.plane,
+      date: d, loc: c.loc, endLoc, auto: c.auto, tonight: c.tonight, last: c.last, dep: c.dep, arr: c.arr, plane: c.plane,
       night, entries, notes: c.dd.notes || '',
       checkIns: validStays.filter((s) => s.checkIn === d),
       checkOuts: validStays.filter((s) => s.checkOut === d),

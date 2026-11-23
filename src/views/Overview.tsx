@@ -27,13 +27,13 @@ export function OverviewView({ doc, dv, onDay, onAddStay }: { doc: TripDoc; dv: 
           {wk.map((d) => {
             if (!inTrip.has(d)) return <div key={d} className="cal-pad" />;
             const x = info[d];
+            const end = x.endLoc ? colorOf(x.endLoc) : null;
             const c1 = x.loc ? colorOf(x.loc.a) : null;
-            const c2 = x.loc?.b ? colorOf(x.loc.b) : c1;
             const showMonth = d === start || d.endsWith('-01');
             const flights = [...x.arr, ...x.dep];
             return (
               <div key={d} className={'cal-day' + (x.loc ? '' : ' unplanned') + (d === t ? ' today' : '')}
-                style={c1 ? cssVars({ '--c1': c1.solid, '--c2': c2!.solid, '--cbg': c1.bg }) : undefined}
+                style={c1 ? cssVars({ '--c1': x.loc?.b ? c1.solid : end!.solid, '--c2': end!.solid, '--cbg': end!.bg }) : undefined}
                 onClick={() => onDay(d)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onDay(d)}>
                 <div className="cd-top">
                   <span className="cd-date"><span className="cd-dow">{fmt(d, { weekday: 'short' })}</span> {fmt(d, { day: 'numeric' })}{showMonth && <span className="cd-month"> {fmt(d, { month: 'short' })}</span>}</span>

@@ -23,6 +23,17 @@ describe('auto location', () => {
     expect(locLabel(derive(d).info['2027-01-03'].loc)).toBe('Sapporo → Tokyo');
   });
 
+  it('colours a travel day by where you end up', () => {
+    const d = doc('2027-01-01', '2027-01-05', ['Sapporo', 'Tokyo']);
+    d.stays = [
+      stay({ locationId: 'sapporo', checkIn: '2027-01-01', checkOut: '2027-01-03' }),
+      stay({ locationId: 'tokyo', checkIn: '2027-01-03', checkOut: '2027-01-05' }),
+    ];
+    const v = derive(d);
+    expect(v.info['2027-01-03'].endLoc?.name).toBe('Tokyo');
+    expect(v.info['2027-01-02'].endLoc?.name).toBe('Sapporo');
+  });
+
   it('uses airport codes when there is no stay ("BNE → HKG")', () => {
     const d = doc('2027-01-01', '2027-01-03');
     d.flights = [flight({ from: 'BNE', to: 'HKG', depDate: '2027-01-01', depTime: '10:00', arrDate: '2027-01-01', arrTime: '18:00' })];

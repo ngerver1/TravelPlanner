@@ -45,12 +45,13 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
                   const other = !inTrip(d);
                   const showMonth = d === start || d.endsWith('-01');
                   const x = dv.info[d];
-                  const c = x?.loc ? colorOf(x.loc.a) : null;
+                  const c = x?.endLoc ? colorOf(x.endLoc) : null;
+                  const c0 = x?.loc?.b ? colorOf(x.loc.a) : c;
                   const col = `${2 * i + 1} / span 2`;
                   return [
                     <div key={d} role="button" tabIndex={other || !inTrip(d) ? -1 : 0} aria-label={fmt(d, { weekday: 'long', day: 'numeric', month: 'long' })}
                       className={'mv-day' + (other ? ' other' : '') + (inTrip(d) ? ' trip' : ' off')}
-                      style={cssVars({ gridColumn: col, '--dc': c?.solid })}
+                      style={cssVars({ gridColumn: col, '--dc': c?.solid, '--dc0': c0?.solid })}
                       onClick={() => inTrip(d) && onDay(d)} onKeyDown={(e) => e.key === 'Enter' && inTrip(d) && onDay(d)} />,
                     <div key={'l' + d} className={'mv-label' + (other ? ' other' : '') + (inTrip(d) ? ' trip' : ' off') + (d === t ? ' today' : '')} style={{ gridColumn: col }}>
                       <span className="mv-num">{fmt(d, { day: 'numeric' })}{showMonth && <span className="mv-mon"> {fmt(d, { month: 'short' })}</span>}</span>

@@ -124,7 +124,7 @@ ul.outside li{margin:2px 0}
 .cal-pad{border-radius:var(--r);background:transparent}
 .cal-day{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:8px 8px 7px 11px;min-height:128px;display:flex;flex-direction:column;gap:5px;cursor:pointer;box-shadow:var(--shadow);overflow:hidden;transition:transform .08s,box-shadow .08s}
 .cal-day:hover{box-shadow:0 4px 12px rgba(16,24,40,.12);transform:translateY(-1px)}
-.cal-day::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(var(--c1) 0 50%,var(--c2) 50% 100%)}
+.cal-day::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:linear-gradient(var(--c1) 0 22%,var(--c2) 22% 100%)}
 .cal-day{background:linear-gradient(180deg,var(--cbg,var(--card)) 0,var(--card) 46px)}
 .cal-day.unplanned{background:repeating-linear-gradient(135deg,var(--card),var(--card) 8px,var(--bad-stripe) 8px,var(--bad-stripe) 16px);border-color:var(--bad-line)}
 .cal-day.unplanned::before{background:var(--bad-line)}
@@ -286,8 +286,8 @@ ul.uncov li{display:flex;justify-content:space-between;align-items:center;paddin
 .mv-day{grid-row:1/-1;border-left:1px solid var(--line);min-width:0;background:var(--card)}
 .mv-week .mv-day:nth-child(13){border-right:1px solid var(--line)}
 .mv-label{grid-row:1;padding:3px 5px 1px;display:flex;flex-direction:column;gap:1px;min-width:0;pointer-events:none;position:relative}
-.mv-day.trip{cursor:pointer;box-shadow:inset 0 3px 0 var(--dc,transparent)}
-.mv-day.trip:hover{background:var(--hover)}
+.mv-day.trip{cursor:pointer;background-image:linear-gradient(90deg,var(--dc0,var(--dc,transparent)) 0 22%,var(--dc,transparent) 22% 100%);background-size:100% 3px;background-repeat:no-repeat}
+.mv-day.trip:hover{background-color:var(--hover)}
 .mv-day.off{background:var(--hover)}
 .mv-day.other{background:var(--soft)}
 .mv-label.other .mv-num{color:var(--faint)}
@@ -453,7 +453,7 @@ main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 /* ===== day view ===== */
 .dstrip{display:flex;gap:4px;overflow-x:auto;padding:6px 2px 8px;margin:-6px -2px 6px;scrollbar-width:thin;position:sticky;top:var(--hdr,56px);z-index:15;background:var(--bg)}
 .dchip{flex:none;display:flex;flex-direction:column;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:3px 0 4px;width:46px;cursor:pointer;position:relative;overflow:hidden;font-size:11px;color:var(--muted)}
-.dchip::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--c1,transparent) 50%,var(--c2,transparent) 50%)}
+.dchip::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:linear-gradient(90deg,var(--c1,transparent) 25%,var(--c2,transparent) 25%)}
 .dchip b{font-size:15px;color:var(--ink)}
 .dchip.on{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
 .dchip.unplanned::after{background:repeating-linear-gradient(90deg,var(--bad-line) 0 4px,transparent 4px 8px)}
