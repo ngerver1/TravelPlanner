@@ -48,7 +48,7 @@ export function LocationsList({ doc, dv, actions }: { doc: TripDoc; dv: Derived;
           const c = dv.colorOf(l);
           const n = counts(doc, l.id);
           return (
-            <button key={l.id} className="loc-row" style={cssVars({ '--c1': c.solid, '--cbg': c.bg })} onClick={() => actions.open(l.id)}>
+            <button key={l.id} className="loc-row" style={cssVars({ '--c1': c.solid, '--cbg': c.wash })} onClick={() => actions.open(l.id)}>
               <span className="lr-name" style={{ color: c.fg }}>{l.name}</span>
               <span className="lr-dates">{days.length ? runs(days).map(runLabel).join(', ') : <span className="muted">No days yet</span>}</span>
               <span className="lr-counts muted small">{n.todo} to do · {n.eat} to eat</span>
@@ -80,7 +80,7 @@ export function LocationPage({ doc, dv, id, actions, plan, onBack }: {
   const items = doc.items.filter((i) => i.locationId === id);
   const used = items.length || stays.length || Object.values(doc.days).some((v) => v.locationId === id || v.toLocationId === id);
   return (
-    <div className="page locpage" style={cssVars({ '--c1': c.solid, '--cbg': c.bg })}>
+    <div className="page locpage" style={cssVars({ '--c1': c.solid, '--cbg': c.wash })}>
       <button className="link back" onClick={onBack}>‹ Locations</button>
       <div className="lp-head">
         <input className="lp-name" style={{ color: c.fg }} value={name} onChange={(e) => setName(e.target.value)}

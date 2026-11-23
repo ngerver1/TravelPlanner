@@ -76,8 +76,8 @@ ul.outside li{margin:2px 0}
 .empty{padding:40px;text-align:center;color:var(--muted)}
 
 /* location chips */
-.loc{display:inline-flex;align-items:center;gap:5px;border:1px solid;border-radius:999px;padding:1px 9px 1px 7px;font-weight:600;font-size:13px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;cursor:default}
-.loc i{width:7px;height:7px;border-radius:50%;flex:none}
+.loc{display:inline-flex;align-items:center;gap:5px;border:1.5px solid;border-radius:999px;padding:1px 9px 1px 7px;font-weight:600;font-size:13px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;cursor:default}
+.loc i{width:8px;height:8px;border-radius:50%;flex:none}
 .loc.sm{font-size:12px;padding:0 7px 0 6px}
 .loc.lg{font-size:15px;padding:3px 12px 3px 9px;cursor:pointer}
 .loc.unplanned{background:repeating-linear-gradient(135deg,var(--card),var(--card) 5px,var(--bad-stripe) 5px,var(--bad-stripe) 10px);border:1px dashed var(--bad-line);color:var(--bad)}
@@ -124,7 +124,7 @@ ul.outside li{margin:2px 0}
 .cal-pad{border-radius:var(--r);background:transparent}
 .cal-day{position:relative;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:8px 8px 7px 11px;min-height:128px;display:flex;flex-direction:column;gap:5px;cursor:pointer;box-shadow:var(--shadow);overflow:hidden;transition:transform .08s,box-shadow .08s}
 .cal-day:hover{box-shadow:0 4px 12px rgba(16,24,40,.12);transform:translateY(-1px)}
-.cal-day::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--stripe,var(--c2))}
+.cal-day::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:var(--stripe,var(--c2))}
 .cal-day{background:linear-gradient(180deg,var(--cbg,var(--card)) 0,var(--card) 46px)}
 .cal-day.unplanned{background:repeating-linear-gradient(135deg,var(--card),var(--card) 8px,var(--bad-stripe) 8px,var(--bad-stripe) 16px);border-color:var(--bad-line)}
 .cal-day.unplanned::before{background:var(--bad-line)}
@@ -286,7 +286,7 @@ ul.uncov li{display:flex;justify-content:space-between;align-items:center;paddin
 .mv-day{grid-row:1/-1;border-left:1px solid var(--line);min-width:0;background:var(--card)}
 .mv-week .mv-day:nth-child(13){border-right:1px solid var(--line)}
 .mv-label{grid-row:1;padding:3px 5px 1px;display:flex;flex-direction:column;gap:1px;min-width:0;pointer-events:none;position:relative}
-.mv-day.trip{cursor:pointer;background-image:var(--stripe,none);background-size:100% 3px;background-repeat:no-repeat}
+.mv-day.trip{cursor:pointer;background-image:var(--stripe,none);background-size:100% 5px;background-repeat:no-repeat}
 .mv-day.trip:hover{background-color:var(--hover)}
 .mv-day.off{background:var(--hover)}
 .mv-day.other{background:var(--soft)}
@@ -381,7 +381,7 @@ main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 /* overview marks */
 .cd-marks{display:flex;align-items:center;gap:8px}
 .cd-marks .slots,.slots-key{display:inline-flex;gap:2px}
-.cd-marks .slots i,.slots-key i{display:inline-block;width:14px;height:6px;border-radius:3px;background:var(--line)}
+.cd-marks .slots i,.slots-key i{display:inline-block;width:15px;height:7px;border-radius:4px;background:var(--line)}
 .cd-marks .slots i.on{background:var(--c2,var(--ink2))}
 .slots-key i.on{background:var(--ink2)}
 .cd-marks .slots i.over{background:var(--warn)}
@@ -454,7 +454,7 @@ main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 /* ===== day view ===== */
 .dstrip{display:flex;gap:4px;overflow-x:auto;padding:6px 2px 8px;margin:-6px -2px 6px;scrollbar-width:thin;position:sticky;top:var(--hdr,56px);z-index:15;background:var(--bg)}
 .dchip{flex:none;display:flex;flex-direction:column;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:3px 0 4px;width:46px;cursor:pointer;position:relative;overflow:hidden;font-size:11px;color:var(--muted)}
-.dchip::after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--stripe,transparent)}
+.dchip::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--stripe,transparent)}
 .dchip b{font-size:15px;color:var(--ink)}
 .dchip.on{border-color:var(--accent);background:var(--accent-bg);color:var(--accent)}
 .dchip.unplanned::after{background:repeating-linear-gradient(90deg,var(--bad-line) 0 4px,transparent 4px 8px)}
