@@ -173,6 +173,15 @@ describe('out of range', () => {
 });
 
 describe('colours', () => {
+  it('hands out different colours in trip order', () => {
+    const names = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    const d = doc('2027-01-01', '2027-01-09', names);
+    names.forEach((n, i) => { d.days[`2027-01-0${i + 1}`] = { locationId: n.toLowerCase() }; });
+    const v = derive(d);
+    const solids = names.map((n) => v.colorOf(n.toLowerCase()).solid);
+    expect(new Set(solids).size).toBe(8);
+    expect(v.colorOf('a').solid).toContain('hsl(214'); // first place gets the first colour
+  });
   it('gives each location its own colour, stable by id', () => {
     const d = doc('2027-01-01', '2027-01-03', ['Sapporo', 'Tokyo']);
     const v = derive(d);

@@ -2,7 +2,7 @@
 // Ported from v1 logic.js; locations are now records referenced by id.
 import { addDays, diffDays, fmtLong, fmtShort, isDate, range } from './dates';
 import { norm } from './ids';
-import { NEUTRAL, HUES, assignHues, hash, isAirport, swatch, type Swatch } from './colors';
+import { NEUTRAL, PALETTE, assignColors, hash, isAirport, swatchAt, type Swatch } from './colors';
 import type { Flight, Item, Location, Placement, Stay, TripDoc } from './types';
 
 /** A location as shown on a day: a Location record (id) or a bare airport code from a flight. */
@@ -286,13 +286,13 @@ export function derive(doc: TripDoc): Derived {
   for (const s of stays) push(s.locationId);
   for (const v of Object.values(doc.days)) { push(v.locationId); push(v.toLocationId); }
   for (const l of doc.locations) push(l.id);
-  const hues = assignHues(order.filter((l) => !isAirport(l.name)).map((l) => ({ key: l.id, seed: norm(l.name), fixed: l.colorIndex })));
+  const hues = assignColors(order.filter((l) => !isAirport(l.name)).map((l) => ({ key: l.id, fixed: l.colorIndex })));
   const colorOf = (l: LocRef | Location | string | null | undefined): Swatch => {
     if (!l) return NEUTRAL;
     const r = typeof l === 'string' ? { id: locById.has(l) ? l : undefined, name: locById.get(l)?.name ?? l } : l;
     if (isAirport(r.name)) return NEUTRAL;
     const idx = r.id != null ? hues.get(r.id) : undefined;
-    return swatch(HUES[idx ?? hash(norm(r.name)) % HUES.length]);
+    return swatchAt(idx ?? hash(norm(r.name)) % PALETTE.length);
   };
 
   const known = [...new Set(doc.locations.map((l) => l.name))].sort((a, b) => a.localeCompare(b));
