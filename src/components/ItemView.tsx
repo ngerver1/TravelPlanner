@@ -17,8 +17,10 @@ export function Linkified({ text }: { text: string }) {
 }
 const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 
-export function ItemView({ item, location, colorOf, onEdit, onMove, onStatus, onGoDay, onClose }: {
+export function ItemView({ item, location, colorOf, onEdit, onMove, onStatus, onGoDay, onClose, otherOptions }: {
   item: Item; location?: { id: string; name: string }; colorOf: ColorOf;
+  /** How many other places to eat are options for the same day and meal. */
+  otherOptions?: (date: string, meal: string) => number;
   onEdit: () => void; onMove: () => void; onStatus: (s: Status) => void; onGoDay: (d: string) => void; onClose: () => void;
 }) {
   const p = item.place;
@@ -49,7 +51,7 @@ export function ItemView({ item, location, colorOf, onEdit, onMove, onStatus, on
           {item.placements.length ? (
             <span className="iv-days">{item.placements.map((pl, i) => (
               <button key={i} className="link" onClick={() => onGoDay(pl.date)}>
-                {fmt(pl.date, { weekday: 'short', day: 'numeric', month: 'short' })}{pl.meal ? ` · ${MEAL_LABEL[pl.meal]}` : pl.slot ? ` · ${SLOT_LABEL[pl.slot]}` : ''}{pl.time ? ` · ${pl.time}` : ''}{pl.chosen ? ' (the pick)' : ''}
+                {fmt(pl.date, { weekday: 'short', day: 'numeric', month: 'short' })}{pl.meal ? ` · ${MEAL_LABEL[pl.meal]}` : pl.slot ? ` · ${SLOT_LABEL[pl.slot]}` : ''}{pl.time ? ` · ${pl.time}` : ''}{(() => { const n = pl.chosen && pl.meal && otherOptions ? otherOptions(pl.date, pl.meal) : 0; return n ? ` · ✓ chosen over ${n} other option${n > 1 ? 's' : ''}` : ''; })()}
               </button>
             ))}</span>
           ) : <span className="muted">Not planned yet</span>}

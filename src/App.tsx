@@ -434,7 +434,7 @@ export default function App() {
         if (!it) return null;
         const l = dv.locById.get(it.locationId);
         return (
-          <ItemView item={it} location={l ? { id: l.id, name: l.name } : undefined} colorOf={dv.colorOf} onClose={close}
+          <ItemView item={it} otherOptions={(date, meal) => doc.items.filter((o) => o.id !== it.id && o.placements.some((q) => q.date === date && q.meal === meal)).length} location={l ? { id: l.id, name: l.name } : undefined} colorOf={dv.colorOf} onClose={close}
             onEdit={() => setModal({ type: 'item', v: itemDraft(doc, it, modal.pi) })}
             onMove={() => setModal({ type: 'move', itemId: it.id, pi: modal.pi })}
             onStatus={(s) => plan.patchItem(it.id, { status: s })}
