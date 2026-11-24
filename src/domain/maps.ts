@@ -64,3 +64,20 @@ export function directionsLink(stops: string[], origin?: string, destination?: s
   if (ways.length) p.set('waypoints', ways.join('|'));
   return `https://www.google.com/maps/dir/?${p}`;
 }
+
+// ---------- Google Maps embeds (no key: the classic maps.google.com embed) ----------
+const G = 'https://maps.google.com/maps';
+/** Embedded Google map of one place (a search, or exact coordinates). */
+export function embedPlace(query: string, zoom = 15): string {
+  return `${G}?${new URLSearchParams({ q: query, z: String(zoom), output: 'embed' })}`;
+}
+/** Embedded Google map with directions: origin → stops → destination (" to:" joins the stops). */
+export function embedDirections(points: string[], mode?: 'transit' | 'walking' | 'driving'): string | null {
+  const list = points.filter(Boolean);
+  if (list.length < 2) return list.length ? embedPlace(list[0]) : null;
+  const p = new URLSearchParams({ saddr: list[0], daddr: list.slice(1).join(' to:'), output: 'embed' });
+  if (mode) p.set('dirflg', mode === 'transit' ? 'r' : mode === 'walking' ? 'w' : 'd');
+  return `${G}?${p}`;
+}
+/** What to search for an airport code. */
+export const airportQuery = (code: string) => `${code.trim().toUpperCase()} airport`;

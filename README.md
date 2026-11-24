@@ -162,10 +162,16 @@ No Google account or key needed for any of this:
 
 ### Map (no key needed)
 
-- **Plan → Map** shows everything that has a map position: ideas as dots in their location's colour
+- **Google maps without a key:** each idea's and stay's view shows an embedded Google map of the place
+  (found by its name and city, or its exact position if it has one — so Google links and plain names
+  both work). Flights show the departure and arrival airports; transport shows its route.
+- **Day map** (Day view) and **Map → a day** show the day on Google Maps with directions:
+  last night's hotel (or the arrival airport after a flight) → the day's stops in order → tonight's
+  hotel (or the departure airport before an overnight flight). Up to 10 stops.
+
+- **Plan → Map → Everything / a location** pins everything that has a map position (OpenStreetMap): ideas as dots in their location's colour
   (solid = on a day, hollow = still an idea) and stays as 🛏. Choose **Everything**, **a location** or
   **a day** (a day shows its stops numbered in order, joined from hotel to hotel). Tap a pin to open it.
-- **Day map** (Day view) shows that day's route on a small map.
 - **Giving something a position:** in an idea's or stay's editor, tap **Find on map** (searches
   OpenStreetMap by name and city; pick the right result), or paste a long Google Maps link from a
   computer. Short `maps.app.goo.gl` share links don't include the position.

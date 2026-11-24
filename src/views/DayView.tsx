@@ -1,7 +1,6 @@
-import { createContext, lazy, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { dayRoute } from '../domain/geo';
-import { Lazy, toPins } from './MapView';
-const MapCanvas = lazy(() => import('../components/MapCanvas'));
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { dayRouteQueries } from '../domain/geo';
+import { GoogleMap } from '../components/GoogleMap';
 import {
   DndContext, DragOverlay, KeyboardSensor, MouseSensor, TouchSensor, pointerWithin, rectIntersection, useDraggable, useDroppable,
   useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragStartEvent,
@@ -9,12 +8,12 @@ import {
 import { addDays, fmt, fmtShort } from '../domain/dates';
 import { CATEGORIES, MEALS, MEAL_LABEL, SLOTS, SLOT_LABEL } from '../domain/constants';
 import { flightLabel, type DayInfo, type Derived } from '../domain/derive';
-import { dayStops, fits, laneEntries, laneKey, overCapacity, parseLaneKey, slotLoad, swappable, type Entry, type Lane, type Ref } from '../domain/plan';
+import { fits, laneEntries, laneKey, overCapacity, parseLaneKey, slotLoad, swappable, type Entry, type Lane, type Ref } from '../domain/plan';
 import type { ActivityCategory, Flight, Item, ItemKind, Meal, Status, Stay, TransportLeg, TripDoc } from '../domain/types';
 import { MODE_ICON } from '../domain/constants';
 import { legTitle } from '../components/BookingViews';
 import { ItemCard, MapLink, itemIcon } from '../components/ItemCard';
-import { MAX_WAYPOINTS, directionsLink, mapsLink, placeQuery } from '../domain/maps';
+import { MAX_WAYPOINTS, directionsLink, mapsLink } from '../domain/maps';
 import { LocChip, LocDisplay, Modal, NightBadge, StatusPill, cssVars, dayStripe } from '../components/ui';
 
 export type DropTarget = { type: 'lane'; lane: Lane; index?: number } | { type: 'pool' } | { type: 'date'; date: string } | { type: 'swap'; with: Ref };
@@ -182,17 +181,15 @@ function DateChip({ d, on, dv, onPick }: { d: string; on: boolean; dv: Derived; 
   );
 }
 
-/** Google Maps directions: last night's stay → the day's stops in order → tonight's stay. */
-function directions(doc: TripDoc, dv: Derived, x: DayInfo, date: string): { url: string; stops: number } | null {
-  const area = (id?: string) => (id ? dv.locById.get(id)?.name : undefined);
-  const stayQ = (s?: Stay) => (s ? placeQuery(s.place ?? { name: s.name, address: s.address }, s.name || 'Hotel', area(s.locationId)) : undefined);
-  const stops = dayStops(doc, date).map((e) => placeQuery(e.item.place, e.item.title, area(e.item.locationId)));
-  if (!stops.length) return null;
-  const url = directionsLink(stops, stayQ(x.last[0]), stayQ(x.tonight[0]));
-  return url ? { url, stops: stops.length } : null;
+/** Google Maps directions for the day: hotel or arrival airport → stops in order → hotel or departure airport. */
+function directions(doc: TripDoc, dv: Derived, _x: DayInfo, date: string): { url: string; stops: number; route: string[] } | null {
+  const r = dayRouteQueries(doc, dv, date);
+  if (!r) return null;
+  const url = directionsLink(r.stops, r.origin, r.destination);
+  return url ? { url, stops: r.stops.length, route: [r.origin, ...r.stops, r.destination].filter((v): v is string => !!v) } : null;
 }
 
-function DayHeader({ x, dv, doc, date, idx, actions, directions: dir }: { x: DayInfo; dv: Derived; doc: TripDoc; date: string; idx: number; actions: PlanActions; directions: { url: string; stops: number } | null }) {
+function DayHeader({ x, dv, date, idx, actions, directions: dir }: { x: DayInfo; dv: Derived; doc: TripDoc; date: string; idx: number; actions: PlanActions; directions: { url: string; stops: number; route: string[] } | null }) {
   const prev = dv.dates[idx - 1], next = dv.dates[idx + 1];
   const n = x.night;
   return (
@@ -220,7 +217,7 @@ function DayHeader({ x, dv, doc, date, idx, actions, directions: dir }: { x: Day
       )}
       <div className="dv-links">
         {!x.notes && <button type="button" className="link note-add" onClick={() => actions.editDay(date)}>+ Add a note</button>}
-        <DayMapToggle doc={doc} dv={dv} date={date} actions={actions} />
+        <DayMapToggle route={dir?.route ?? null} />
         {dir && <a className="btn sm" href={dir.url} target="_blank" rel="noreferrer" title={dir.stops > MAX_WAYPOINTS + 1 ? `Google Maps takes up to ${MAX_WAYPOINTS} stops in between; the rest are left off` : ''}>Directions for this day ↗</a>}
       </div>
       {x.notes && <p className="iday-notes" onClick={() => actions.editDay(date)}>{x.notes}</p>}
@@ -228,18 +225,17 @@ function DayHeader({ x, dv, doc, date, idx, actions, directions: dir }: { x: Day
   );
 }
 
-/** "Day map": that day's stops on a small map, numbered in order, from last night's to tonight's stay. */
-function DayMapToggle({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived; date: string; actions: PlanActions }) {
+/** "Day map": the day's route on an embedded Google map (by name, so no map positions are needed). */
+function DayMapToggle({ route }: { route: string[] | null }) {
   const [open, setOpen] = useState(false);
-  const route = useMemo(() => dayRoute(doc, dv, date), [doc, dv, date]);
-  const pins = useMemo(() => toPins(route, dv, (p) => (p.ref.type === 'stay' ? actions.openStay(p.ref.stay) : actions.viewItem(p.ref.item, p.ref.pi))), [route, dv, actions]);
   return (
     <>
-      <button type="button" className={'btn sm' + (open ? ' on' : '')} onClick={() => setOpen(!open)}>{open ? 'Hide map' : `Day map${route.length ? ` (${route.filter((p) => p.number).length})` : ''}`}</button>
+      <button type="button" className={'btn sm' + (open ? ' on' : '')} onClick={() => setOpen(!open)}>{open ? 'Hide map' : 'Day map'}</button>
       {open && (
         <div className="daymap">
-          {route.length ? <Lazy><MapCanvas pins={pins} route height={260} /></Lazy>
-            : <p className="muted small">None of today’s stops have a map position yet. Open one → Edit → Find on map.</p>}
+          {route?.length ? <GoogleMap route={route} height={300} title="Day route" />
+            : <p className="muted small">Nothing planned on this day yet.</p>}
+          {route && route.length > 11 && <p className="muted small">Google shows up to 10 stops; the rest are left off.</p>}
         </div>
       )}
     </>

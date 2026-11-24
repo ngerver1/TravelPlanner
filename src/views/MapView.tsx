@@ -1,7 +1,8 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { fmtLong } from '../domain/dates';
 import type { Derived } from '../domain/derive';
-import { dayRoute, mapPoints, type MapFilter, type MapPoint } from '../domain/geo';
+import { dayRouteQueries, mapPoints, type MapFilter, type MapPoint } from '../domain/geo';
+import { GoogleMap } from '../components/GoogleMap';
 import type { TripDoc } from '../domain/types';
 import type { Pin } from '../components/MapCanvas';
 
@@ -23,8 +24,10 @@ export function Lazy({ children }: { children: React.ReactNode }) {
 export function MapView({ doc, dv, onOpen }: { doc: TripDoc; dv: Derived; onOpen: (p: MapPoint) => void }) {
   const [filter, setFilter] = useState<MapFilter>({ by: 'all' });
   const { points, missing } = useMemo(() => mapPoints(doc, filter), [doc, filter]);
-  const route = filter.by === 'day' ? dayRoute(doc, dv, filter.date) : null;
-  const pins = useMemo(() => toPins(route ?? points, dv, onOpen), [route, points, dv, onOpen]);
+  const day = filter.by === 'day' ? dayRouteQueries(doc, dv, filter.date) : null;
+  const dayRoute = day ? [day.origin, ...day.stops, day.destination].filter((v): v is string => !!v) : null;
+  const pins = useMemo(() => toPins(points, dv, onOpen), [points, dv, onOpen]);
+  const h = Math.max(300, Math.min(600, Math.round(window.innerHeight * 0.58)));
   const value = filter.by === 'all' ? 'all' : filter.by === 'day' ? 'd:' + filter.date : 'l:' + filter.id;
   return (
     <div className="mapview">
@@ -37,11 +40,15 @@ export function MapView({ doc, dv, onOpen }: { doc: TripDoc; dv: Derived; onOpen
           <optgroup label="A location">{dv.locOrder.map((l) => <option key={l.id} value={'l:' + l.id}>{l.name}</option>)}</optgroup>
           <optgroup label="A day">{dv.dates.map((d) => <option key={d} value={'d:' + d}>{fmtLong(d)}</option>)}</optgroup>
         </select>
-        <span className="muted small">{pins.length} on the map{filter.by === 'day' ? ' · numbered in day order' : ' · solid = on a day, hollow = idea'}</span>
+        <span className="muted small">{filter.by === 'day' ? 'Google Maps: the day’s route, hotel to hotel' : `${pins.length} pinned · solid = on a day, hollow = idea`}</span>
       </div>
-      <Lazy><MapCanvas pins={pins} route={filter.by === 'day'} height={Math.max(300, Math.min(600, Math.round(window.innerHeight * 0.58)))} /></Lazy>
-      {!pins.length && <p className="muted small">Nothing here has a map position yet. Open an idea or stay → Edit → <b>Find on map</b> (or paste a long Google Maps link).</p>}
-      {missing.length > 0 && (
+      {filter.by === 'day' ? (
+        dayRoute?.length ? <GoogleMap route={dayRoute} height={h} title="Day route" /> : <p className="muted small">Nothing planned on this day yet.</p>
+      ) : (<>
+        <Lazy><MapCanvas pins={pins} height={h} /></Lazy>
+        <p className="muted small">This overview pins things with an exact map position. To add one: open it → Edit → <b>Find on map</b>, or paste a long Google Maps link. Pick a day above to see it on Google Maps (by name, no position needed).</p>
+      </>)}
+      {filter.by !== 'day' && missing.length > 0 && (
         <details className="map-missing small">
           <summary>{missing.length} without a map position</summary>
           <div className="row gap wrap">

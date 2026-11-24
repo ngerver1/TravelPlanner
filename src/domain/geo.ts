@@ -1,7 +1,8 @@
 // What goes on the map: ideas and stays with a position, filtered by day or location; and a day's route.
 import type { Derived } from './derive';
 import { dayStops } from './plan';
-import type { Item, Place, Stay, TripDoc } from './types';
+import type { Item, Place, Stay, TransportLeg, TripDoc } from './types';
+import { airportQuery, placeQuery } from './maps';
 
 export interface MapPoint {
   key: string; kind: 'item' | 'stay'; lat: number; lng: number; title: string;
@@ -47,4 +48,29 @@ export function dayRoute(doc: TripDoc, dv: Derived, date: string): MapPoint[] {
   if (x.tonight[0] && x.tonight[0].id !== x.last[0]?.id) stay(x.tonight[0], 'end');
   else if (x.tonight[0] && out.length && out[0].key === 'start') stay(x.tonight[0], 'end'); // back to the same hotel
   return out;
+}
+
+/**
+ * The day as places to go through, for Google Maps (by name, so no map positions are needed):
+ * start = arrival airport / transport stop if you arrive today, else last night's stay;
+ * then the day's stops in order; end = departure airport / transport stop if you leave today, else tonight's stay.
+ */
+export function dayRouteQueries(doc: TripDoc, dv: Derived, date: string): { origin?: string; stops: string[]; destination?: string } | null {
+  const x = dv.info[date];
+  if (!x) return null;
+  const area = (id?: string) => (id ? dv.locById.get(id)?.name : undefined);
+  const stayQ = (s?: Stay) => (s ? placeQuery(s.place ?? { name: s.name, address: s.address }, s.name || 'Hotel', area(s.locationId)) : undefined);
+  const linked = (l: TransportLeg) => !!l.itemId;
+  const legEnd = (name: string, locId?: string) => (name ? [name, area(locId)].filter(Boolean).join(', ') : area(locId));
+  const stops = dayStops(doc, date).map((e) => placeQuery(e.item.place, e.item.title, area(e.item.locationId)));
+  const arrLeg = x.legArr.find((l) => !linked(l));
+  const depLeg = x.legDep.find((l) => !linked(l));
+  // A flight that lands the same day: the day's plans happen after landing, so start at the arrival airport.
+  // One that lands on a later day (overnight): the day ends at the departure airport.
+  const landsToday = x.dep.filter((f) => f.arrDate === date).pop();
+  const leavesTonight = x.dep.find((f) => f.arrDate && f.arrDate > date);
+  const origin = landsToday?.to ? airportQuery(landsToday.to) : x.arr[0]?.to ? airportQuery(x.arr[0].to) : arrLeg ? legEnd(arrLeg.toName, arrLeg.toLocationId) : stayQ(x.last[0]);
+  const destination = leavesTonight?.from ? airportQuery(leavesTonight.from) : depLeg ? legEnd(depLeg.fromName, depLeg.fromLocationId) : stayQ(x.tonight[0]);
+  if (!stops.length && !(origin && destination && origin !== destination)) return null;
+  return { origin, stops, destination };
 }

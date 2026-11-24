@@ -661,3 +661,7 @@ a.btn{text-decoration:none;color:inherit}
 .dv-links{flex-wrap:wrap}
 
 .mapcanvas.dark-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9)}
+
+.gmap{width:100%;border:1px solid var(--line);border-radius:12px;margin:4px 0 10px;display:block;background:var(--soft)}
+.airport-maps{margin-bottom:6px}
+.airport-maps .seg{margin-bottom:6px}

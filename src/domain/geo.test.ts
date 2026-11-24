@@ -40,3 +40,39 @@ describe('day route', () => {
     expect(r.map((p) => `${p.title}${p.number ?? ''}`)).toEqual(['Hotel', 'a1', 'b2', 'Hotel']);
   });
 });
+
+import { dayRouteQueries } from './geo';
+import { embedDirections, embedPlace } from './maps';
+import { flight } from './testutil';
+
+describe('Google route for a day (by name)', () => {
+  it('hotel → stops → hotel, using names when there are no positions', () => {
+    const d = trip();
+    d.stays[0].place = { name: 'Hotel' }; // no position
+    const r = dayRouteQueries(d, derive(d), '2027-01-02')!;
+    expect(r.origin).toBe('Hotel, Tokyo');
+    expect(r.stops).toEqual(['35.71,139.79', '35.66,139.7', 'c, Tokyo']);
+    expect(r.destination).toBe('Hotel, Tokyo');
+  });
+  it('ends at the departure airport on a flight day, starts at the arrival airport after an overnight flight', () => {
+    const d = trip();
+    d.flights = [flight({ from: 'HND', to: 'CTS', depDate: '2027-01-02', depTime: '20:00', arrDate: '2027-01-03', arrTime: '01:00' })];
+    placeAt(d, { itemId: 'k', pi: -1 }, { date: '2027-01-03', slot: 'morning' });
+    const v = derive(d);
+    expect(dayRouteQueries(d, v, '2027-01-02')!.destination).toBe('HND airport');
+    expect(dayRouteQueries(d, v, '2027-01-03')?.origin).toBe('CTS airport');
+  });
+  it('a same-day flight starts the day at the arrival airport', () => {
+    const d = trip();
+    d.flights = [flight({ from: 'BNE', to: 'HND', depDate: '2027-01-02', depTime: '06:00', arrDate: '2027-01-02', arrTime: '13:00' })];
+    const r = dayRouteQueries(d, derive(d), '2027-01-02')!;
+    expect(r.origin).toBe('HND airport');
+    expect(r.destination).toBe('35.68,139.76'); // the hotel, by its exact position
+  });
+  it('builds keyless Google embeds', () => {
+    expect(embedPlace('Senso-ji, Tokyo')).toBe('https://maps.google.com/maps?q=Senso-ji%2C+Tokyo&z=15&output=embed');
+    const u = new URL(embedDirections(['Hotel', 'A', 'B'])!);
+    expect(u.searchParams.get('saddr')).toBe('Hotel');
+    expect(u.searchParams.get('daddr')).toBe('A to:B');
+  });
+});

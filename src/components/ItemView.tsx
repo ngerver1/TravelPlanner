@@ -2,7 +2,8 @@
 import type { ReactNode } from 'react';
 import { fmt } from '../domain/dates';
 import { CATEGORIES, MEAL_LABEL, SLOT_LABEL } from '../domain/constants';
-import { mapsLink } from '../domain/maps';
+import { mapsLink, placeQuery } from '../domain/maps';
+import { GoogleMap } from './GoogleMap';
 import { fmtPrice } from '../domain/money';
 import type { Item, Status, TransportLeg } from '../domain/types';
 import { MODE_ICON, MODE_LABEL, STATUS_LABEL } from '../domain/constants';
@@ -48,6 +49,7 @@ export function ItemView({ item, location, colorOf, onEdit, onMove, onStatus, on
         <a className="btn" href={mapsLink(p, item.title, location?.name)} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>
         {item.link && <a className="btn" href={item.link} target="_blank" rel="noreferrer">{host(item.link)} ↗</a>}
       </div>
+      <GoogleMap query={placeQuery(p, item.title, location?.name)} title={`Map of ${item.title}`} />
       <div className="iv-rows">
         {location && <Row label="Location"><LocChip loc={location} colorOf={colorOf} size="sm" /></Row>}
         <Row label="When">
