@@ -54,7 +54,7 @@ export function mapsLink(place: Place | undefined, title: string, area?: string)
 export const MAX_WAYPOINTS = 9;
 
 /** Directions through a day's stops. With no origin, Google Maps starts from where you are. */
-export function directionsLink(stops: string[], origin?: string, destination?: string): string | null {
+export function directionsLink(stops: string[], origin?: string, destination?: string, mode?: 'transit' | 'walking' | 'driving'): string | null {
   const list = stops.filter(Boolean);
   const dest = destination || list[list.length - 1];
   if (!dest) return null;
@@ -62,6 +62,7 @@ export function directionsLink(stops: string[], origin?: string, destination?: s
   const p = new URLSearchParams({ api: '1', destination: dest });
   if (origin) p.set('origin', origin);
   if (ways.length) p.set('waypoints', ways.join('|'));
+  if (mode) p.set('travelmode', mode);
   return `https://www.google.com/maps/dir/?${p}`;
 }
 

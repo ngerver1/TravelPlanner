@@ -165,7 +165,12 @@ No Google account or key needed for any of this:
 - **Google maps without a key:** each idea's and stay's view shows an embedded Google map of the place
   (found by its name and city, or its exact position if it has one — so Google links and plain names
   both work). Flights show the departure and arrival airports; transport shows its route.
-- **Day map** (Day view) and **Map → a day** show the day on Google Maps with directions:
+- **Route & map** (Day view) is the day in Google Maps:
+  - an embedded map of the whole day;
+  - **Whole day in Google Maps: Walking / Driving** opens every stop as one route in the Google Maps app;
+  - **each hop** (e.g. "Snow Lodge → Ski lesson") has **Transit ↗** and **Walk ↗**. Google Maps only does
+    public transport one hop at a time, so this is how to see trains and buses between your plans.
+- **Route & map** and **Map → a day** show the day on Google Maps with directions:
   last night's hotel (or the arrival airport after a flight) → the day's stops in order → tonight's
   hotel (or the departure airport before an overnight flight). Up to 10 stops.
 

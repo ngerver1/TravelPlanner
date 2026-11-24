@@ -76,3 +76,12 @@ describe('Google route for a day (by name)', () => {
     expect(u.searchParams.get('daddr')).toBe('A to:B');
   });
 });
+
+import { dayRoutePoints } from './geo';
+describe('day route points', () => {
+  it('lists the day hop by hop with names to show', () => {
+    const d = trip();
+    const pts = dayRoutePoints(d, derive(d), '2027-01-02');
+    expect(pts.map((p) => `${p.kind}:${p.label}`)).toEqual(['start:Hotel', 'stop:a', 'stop:b', 'stop:c', 'end:Hotel']);
+  });
+});

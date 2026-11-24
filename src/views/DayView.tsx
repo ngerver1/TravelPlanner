@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { dayRouteQueries } from '../domain/geo';
+import { dayRoutePoints, type RoutePoint } from '../domain/geo';
 import { GoogleMap } from '../components/GoogleMap';
 import {
   DndContext, DragOverlay, KeyboardSensor, MouseSensor, TouchSensor, pointerWithin, rectIntersection, useDraggable, useDroppable,
@@ -13,7 +13,7 @@ import type { ActivityCategory, Flight, Item, ItemKind, Meal, Status, Stay, Tran
 import { MODE_ICON } from '../domain/constants';
 import { legTitle } from '../components/BookingViews';
 import { ItemCard, MapLink, itemIcon } from '../components/ItemCard';
-import { MAX_WAYPOINTS, directionsLink, mapsLink } from '../domain/maps';
+import { directionsLink, mapsLink } from '../domain/maps';
 import { LocChip, LocDisplay, Modal, NightBadge, StatusPill, cssVars, dayStripe } from '../components/ui';
 
 export type DropTarget = { type: 'lane'; lane: Lane; index?: number } | { type: 'pool' } | { type: 'date'; date: string } | { type: 'swap'; with: Ref };
@@ -137,7 +137,7 @@ export function DayView({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived;
             <Pool doc={doc} dv={dv} date={date} locIds={dayLocIds} actions={actions} onClose={() => setPoolOpen(false)} />
           </aside>
           <section className="dv-day" {...swipe}>
-            <DayHeader x={x} dv={dv} doc={doc} date={date} idx={idx} actions={actions} directions={directions(doc, dv, x, date)} />
+            <DayHeader x={x} dv={dv} doc={doc} date={date} idx={idx} actions={actions} route={dayRoutePoints(doc, dv, date)} />
             <DayTimeline x={x} dv={dv} doc={doc} actions={actions} />
             <LaneBox lane={{ date }} label="On this day" hint="slot not decided yet" doc={doc} actions={actions} onAdd={setPicker} compact />
             <h4 className="dv-h">Things to do</h4>
@@ -181,15 +181,7 @@ function DateChip({ d, on, dv, onPick }: { d: string; on: boolean; dv: Derived; 
   );
 }
 
-/** Google Maps directions for the day: hotel or arrival airport → stops in order → hotel or departure airport. */
-function directions(doc: TripDoc, dv: Derived, _x: DayInfo, date: string): { url: string; stops: number; route: string[] } | null {
-  const r = dayRouteQueries(doc, dv, date);
-  if (!r) return null;
-  const url = directionsLink(r.stops, r.origin, r.destination);
-  return url ? { url, stops: r.stops.length, route: [r.origin, ...r.stops, r.destination].filter((v): v is string => !!v) } : null;
-}
-
-function DayHeader({ x, dv, date, idx, actions, directions: dir }: { x: DayInfo; dv: Derived; doc: TripDoc; date: string; idx: number; actions: PlanActions; directions: { url: string; stops: number; route: string[] } | null }) {
+function DayHeader({ x, dv, date, idx, actions, route }: { x: DayInfo; dv: Derived; doc: TripDoc; date: string; idx: number; actions: PlanActions; route: RoutePoint[] }) {
   const prev = dv.dates[idx - 1], next = dv.dates[idx + 1];
   const n = x.night;
   return (
@@ -217,25 +209,49 @@ function DayHeader({ x, dv, date, idx, actions, directions: dir }: { x: DayInfo;
       )}
       <div className="dv-links">
         {!x.notes && <button type="button" className="link note-add" onClick={() => actions.editDay(date)}>+ Add a note</button>}
-        <DayMapToggle route={dir?.route ?? null} />
-        {dir && <a className="btn sm" href={dir.url} target="_blank" rel="noreferrer" title={dir.stops > MAX_WAYPOINTS + 1 ? `Google Maps takes up to ${MAX_WAYPOINTS} stops in between; the rest are left off` : ''}>Directions for this day ↗</a>}
+        <DayRoute points={route} />
       </div>
       {x.notes && <p className="iday-notes" onClick={() => actions.editDay(date)}>{x.notes}</p>}
     </header>
   );
 }
 
-/** "Day map": the day's route on an embedded Google map (by name, so no map positions are needed). */
-function DayMapToggle({ route }: { route: string[] | null }) {
+/**
+ * "Route": the day on Google Maps. The whole day opens as one route (walking or driving: Google allows
+ * several stops only for those), and each hop opens on its own with public transport or walking options.
+ */
+function DayRoute({ points }: { points: RoutePoint[] }) {
   const [open, setOpen] = useState(false);
+  const q = points.map((p) => p.query);
+  const whole = (mode: 'walking' | 'driving') => directionsLink(q.slice(1), q[0], undefined, mode);
   return (
     <>
-      <button type="button" className={'btn sm' + (open ? ' on' : '')} onClick={() => setOpen(!open)}>{open ? 'Hide map' : 'Day map'}</button>
-      {open && (
+      <button type="button" className={'btn sm' + (open ? ' on' : '')} onClick={() => setOpen(!open)} disabled={points.length < 2}>
+        {open ? 'Hide route' : `Route & map${points.length > 1 ? ` (${points.length - 1} hop${points.length > 2 ? 's' : ''})` : ''}`}
+      </button>
+      {open && points.length > 1 && (
         <div className="daymap">
-          {route?.length ? <GoogleMap route={route} height={300} title="Day route" />
-            : <p className="muted small">Nothing planned on this day yet.</p>}
-          {route && route.length > 11 && <p className="muted small">Google shows up to 10 stops; the rest are left off.</p>}
+          <GoogleMap route={q} height={260} title="Day route" />
+          <div className="row gap wrap route-whole">
+            <span className="muted small">Whole day in Google Maps:</span>
+            <a className="btn sm" href={whole('walking') ?? '#'} target="_blank" rel="noreferrer">Walking ↗</a>
+            <a className="btn sm" href={whole('driving') ?? '#'} target="_blank" rel="noreferrer">Driving ↗</a>
+          </div>
+          <ol className="hops">
+            {points.slice(1).map((p, i) => {
+              const from = points[i];
+              return (
+                <li key={i}>
+                  <span className="hop-names"><span className="muted small">{from.label}</span><span className="hop-arrow">↓</span><b>{p.label}</b></span>
+                  <span className="hop-links">
+                    <a className="btn sm" href={directionsLink([p.query], from.query, undefined, 'transit') ?? '#'} target="_blank" rel="noreferrer">Transit ↗</a>
+                    <a className="btn sm ghost" href={directionsLink([p.query], from.query, undefined, 'walking') ?? '#'} target="_blank" rel="noreferrer">Walk ↗</a>
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          <p className="muted small">Google Maps shows public transport one hop at a time, so each hop has its own button.</p>
         </div>
       )}
     </>
