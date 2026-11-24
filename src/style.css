@@ -659,3 +659,5 @@ a.btn{text-decoration:none;color:inherit}
 .geo-results{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 .leaflet-container{font:inherit}
 .dv-links{flex-wrap:wrap}
+
+.mapcanvas.dark-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9)}

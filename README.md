@@ -169,7 +169,7 @@ No Google account or key needed for any of this:
 - **Giving something a position:** in an idea's or stay's editor, tap **Find on map** (searches
   OpenStreetMap by name and city; pick the right result), or paste a long Google Maps link from a
   computer. Short `maps.app.goo.gl` share links don't include the position.
-- Map tiles: © OpenStreetMap contributors, © CARTO. Place search: OpenStreetMap Nominatim (only the
+- Map tiles: © OpenStreetMap contributors (openstreetmap.org standard tiles). Place search: OpenStreetMap Nominatim (only the
   name and city you search for are sent).
 
 ## Moving your trip over from v1

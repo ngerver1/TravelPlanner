@@ -1,4 +1,4 @@
-// Leaflet map with OpenStreetMap tiles (CARTO basemaps, light or dark). No API key needed.
+// Leaflet map with OpenStreetMap's standard tiles (no API key). Dark mode darkens the tiles with a CSS filter.
 // Loaded lazily (only when a map is shown).
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
@@ -23,10 +23,11 @@ export default function MapCanvas({ pins, route, height = 420 }: { pins: Pin[]; 
   useEffect(() => {
     if (!el.current) return;
     const m = L.map(el.current, { zoomControl: true, attributionControl: true, scrollWheelZoom: false });
-    L.tileLayer(`https://{s}.basemaps.cartocdn.com/${dark() ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`, {
-      maxZoom: 19, subdomains: 'abcd',
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(m);
+    el.current.classList.toggle('dark-tiles', dark());
     m.setView([35.68, 139.76], 4);
     layer.current = L.layerGroup().addTo(m);
     map.current = m;
