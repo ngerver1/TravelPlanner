@@ -1,5 +1,5 @@
 // Money: amounts with a currency, conversion to the trip's home currency, and the cost report.
-import type { Item, Money, Rates, Stay, TripDoc, Flight, Status } from './types';
+import type { Item, Money, Rates, Stay, TripDoc, Flight, Status, TransportLeg } from './types';
 import { MEALS } from './constants';
 
 export const CURRENCIES = ['AUD', 'HKD', 'JPY', 'USD', 'EUR', 'GBP', 'NZD', 'SGD', 'CNY', 'KRW', 'TWD', 'THB', 'MYR', 'IDR', 'PHP', 'INR', 'CAD', 'CHF'];
@@ -57,13 +57,13 @@ export function toHome(m: Money, home: string, rates: Rates | undefined, people 
 }
 
 // ---------- report ----------
-export type CostKind = 'stay' | 'flight' | 'activity' | 'food';
-export const KIND_LABEL: Record<CostKind, string> = { stay: 'Stays', flight: 'Flights', activity: 'Things to do', food: 'Food' };
+export type CostKind = 'stay' | 'flight' | 'transport' | 'activity' | 'food';
+export const KIND_LABEL: Record<CostKind, string> = { stay: 'Stays', flight: 'Flights', transport: 'Transport', activity: 'Things to do', food: 'Food' };
 
 export interface CostLine {
   kind: CostKind; id: string; title: string; date: string; locationId?: string; status: Status;
   price: Money; times: number; home: number | null; // times: e.g. a restaurant picked on 2 days
-  ref: { type: 'stay'; stay: Stay } | { type: 'flight'; flight: Flight } | { type: 'item'; item: Item; pi: number };
+  ref: { type: 'stay'; stay: Stay } | { type: 'flight'; flight: Flight } | { type: 'leg'; leg: TransportLeg } | { type: 'item'; item: Item; pi: number };
 }
 export interface CostReport {
   home: string; people: number;
@@ -103,6 +103,11 @@ export function costReport(doc: TripDoc): CostReport {
     if (f.price) add(lines, { kind: 'flight', id: f.id, title, date: f.depDate, status: f.status, price: f.price, times: 1, ref: { type: 'flight', flight: f } });
     else missing.push({ kind: 'flight', title, ref: { type: 'flight', flight: f } });
   }
+  for (const l of doc.legs) {
+    const title = `${l.operator || l.mode} ${l.fromName || ''}→${l.toName || ''}`.trim();
+    if (l.price) add(lines, { kind: 'transport', id: l.id, title, date: l.date, status: l.status, price: l.price, times: 1, ref: { type: 'leg', leg: l } });
+    else missing.push({ kind: 'transport', title, ref: { type: 'leg', leg: l } });
+  }
   for (const it of doc.items) {
     const kind: CostKind = it.kind === 'restaurant' ? 'food' : 'activity';
     const counted = it.kind === 'activity' ? (it.placements.length ? [0] : []) : it.placements.map((_, i) => i).filter((i) => mealCounts(doc, it, i));
@@ -115,7 +120,7 @@ export function costReport(doc: TripDoc): CostReport {
   }
   lines.sort((a, b) => (a.date || '9').localeCompare(b.date || '9') || a.title.localeCompare(b.title));
   const byStatus: Record<Status, number> = { booked: 0, planned: 0, idea: 0 };
-  const byKind: Record<CostKind, number> = { stay: 0, flight: 0, activity: 0, food: 0 };
+  const byKind: Record<CostKind, number> = { stay: 0, flight: 0, transport: 0, activity: 0, food: 0 };
   const byLocation = new Map<string, number>();
   const unconverted = new Set<string>();
   let total = 0;
@@ -130,7 +135,7 @@ export function costReport(doc: TripDoc): CostReport {
 /** Currencies used anywhere in the trip (besides home). */
 export function usedCurrencies(doc: TripDoc): string[] {
   const s = new Set<string>();
-  for (const x of [...doc.stays, ...doc.flights, ...doc.items]) if (x.price) s.add(x.price.currency);
+  for (const x of [...doc.stays, ...doc.flights, ...doc.legs, ...doc.items]) if (x.price) s.add(x.price.currency);
   s.delete(doc.trip.currency || 'AUD');
   return [...s].sort();
 }

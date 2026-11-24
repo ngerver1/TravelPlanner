@@ -3,13 +3,16 @@ import { fmt, todayStr } from '../domain/dates';
 import { STATUS_LABEL } from '../domain/constants';
 import { flightLabel, type Derived } from '../domain/derive';
 import { barsInWeek, monthBars, weeksCovering, type MonthBarItem } from '../domain/month';
-import type { Flight, Stay } from '../domain/types';
+import type { Flight, Stay, TransportLeg } from '../domain/types';
+import { MODE_ICON } from '../domain/constants';
+import { legChipText } from './Overview';
 import { cssVars, dayStripe } from '../components/ui';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
+export function MonthView({ dv, onDay, onStay, onFlight, onAddStay, onLeg, onAddLeg }: {
   dv: Derived; onDay: (d: string) => void; onStay: (s: Stay) => void; onFlight: (f: Flight) => void; onAddStay: (from: string, to: string) => void;
+  onLeg: (l: TransportLeg) => void; onAddLeg: (d: string) => void;
 }) {
   const { dates, colorOf, locById } = dv;
   const start = dates[0], end = dates[dates.length - 1];
@@ -72,8 +75,10 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
                   );
                 })}
                 {wk.map((d, i) => {
-                  const fl = flightsOn.get(d);
-                  if (!fl) return null;
+                  const fl = flightsOn.get(d) || [];
+                  const x = dv.info[d];
+                  const legs = x ? [...x.legArr, ...x.legDep] : [];
+                  if (!fl.length && !legs.length && !x?.noTransport) return null;
                   return (
                     <div key={'f' + d} className="mv-flights" style={{ gridColumn: `${2 * i + 1} / span 2`, gridRow: lanes + 2 }}>
                       {fl.map(({ f, dep }) => (
@@ -83,6 +88,13 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay }: {
                           <span className="short">✈{f.to || '?'}</span>
                         </button>
                       ))}
+                      {legs.map((l) => (
+                        <button key={l.id + (l.date === d)} type="button" className={`mv-fl st-${l.status}`} onClick={() => onLeg(l)} title={`${l.operator || l.mode} ${l.fromName}→${l.toName}`}>
+                          <span className="long">{MODE_ICON[l.mode]} {legChipText(l, d, dv)}</span>
+                          <span className="short">{MODE_ICON[l.mode]}</span>
+                        </button>
+                      ))}
+                      {x?.noTransport && <button type="button" className="mv-fl notr" onClick={() => onAddLeg(d)} title="Location changes with no flight or transport booked"><span className="long">NO TRANSPORT</span><span className="short">NO TRANSP.</span></button>}
                     </div>
                   );
                 })}

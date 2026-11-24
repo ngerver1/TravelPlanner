@@ -33,3 +33,8 @@ export function mealFromTime(t: string | undefined): Meal {
   if (t < '16:00') return 'lunch';
   return 'dinner';
 }
+
+import type { TransportMode } from './types';
+export const MODES: TransportMode[] = ['train', 'bus', 'ferry', 'car', 'transfer', 'other'];
+export const MODE_LABEL: Record<TransportMode, string> = { train: 'Train', bus: 'Bus', ferry: 'Ferry', car: 'Car', transfer: 'Transfer', other: 'Other' };
+export const MODE_ICON: Record<TransportMode, string> = { train: '🚆', bus: '🚌', ferry: '⛴', car: '🚗', transfer: '🚐', other: '➜' };

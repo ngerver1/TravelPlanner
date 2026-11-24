@@ -20,7 +20,7 @@ export function parseRoute(hash: string): Route {
     case 'locations': case 'pools': return { page: 'locations' };
     case 'location': return arg ? { page: 'location', id: decodeURIComponent(arg) } : { page: 'locations' };
     case 'stays': return { page: 'stays' };
-    case 'flights': return { page: 'flights' };
+    case 'flights': case 'travel': return { page: 'flights' };
     case 'settings': return { page: 'settings' };
     case 'costs': case 'budget': return { page: 'costs' };
     default: return { page: 'plan', view: 'calendar' };

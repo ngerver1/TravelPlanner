@@ -40,7 +40,7 @@ The bar at the bottom has five sections:
   - **Day**: one day in detail. Tap any day elsewhere to open it here.
 - **Locations**: the places on the trip. Open one to see its dates, assign it to days, add a stay,
   and collect **things to do** and **places to eat**.
-- **Stays** and **Flights**: your bookings.
+- **Stays** and **Travel**: your bookings. Travel has flights and other transport (train, bus, ferry, car, transfer) together.
 - **Settings**: backup and restore (and, later, syncing and map keys).
 
 ### Planning a day
@@ -123,13 +123,29 @@ No Google account or key needed for any of this:
   in order (breakfast, morning, lunch, afternoon, dinner, evening) → tonight's stay. Google Maps
   takes up to 9 stops in between.
 
+## Transport
+
+- **+ Add transport** (Travel page) for trains, buses, ferries, hire cars and transfers: operator or
+  service, from and to (typed names, plus the trip locations at each end), date and times (arrival
+  can be the next day), status, confirmation number, booking link, price and notes.
+- If the two locations differ, it's a **travel day** like a flight: it sets the day's location,
+  splits the day's colour stripe by time, and an overnight ferry/bus/train counts as somewhere to sleep.
+- **Link it to a thing to do or a place to eat** ("Getting there" or "Getting back"): it then shows
+  right before or after that item in Day view, and in the item's view. You can also add it from the
+  item's view (**+ Getting there**).
+- **NO TRANSPORT** (red, like NO STAY) marks a day where your location changes with no flight or
+  transport booked, including waking up somewhere new. Tap it to add a booking already filled in.
+  The Travel page lists these days at the top, and the Travel button shows how many.
+- Tapping a booking shows it with **Directions** (Google Maps public transport, or driving for a car),
+  the booking link and a copyable confirmation number.
+
 ## Costs
 
 - **Prices:** stays, flights, things to do and places to eat each have an optional **amount and currency**
   (in their editors). Flights, things to do and food can be **per person**; stays are for the whole stay.
 - **💰 Costs** (bottom bar) shows:
   - the **trip total** in your home currency, split into booked / planned / idea;
-  - totals **by type** (stays, flights, things to do, food) and **by location**;
+  - totals **by type** (stays, flights, transport, things to do, food) and **by location**;
   - every costed thing, with its original price;
   - what has **no cost yet**, and ideas not on a day (not counted).
   - **Download CSV** gives a spreadsheet of everything in the total.

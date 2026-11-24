@@ -632,3 +632,13 @@ a.btn{text-decoration:none;color:inherit}
 .iv-days{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
 .iv-url{word-break:break-all}
 .mono-ish{font-variant-numeric:tabular-nums;letter-spacing:.02em}
+
+/* transport */
+.night.notransport{display:block;width:100%;margin-top:8px;border:0;text-align:left;padding:6px 10px;font-size:12px;cursor:pointer}
+.mv-fl.notr{background:var(--bad);color:#fff;border-left-color:var(--bad);font-weight:700;letter-spacing:.02em}
+.entry{display:flex;flex-direction:column;gap:3px}
+.leg-link{display:flex;align-items:center;gap:8px;font-size:12.5px;border:1px dashed var(--line2);border-radius:9px;padding:4px 6px 4px 8px;cursor:pointer;background:var(--hover);min-height:36px}
+.leg-link:hover{border-color:var(--accent-line)}
+.ll-t{font-variant-numeric:tabular-nums;color:var(--muted);width:38px;flex:none}
+.ll-main{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sec-h{margin:16px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}

@@ -108,6 +108,7 @@ export function NightBadge({ night, onClick }: { night: Night; onClick?: (e: Mou
   switch (night.kind) {
     case 'end': return <span className="night end">Trip ends</span>;
     case 'plane': return <span className="night plane">✈ Night on plane</span>;
+    case 'transit': return <span className="night plane">Night on {night.leg.mode === 'ferry' ? 'ferry' : night.leg.mode === 'bus' ? 'bus' : night.leg.mode === 'train' ? 'train' : 'the way'}</span>;
     case 'none': return <span className="night none" onClick={onClick}>NO STAY</span>;
     default:
       return (

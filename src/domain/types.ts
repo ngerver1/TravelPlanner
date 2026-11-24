@@ -114,20 +114,33 @@ export interface Stay {
   notes: string;
 }
 
-export type TransportMode = 'train' | 'bus' | 'ferry' | 'car' | 'other';
+export type TransportMode = 'train' | 'bus' | 'ferry' | 'car' | 'transfer' | 'other';
 
+/** A transport booking other than a flight: train, bus, ferry, car hire, transfer. */
 export interface TransportLeg {
   id: string;
   mode: TransportMode;
+  /** Operator / service, e.g. "JR Hokkaido · Super Hokuto 3". */
+  operator: string;
+  /** Typed end points, e.g. "Sapporo Stn" → "Rusutsu Resort". */
+  fromName: string;
+  toName: string;
+  /** Trip locations at each end; when they differ this is a travel day (like a flight). */
   fromLocationId?: string;
   toLocationId?: string;
   date: string;
   depTime: string;
+  arrDate: string; // '' = same day
   arrTime: string;
   duration: string;
-  operator: string;
-  cost: string;
   status: Status;
   conf: string;
+  price?: Money;
+  /** Old free-text cost (kept as a note). */
+  cost: string;
+  link: string;
   notes: string;
+  /** Optional link to an activity or place to eat: getting there, or getting back. */
+  itemId?: string;
+  itemRole?: 'to' | 'from';
 }

@@ -4,7 +4,8 @@ import { fmt } from '../domain/dates';
 import { CATEGORIES, MEAL_LABEL, SLOT_LABEL } from '../domain/constants';
 import { mapsLink } from '../domain/maps';
 import { fmtPrice } from '../domain/money';
-import type { Item, Status } from '../domain/types';
+import type { Item, Status, TransportLeg } from '../domain/types';
+import { MODE_ICON, MODE_LABEL, STATUS_LABEL } from '../domain/constants';
 import { itemIcon, sizeLabel } from './ItemCard';
 import { LocChip, Modal, StatusPill, type ColorOf } from './ui';
 
@@ -17,10 +18,12 @@ export function Linkified({ text }: { text: string }) {
 }
 const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 
-export function ItemView({ item, location, colorOf, onEdit, onMove, onStatus, onGoDay, onClose, otherOptions }: {
+export function ItemView({ item, location, colorOf, onEdit, onMove, onStatus, onGoDay, onClose, otherOptions, legs = [], onOpenLeg, onAddLeg }: {
   item: Item; location?: { id: string; name: string }; colorOf: ColorOf;
   /** How many other places to eat are options for the same day and meal. */
   otherOptions?: (date: string, meal: string) => number;
+  /** Transport bookings linked to this item. */
+  legs?: TransportLeg[]; onOpenLeg?: (l: TransportLeg) => void; onAddLeg?: (role: 'to' | 'from') => void;
   onEdit: () => void; onMove: () => void; onStatus: (s: Status) => void; onGoDay: (d: string) => void; onClose: () => void;
 }) {
   const p = item.place;
@@ -56,6 +59,23 @@ export function ItemView({ item, location, colorOf, onEdit, onMove, onStatus, on
             ))}</span>
           ) : <span className="muted">Not planned yet</span>}
         </Row>
+        {(legs.length > 0 || (onAddLeg && item.placements.length > 0)) && (
+          <Row label="Transport">
+            <span className="iv-days">
+              {legs.map((l) => (
+                <button key={l.id} className="link" onClick={() => onOpenLeg?.(l)}>
+                  {l.itemRole === 'from' ? 'Back: ' : 'There: '}{MODE_ICON[l.mode]} {l.operator || MODE_LABEL[l.mode]}{l.depTime ? ` · ${l.depTime}` : ''} <span className={`pill sm st-${l.status}`}>{STATUS_LABEL[l.status]}</span>
+                </button>
+              ))}
+              {onAddLeg && item.placements.length > 0 && (
+                <span className="row gap">
+                  <button className="link small" onClick={() => onAddLeg('to')}>+ Getting there</button>
+                  <button className="link small" onClick={() => onAddLeg('from')}>+ Getting back</button>
+                </span>
+              )}
+            </span>
+          </Row>
+        )}
         {(p?.name && p.name !== item.title) || p?.address ? <Row label="Place">{[p?.name !== item.title ? p?.name : '', p?.address].filter(Boolean).join(', ')}</Row> : null}
         {item.price && <Row label="Cost">{fmtPrice(item.price)}</Row>}
         {item.cuisine && <Row label="Cuisine">{item.cuisine}</Row>}

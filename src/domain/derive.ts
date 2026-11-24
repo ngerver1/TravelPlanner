@@ -3,7 +3,7 @@
 import { addDays, diffDays, fmtLong, fmtShort, isDate, range } from './dates';
 import { norm } from './ids';
 import { NEUTRAL, PALETTE, assignColors, hash, isAirport, swatchAt, type Swatch } from './colors';
-import type { Flight, Item, Location, Placement, Stay, TripDoc } from './types';
+import type { Flight, Item, Location, Placement, Stay, TransportLeg, TripDoc } from './types';
 
 /** A location as shown on a day: a Location record (id) or a bare airport code from a flight. */
 export interface LocRef { id?: string; name: string }
@@ -13,10 +13,14 @@ export type Night =
   | { kind: 'end' }
   | { kind: 'booked' | 'planned' | 'idea'; stay: Stay; count: number }
   | { kind: 'plane'; flight: Flight }
+  | { kind: 'transit'; leg: TransportLeg }
   | { kind: 'none' };
 
 /** A part of the day: at the first place (a), in the air, or at the second place (b). */
 export interface DaySegment { at: 'a' | 'b' | 'air'; from: number; to: number }
+
+const asTimed = (l: TransportLeg) => ({ depDate: l.date, depTime: l.depTime, arrDate: l.arrDate || l.date, arrTime: l.arrTime });
+type Timed = { depDate: string; depTime: string; arrDate: string; arrTime: string };
 
 const frac = (t: string | undefined) => (t && /^\d\d:\d\d$/.test(t) ? (Number(t.slice(0, 2)) * 60 + Number(t.slice(3))) / 1440 : null);
 
@@ -25,7 +29,7 @@ const frac = (t: string | undefined) => (t && /^\d\d:\d\d$/.test(t) ? (Number(t.
  * when the last flight lands. Overnight flights fill the rest of (or the start of) the day with "air".
  * With no flight times, a travel day splits at the checkout time if known, else early (mostly destination).
  */
-export function daySegments(loc: { a: LocRef; b: LocRef | null } | null, dep: Flight[], arr: Flight[], d: string, checkOutTime?: string): DaySegment[] {
+export function daySegments(loc: { a: LocRef; b: LocRef | null } | null, dep: Timed[], arr: Timed[], d: string, checkOutTime?: string): DaySegment[] {
   if (!loc) return [];
   const segs: DaySegment[] = [];
   const push = (at: DaySegment['at'], from: number, to: number) => { if (to - from > 0.001) segs.push({ at, from, to }); };
@@ -65,6 +69,11 @@ export interface DayInfo {
   dep: Flight[];
   arr: Flight[];
   plane: Flight | null;
+  /** Transport bookings leaving today, and overnight ones arriving today. */
+  legDep: TransportLeg[];
+  legArr: TransportLeg[];
+  /** Location changes today (or since yesterday) with no flight or transport booked. */
+  noTransport: boolean;
   night: Night;
   entries: DayEntry[];
   notes: string;
@@ -72,11 +81,11 @@ export interface DayInfo {
   checkOuts: Stay[];
 }
 
-export interface OutsideEntry { kind: 'day' | 'flight' | 'stay' | 'item'; id?: string; date?: string; label: string }
+export interface OutsideEntry { kind: 'day' | 'flight' | 'stay' | 'item' | 'leg'; id?: string; date?: string; label: string }
 
 export interface Stats {
   nights: number; booked: number; plane: number; none: number; tentative: number;
-  unbooked: number; noLoc: number; flights: number; flightsBooked: number;
+  unbooked: number; noLoc: number; flights: number; flightsBooked: number; noTransport: number;
 }
 
 export interface Derived {
@@ -88,6 +97,9 @@ export interface Derived {
   outside: OutsideEntry[];
   fit: { start: string; end: string } | null;
   uncovered: { from: string; to: string }[];
+  /** Days that change location with nothing booked to get there. */
+  transportGaps: string[];
+  legs: TransportLeg[];
   colorOf: (l: LocRef | Location | string | null | undefined) => Swatch;
   locById: Map<string, Location>;
   known: string[];
@@ -124,6 +136,8 @@ function context(doc: TripDoc) {
     return l ? { id: l.id, name: l.name } : null;
   };
   const code = (c: string): LocRef | null => (c.trim() ? { name: c.trim() } : null);
+  const legs = [...doc.legs].sort((a, b) => `${a.date || '9999'} ${a.depTime || '99:99'}`.localeCompare(`${b.date || '9999'} ${b.depTime || '99:99'}`));
+  const legEnd = (l: TransportLeg) => l.arrDate || l.date;
 
   function dayCore(d: string) {
     const tonight = staysOn(d).sort(byRank);
@@ -131,24 +145,41 @@ function context(doc: TripDoc) {
     const dep = flights.filter((f) => f.depDate === d);
     const arr = flights.filter((f) => f.arrDate === d && f.depDate !== d);
     const plane = flights.find((f) => isDate(f.depDate) && isDate(f.arrDate) && f.depDate <= d && f.arrDate > d) || null;
+    const legDep = legs.filter((l) => l.date === d);
+    const legArr = legs.filter((l) => l.arrDate === d && l.date !== d);
+    const transit = legs.find((l) => isDate(l.date) && l.date <= d && legEnd(l) > d) || null;
 
-    // Auto location: where I woke up → where I sleep, filled from flights on travel days.
+    // Flights and transport bookings as moves (in time order) from one place to another.
+    type Move = { from: LocRef | null; to: LocRef | null; t: string };
+    const depMoves: Move[] = [
+      ...dep.map((f) => ({ from: code(f.from), to: code(f.to), t: f.depTime })),
+      ...legDep.map((l) => ({ from: ref(l.fromLocationId), to: ref(l.toLocationId), t: l.depTime })),
+    ].sort((a, b) => (a.t || '99').localeCompare(b.t || '99'));
+    const arrMoves: Move[] = [
+      ...arr.map((f) => ({ from: code(f.from), to: code(f.to), t: f.arrTime })),
+      ...legArr.map((l) => ({ from: ref(l.fromLocationId), to: ref(l.toLocationId), t: l.arrTime })),
+    ];
+
+    // Auto location: where I woke up → where I sleep, filled from flights and transport on travel days.
     let from = ref(last[0]?.locationId);
     let to = ref(tonight[0]?.locationId);
-    if (dep.length || arr.length) {
-      if (!from && !arr.length && dep[0]) from = code(dep[0].from);
+    if (depMoves.length || arrMoves.length) {
+      if (!from && !arrMoves.length && depMoves[0]) from = depMoves[0].from;
       if (!to) {
-        const lf = dep.length ? dep[dep.length - 1] : arr[arr.length - 1];
-        to = lf ? code(lf.to) : null;
+        const lf = depMoves.length ? depMoves[depMoves.length - 1] : arrMoves[arrMoves.length - 1];
+        to = lf?.to ?? null;
       }
-    } else if (!from && !to && !plane) {
-      // No stay and no flight today: assume I'm still where my last flight landed,
-      // unless a stay has checked out since that flight arrived.
-      const landed = flights.filter((f) => isDate(f.arrDate) && f.arrDate < d && f.to.trim());
-      const lastFlight = landed[landed.length - 1];
-      if (lastFlight) {
+    } else if (!from && !to && !plane && !transit) {
+      // No stay and no travel today: assume I'm still where my last flight or transport arrived,
+      // unless a stay has checked out since then.
+      const arrived = [
+        ...flights.filter((f) => isDate(f.arrDate) && f.arrDate < d && f.to.trim()).map((f) => ({ at: f.arrDate, to: code(f.to) })),
+        ...legs.filter((l) => isDate(legEnd(l)) && legEnd(l) < d && l.toLocationId).map((l) => ({ at: legEnd(l), to: ref(l.toLocationId) })),
+      ].sort((a, b) => a.at.localeCompare(b.at));
+      const lastMove = arrived[arrived.length - 1];
+      if (lastMove?.to) {
         const lastCheckout = validStays.reduce((m, s) => (s.checkOut < d && s.checkOut > m ? s.checkOut : m), '');
-        if (lastFlight.arrDate >= lastCheckout) to = code(lastFlight.to);
+        if (lastMove.at >= lastCheckout) to = lastMove.to;
       }
     }
     let auto: DayInfo['auto'] = null;
@@ -160,10 +191,10 @@ function context(doc: TripDoc) {
     const loc: DayLoc | null = ma
       ? { a: ma, b: ref(dd.toLocationId), manual: true }
       : auto ? { ...auto, manual: false } : null;
-    return { tonight, last, dep, arr, plane, auto, loc, dd };
+    return { tonight, last, dep, arr, plane, legDep, legArr, transit, auto, loc, dd };
   }
 
-  return { locById, flights, stays, validStays, dayCore };
+  return { locById, flights, stays, validStays, legs, dayCore };
 }
 
 /** The location of any date (inside or outside the trip range). */
@@ -175,7 +206,7 @@ export function derive(doc: TripDoc): Derived {
   const { start, end } = doc.trip;
   const dates = range(start, end);
   const inRange = (d: string) => isDate(d) && isDate(start) && isDate(end) && d >= start && d <= end;
-  const { locById, flights, stays, validStays, dayCore } = context(doc);
+  const { locById, flights, stays, validStays, legs, dayCore } = context(doc);
 
   // Placements by date
   const byDate = new Map<string, DayEntry[]>();
@@ -193,6 +224,7 @@ export function derive(doc: TripDoc): Derived {
     if (d === end) night = { kind: 'end' };
     else if (c.tonight.length) night = { kind: c.tonight[0].status, stay: c.tonight[0], count: c.tonight.length };
     else if (c.plane) night = { kind: 'plane', flight: c.plane };
+    else if (c.transit) night = { kind: 'transit', leg: c.transit };
     else night = { kind: 'none' };
 
     const entries = (byDate.get(d) || []).sort(
@@ -204,12 +236,27 @@ export function derive(doc: TripDoc): Derived {
       : c.loc.b?.id ? c.loc.b : c.loc.a.id ? c.loc.a : c.loc.b ?? c.loc.a;
     const lastOut = validStays.filter((s) => s.checkOut === d).map((s) => s.checkOutTime).filter(Boolean).sort().pop();
     info[d] = {
-      date: d, loc: c.loc, endLoc, segments: daySegments(c.loc, c.dep, c.arr, d, lastOut), auto: c.auto, tonight: c.tonight, last: c.last, dep: c.dep, arr: c.arr, plane: c.plane,
+      date: d, loc: c.loc, endLoc,
+      segments: daySegments(c.loc, [...c.dep, ...c.legDep.map(asTimed)].sort((a, b) => (a.depTime || '99').localeCompare(b.depTime || '99')), [...c.arr, ...c.legArr.map(asTimed)], d, lastOut),
+      legDep: c.legDep, legArr: c.legArr, noTransport: false, auto: c.auto, tonight: c.tonight, last: c.last, dep: c.dep, arr: c.arr, plane: c.plane,
       night, entries, notes: c.dd.notes || '',
       checkIns: validStays.filter((s) => s.checkIn === d),
       checkOuts: validStays.filter((s) => s.checkOut === d),
     };
   }
+
+  // Days that change location with no flight or transport booked: a move within the day (A → B),
+  // or waking somewhere other than where yesterday ended. Only real locations count (not airport codes).
+  const transportGaps: string[] = [];
+  dates.forEach((d, i) => {
+    const x = info[d];
+    if (!x.loc) return;
+    const moved = (x.loc.a.id && x.loc.b?.id && x.loc.a.id !== x.loc.b.id)
+      || (i > 0 && info[dates[i - 1]].endLoc?.id && x.loc.a.id && info[dates[i - 1]].endLoc!.id !== x.loc.a.id);
+    const covered = x.dep.length || x.arr.length || x.legDep.length || x.legArr.length
+      || (i > 0 && (info[dates[i - 1]].night.kind === 'plane' || info[dates[i - 1]].night.kind === 'transit'));
+    if (moved && !covered) { x.noTransport = true; transportGaps.push(d); }
+  });
 
   // Stats
   const nights = Math.max(0, dates.length - 1);
@@ -217,7 +264,7 @@ export function derive(doc: TripDoc): Derived {
   for (const d of dates) {
     const n = info[d].night.kind;
     if (n === 'booked') booked++;
-    else if (n === 'plane') plane++;
+    else if (n === 'plane' || n === 'transit') plane++;
     else if (n === 'none') none++;
     else if (n === 'planned' || n === 'idea') tentative++;
     if (!info[d].loc) noLoc++;
@@ -258,6 +305,11 @@ export function derive(doc: TripDoc): Derived {
       outside.push({ kind: 'flight', id: f.id, date: f.depDate, label: `Flight ${flightLabel(f)} ${f.from}→${f.to} on ${fmtLong(f.depDate)}` });
       outsideDates.push(f.depDate);
     }
+  }
+  for (const l of legs) {
+    const label = `${l.operator || l.mode} ${l.fromName || name(l.fromLocationId) || '?'}→${l.toName || name(l.toLocationId) || '?'}`;
+    if (!l.date) outside.push({ kind: 'leg', id: l.id, label: `${label} has no date` });
+    else if (!inRange(l.date)) { outside.push({ kind: 'leg', id: l.id, date: l.date, label: `${label} on ${fmtLong(l.date)}` }); outsideDates.push(l.date); }
   }
   for (const s of stays) {
     if (!isDate(s.checkIn) || !isDate(s.checkOut)) outside.push({ kind: 'stay', id: s.id, label: `Stay “${s.name || 'Untitled'}” is missing dates` });
@@ -309,7 +361,7 @@ export function derive(doc: TripDoc): Derived {
   const locOrder = [...doc.locations].sort((a, b) => first(a.id).localeCompare(first(b.id)) || order.indexOf(a) - order.indexOf(b));
 
   return {
-    dates, info, flights, stays, overlaps, outside, fit, uncovered, colorOf, locById, known, locOrder, locDays,
-    stats: { nights, booked, plane, none, tentative, unbooked: nights - booked - plane, noLoc, flights: tripFlights.length, flightsBooked },
+    dates, info, flights, stays, overlaps, outside, fit, uncovered, transportGaps, legs, colorOf, locById, known, locOrder, locDays,
+    stats: { nights, booked, plane, none, tentative, unbooked: nights - booked - plane, noLoc, flights: tripFlights.length, flightsBooked, noTransport: transportGaps.length },
   };
 }

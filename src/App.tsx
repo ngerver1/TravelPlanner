@@ -5,7 +5,7 @@ import { UNASSIGNED, mealFromTime, slotFromTime } from './domain/constants';
 import { derive, locationOn } from './domain/derive';
 import { ensureLocation, locationName } from './domain/locations';
 import { fits, moveToDate, placeAt, setChosen, swap, unplace, type Lane, type Ref } from './domain/plan';
-import type { Flight, Item, Place, Placement, Stay, TripDoc } from './domain/types';
+import type { Flight, Item, Place, Placement, Stay, TransportLeg, TripDoc } from './domain/types';
 import { parseMapsUrl } from './domain/maps';
 import { CostContext, fromMoney, toMoney } from './components/MoneyField';
 import { usedCurrencies } from './domain/money';
@@ -13,10 +13,12 @@ import { useTripStore } from './store';
 import { useRoute, type PlanView, type Route } from './router';
 import { Modal } from './components/ui';
 import { DayForm, FlightForm, ItemForm, RangeLocForm, StayForm, type FlightDraft, type ItemDraft, type RangeDraft, type StayDraft } from './components/forms';
-import { FlightsPanel, StaysPanel, type PanelActions } from './components/panels';
+import { StaysPanel, type PanelActions } from './components/panels';
 import { MoveSheet } from './components/MoveSheet';
 import { ItemView } from './components/ItemView';
-import { FlightView, StayView } from './components/BookingViews';
+import { FlightView, StayView, TransportView } from './components/BookingViews';
+import { TransportForm, type LegDraft } from './components/TransportForm';
+import { TravelPage } from './views/Travel';
 import { TripSettings } from './components/TripSettings';
 import { SyncChip } from './components/SyncChip';
 import { useSync } from './sync/useSync';
@@ -41,6 +43,8 @@ type ModalState =
   | { type: 'view'; itemId: string; pi: number }
   | { type: 'viewStay'; id: string }
   | { type: 'viewFlight'; id: string }
+  | { type: 'leg'; v: LegDraft }
+  | { type: 'viewLeg'; id: string }
   | { type: 'relocate'; itemId: string; ids: string[] }
   | null;
 
@@ -148,6 +152,36 @@ export default function App() {
   const openStay = (s: Stay) => setModal({ type: 'viewStay', id: s.id });
   const openFlight = (f: Flight) => setModal({ type: 'viewFlight', id: f.id });
   const editFlight = (f: Flight) => setModal({ type: 'flight', v: { ...f, priceDraft: fromMoney(f.price, home) } });
+  const locNameOf = (id?: string) => (id ? dv.locById.get(id)?.name || '' : '');
+  const openLeg = (l: TransportLeg) => setModal({ type: 'viewLeg', id: l.id });
+  const legDraft = (l: TransportLeg): LegDraft => {
+    const { fromLocationId, toLocationId, price, itemId, itemRole, ...rest } = l;
+    return { ...rest, fromLoc: locNameOf(fromLocationId), toLoc: locNameOf(toLocationId), priceDraft: fromMoney(price, home), itemId: itemId || '', itemRole: itemRole || 'to' };
+  };
+  const editLeg = (l: TransportLeg) => setModal({ type: 'leg', v: legDraft(l) });
+  const addLeg = (p: { date?: string; fromLoc?: string; toLoc?: string; itemId?: string; itemRole?: 'to' | 'from' }) => setModal({ type: 'leg', v: {
+    _new: true, id: uid(), mode: 'train', operator: '', fromName: '', toName: '', date: p.date || '', depTime: '', arrDate: '', arrTime: '', duration: '',
+    status: 'planned', conf: '', cost: '', link: '', notes: '', fromLoc: p.fromLoc || '', toLoc: p.toLoc || '', priceDraft: fromMoney(undefined, home),
+    itemId: p.itemId || '', itemRole: p.itemRole || 'to',
+  } });
+  /** Prefill a new booking for a day that needs transport. */
+  const gapPrefill = (d: string) => { const l = dv.info[d]?.loc; const prev = dv.info[addDays(d, -1)]?.endLoc; return { date: d, fromLoc: l?.b ? l.a.name : prev?.id ? prev.name : '', toLoc: (l?.b ?? l?.a)?.name }; };
+  const patchLeg = (id: string, p: Partial<TransportLeg>) => update((x) => { x.legs = x.legs.map((l) => (l.id === id ? { ...l, ...p } : l)); });
+  const saveLeg = (v: LegDraft) => {
+    const { _new, fromLoc, toLoc, priceDraft, itemId, itemRole, ...rest } = v;
+    update((x) => {
+      const l: TransportLeg = { ...rest, fromName: rest.fromName.trim(), toName: rest.toName.trim(), operator: rest.operator.trim() };
+      const a = ensureLocation(x, fromLoc), b = ensureLocation(x, toLoc);
+      if (a) l.fromLocationId = a;
+      if (b) l.toLocationId = b;
+      const price = toMoney(priceDraft);
+      if (price) { l.price = price; l.cost = ''; }
+      if (itemId) { l.itemId = itemId; l.itemRole = itemRole; }
+      const i = x.legs.findIndex((e) => e.id === l.id);
+      if (i >= 0) x.legs[i] = l; else x.legs.push(l);
+    });
+    close();
+  };
   const patchFlight = (id: string, p: Partial<Flight>) => update((x) => { x.flights = x.flights.map((f) => (f.id === id ? { ...f, ...p } : f)); });
 
   /** After putting an item on a day in another place, offer to move it to that place's list. */
@@ -191,7 +225,7 @@ export default function App() {
   const plan: PlanActions = {
     goDay, setDayLoc,
     editDay: (d) => setModal({ type: 'day', date: d }),
-    addStay, openStay, patchStay, openFlight, patchFlight,
+    addStay, openStay, patchStay, openFlight, patchFlight, openLeg, patchLeg, addLeg,
     editItem: (it, pi) => setModal({ type: 'item', v: itemDraft(doc, it, pi) }),
     viewItem: (it, pi) => setModal({ type: 'view', itemId: it.id, pi }),
     // New ideas always open the full editor (prefilled); nothing is added until Save.
@@ -311,6 +345,7 @@ export default function App() {
   const openOutside = (o: (typeof dv.outside)[number]) => {
     if (o.kind === 'flight') { const f = doc.flights.find((e) => e.id === o.id); if (f) editFlight(f); }
     else if (o.kind === 'stay') { const s = doc.stays.find((e) => e.id === o.id); if (s) editStay(s); }
+    else if (o.kind === 'leg') { const l = doc.legs.find((e) => e.id === o.id); if (l) editLeg(l); }
     else if (o.kind === 'item') { const it = doc.items.find((e) => e.id === o.id); if (it) plan.editItem(it, it.placements.findIndex((p) => p.date === o.date)); }
     else if (o.kind === 'day' && o.date) setModal({ type: 'outday', date: o.date });
   };
@@ -367,11 +402,11 @@ export default function App() {
       )}
       {view === 'calendar' && (<>
         <Summary s={dv.stats} />
-        <MonthView dv={dv} onDay={goDay} onStay={openStay} onFlight={openFlight} onAddStay={(from, to) => addStay(from, addDays(to, 1))} />
+        <MonthView dv={dv} onDay={goDay} onStay={openStay} onFlight={openFlight} onLeg={openLeg} onAddLeg={(d) => addLeg(gapPrefill(d))} onAddStay={(from, to) => addStay(from, addDays(to, 1))} />
       </>)}
       {view === 'overview' && (<>
         <Summary s={dv.stats} />
-        <OverviewView doc={doc} dv={dv} onDay={goDay} onAddStay={(d) => addStay(d)} />
+        <OverviewView doc={doc} dv={dv} onDay={goDay} onAddStay={(d) => addStay(d)} onAddLeg={(d) => addLeg(gapPrefill(d))} />
         <Legend />
       </>)}
       {view === 'day' && <DayView doc={doc} dv={dv} date={dayDate} actions={plan} />}
@@ -401,9 +436,9 @@ export default function App() {
         {page === 'locations' && <LocationsList doc={doc} dv={dv} actions={locActions} />}
         {page === 'location' && <LocationPage key={route.id} doc={doc} dv={dv} id={route.id} actions={locActions} plan={plan} onBack={() => navTo({ page: 'locations' })} />}
         {page === 'stays' && <div className="page"><h2 className="page-h">Stays</h2>{dv.overlaps.length > 0 && warnings}<StaysPanel dv={dv} actions={panelActions} /></div>}
-        {page === 'flights' && <div className="page"><h2 className="page-h">Flights</h2><FlightsPanel dv={dv} actions={panelActions} /></div>}
+        {page === 'flights' && <TravelPage dv={dv} actions={{ addFlight: newFlight, openFlight, patchFlight, addLeg, openLeg, patchLeg }} />}
         {page === 'costs' && <CostsPage doc={doc} dv={dv} update={update} onOpen={(ref) => {
-          if (ref.type === 'stay') openStay(ref.stay); else if (ref.type === 'flight') openFlight(ref.flight); else plan.viewItem(ref.item, ref.pi);
+          if (ref.type === 'stay') openStay(ref.stay); else if (ref.type === 'flight') openFlight(ref.flight); else if (ref.type === 'leg') openLeg(ref.leg); else plan.viewItem(ref.item, ref.pi);
         }} />}
         {page === 'settings' && <SettingsPage doc={doc} toast={toast} theme={theme} onTheme={setTheme} sync={sync} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
       </main>
@@ -414,7 +449,7 @@ export default function App() {
         <button className={page === 'stays' ? 'on' : ''} onClick={() => navTo({ page: 'stays' })}>
           <span className="bi">🛏{dv.stats.none ? <em className="badge bad">{dv.stats.none}</em> : null}</span><span>Stays</span>
         </button>
-        <button className={page === 'flights' ? 'on' : ''} onClick={() => navTo({ page: 'flights' })}><span className="bi">✈</span><span>Flights</span></button>
+        <button className={page === 'flights' ? 'on' : ''} onClick={() => navTo({ page: 'flights' })}><span className="bi">✈{dv.stats.noTransport ? <em className="badge bad">{dv.stats.noTransport}</em> : null}</span><span>Travel</span></button>
         <button className={page === 'costs' ? 'on' : ''} onClick={() => navTo({ page: 'costs' })}><span className="bi">💰</span><span>Costs</span></button>
         <button className={page === 'settings' ? 'on' : ''} onClick={() => navTo({ page: 'settings' })}><span className="bi">⚙</span><span>Settings</span></button>
       </nav>
@@ -434,7 +469,9 @@ export default function App() {
         if (!it) return null;
         const l = dv.locById.get(it.locationId);
         return (
-          <ItemView item={it} otherOptions={(date, meal) => doc.items.filter((o) => o.id !== it.id && o.placements.some((q) => q.date === date && q.meal === meal)).length} location={l ? { id: l.id, name: l.name } : undefined} colorOf={dv.colorOf} onClose={close}
+          <ItemView item={it} legs={doc.legs.filter((l) => l.itemId === it.id)} onOpenLeg={openLeg}
+            onAddLeg={(role) => { const pl = it.placements[modal.pi] ?? it.placements[0]; addLeg({ date: pl?.date, itemId: it.id, itemRole: role, ...(role === 'to' ? { toLoc: locNameOf(it.locationId) } : { fromLoc: locNameOf(it.locationId) }) }); }}
+            otherOptions={(date, meal) => doc.items.filter((o) => o.id !== it.id && o.placements.some((q) => q.date === date && q.meal === meal)).length} location={l ? { id: l.id, name: l.name } : undefined} colorOf={dv.colorOf} onClose={close}
             onEdit={() => setModal({ type: 'item', v: itemDraft(doc, it, modal.pi) })}
             onMove={() => setModal({ type: 'move', itemId: it.id, pi: modal.pi })}
             onStatus={(s) => plan.patchItem(it.id, { status: s })}
@@ -453,6 +490,14 @@ export default function App() {
         if (!f) return null;
         return <FlightView flight={f} onClose={close} onEdit={() => editFlight(f)} onStatus={(st) => patchFlight(f.id, { status: st })}
           onGoDay={(d) => { close(); if (dv.info[d]) goDay(d); }} />;
+      })()}
+      {modal?.type === 'leg' && <TransportForm initial={modal.v} items={doc.items} onClose={close} onSave={saveLeg} onDelete={() => { update((x) => { x.legs = x.legs.filter((l) => l.id !== modal.v.id); }); close(); toast('Deleted', true); }} />}
+      {modal?.type === 'viewLeg' && (() => {
+        const l = doc.legs.find((x) => x.id === modal.id);
+        if (!l) return null;
+        return <TransportView leg={l} locName={locNameOf} item={l.itemId ? doc.items.find((i) => i.id === l.itemId) : undefined} onClose={close}
+          onEdit={() => editLeg(l)} onStatus={(st) => patchLeg(l.id, { status: st })} onGoDay={(d) => { close(); if (dv.info[d]) goDay(d); }}
+          onOpenItem={(it) => setModal({ type: 'view', itemId: it.id, pi: it.placements.findIndex((p) => p.date === l.date) })} />;
       })()}
       {modal?.type === 'relocate' && (() => {
         const it = doc.items.find((i) => i.id === modal.itemId);

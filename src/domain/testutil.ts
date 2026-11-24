@@ -17,3 +17,8 @@ export const flight = (p: Partial<Flight>): Flight => ({
   id: 'f' + ++n, airline: '', flightNo: 'XX1', from: '', to: '', depDate: '', depTime: '', arrDate: '', arrTime: '',
   status: 'booked', conf: '', notes: '', ...p,
 });
+import type { TransportLeg } from './types';
+export const leg = (p: Partial<TransportLeg>): TransportLeg => ({
+  id: 'l' + ++n, mode: 'train', operator: '', fromName: '', toName: '', date: '', depTime: '', arrDate: '', arrTime: '',
+  duration: '', status: 'booked', conf: '', cost: '', link: '', notes: '', ...p,
+});

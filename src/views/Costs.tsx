@@ -113,7 +113,7 @@ export function CostsPage({ doc, dv, update, onOpen }: { doc: TripDoc; dv: Deriv
           <h3>By location</h3>
           {locs.length ? locs.map(([id, v]) => {
             const l = id ? dv.locById.get(id) : undefined;
-            return <Row key={id || 'none'} label={l ? <LocChip loc={{ id: l.id, name: l.name }} colorOf={dv.colorOf} size="sm" /> : <span className="muted">Travel (flights)</span>} value={money(v)} pct={pct(v)} color={l ? dv.colorOf(l).solid : undefined} />;
+            return <Row key={id || 'none'} label={l ? <LocChip loc={{ id: l.id, name: l.name }} colorOf={dv.colorOf} size="sm" /> : <span className="muted">Travel (flights, transport)</span>} value={money(v)} pct={pct(v)} color={l ? dv.colorOf(l).solid : undefined} />;
           }) : <p className="muted small">Nothing costed yet.</p>}
         </section>
       </div>

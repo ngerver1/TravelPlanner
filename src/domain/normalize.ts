@@ -196,24 +196,32 @@ export function normalizeDoc(raw: unknown): TripDoc {
     doc.items.push(item);
   }
 
+  const itemIds = new Set(doc.items.map((i) => i.id));
   for (const l of arr(raw.legs)) {
     if (!obj(l)) continue;
-    const modes = ['train', 'bus', 'ferry', 'car', 'other'];
+    const modes = ['train', 'bus', 'ferry', 'car', 'transfer', 'other'];
     const leg: TransportLeg = {
       id: str(l.id) || uid(),
       mode: modes.includes(str(l.mode)) ? (l.mode as TransportLeg['mode']) : 'other',
+      operator: str(l.operator),
+      fromName: str(l.fromName),
+      toName: str(l.toName),
       date: isDate(l.date) ? l.date : '',
       depTime: isTime(l.depTime) ? l.depTime : '',
+      arrDate: isDate(l.arrDate) && isDate(l.date) && l.arrDate > l.date ? l.arrDate : '',
       arrTime: isTime(l.arrTime) ? l.arrTime : '',
       duration: str(l.duration),
-      operator: str(l.operator),
-      cost: str(l.cost),
       status: status(l.status),
       conf: str(l.conf),
+      cost: str(l.cost),
+      link: str(l.link),
       notes: str(l.notes),
     };
     const a = locOk(l.fromLocationId); if (a) leg.fromLocationId = a;
     const b = locOk(l.toLocationId); if (b) leg.toLocationId = b;
+    const price = normMoney(l.price) ?? (leg.cost.trim() ? parseCost(leg.cost, home) : null);
+    if (price) { leg.price = price; if (!l.price) leg.cost = ''; }
+    if (typeof l.itemId === 'string' && itemIds.has(l.itemId)) { leg.itemId = l.itemId; leg.itemRole = l.itemRole === 'from' ? 'from' : 'to'; }
     doc.legs.push(leg);
   }
   return doc;

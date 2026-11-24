@@ -4,7 +4,8 @@ import { fmt, diffDays } from '../domain/dates';
 import { flightLabel } from '../domain/derive';
 import { mapsLink } from '../domain/maps';
 import { fmtPrice } from '../domain/money';
-import type { Flight, Status, Stay } from '../domain/types';
+import type { Flight, Item, Status, Stay, TransportLeg } from '../domain/types';
+import { MODE_ICON, MODE_LABEL } from '../domain/constants';
 import { Linkified } from './ItemView';
 import { LocChip, Modal, StatusPill, type ColorOf } from './ui';
 
@@ -74,6 +75,41 @@ export function FlightView({ flight: f, onEdit, onStatus, onGoDay, onClose }: {
         {f.conf && <Row label="Confirmation"><Conf value={f.conf} /></Row>}
         {f.price && <Row label="Price">{fmtPrice(f.price)}</Row>}
         {f.notes && <Row label="Notes"><span className="pre"><Linkified text={f.notes} /></span></Row>}
+      </div>
+    </Modal>
+  );
+}
+
+/** "Sapporo Stn → Rusutsu Resort" (typed names, else locations). */
+export const legRoute = (l: TransportLeg, locName: (id?: string) => string) =>
+  `${l.fromName || locName(l.fromLocationId) || '?'} → ${l.toName || locName(l.toLocationId) || '?'}`;
+export const legTitle = (l: TransportLeg) => l.operator || MODE_LABEL[l.mode];
+
+export function TransportView({ leg: l, locName, item, onEdit, onStatus, onGoDay, onOpenItem, onClose }: {
+  leg: TransportLeg; locName: (id?: string) => string; item?: Item;
+  onEdit: () => void; onStatus: (st: Status) => void; onGoDay: (d: string) => void; onOpenItem: (it: Item) => void; onClose: () => void;
+}) {
+  const from = l.fromName || locName(l.fromLocationId), to = l.toName || locName(l.toLocationId);
+  const p = new URLSearchParams({ api: '1', ...(from ? { origin: [from, locName(l.fromLocationId)].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ') } : {}), destination: [to, locName(l.toLocationId)].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ') || '?', travelmode: l.mode === 'car' ? 'driving' : 'transit' });
+  return (
+    <Modal title={`${MODE_ICON[l.mode]} ${legTitle(l)}`} onClose={onClose} footer={<><span className="grow" /><button className="btn primary" onClick={onEdit}>Edit</button></>}>
+      <div className="iv-top">
+        <span className="muted small">{MODE_LABEL[l.mode]} · {legRoute(l, locName)}</span>
+        <span className="grow" />
+        <StatusPill value={l.status} onChange={onStatus} />
+      </div>
+      <div className="iv-links">
+        {to && <a className="btn" href={`https://www.google.com/maps/dir/?${p}`} target="_blank" rel="noreferrer">Directions ↗</a>}
+        {l.link && <a className="btn" href={l.link} target="_blank" rel="noreferrer">{host(l.link)} ↗</a>}
+      </div>
+      <div className="iv-rows">
+        <Row label="Departs">{from || '?'} · {l.date ? <button className="link" onClick={() => onGoDay(l.date)}>{day(l.date)}</button> : '—'}{l.depTime ? ` · ${l.depTime}` : ''}</Row>
+        <Row label="Arrives">{to || '?'} · {l.arrDate ? <button className="link" onClick={() => onGoDay(l.arrDate)}>{day(l.arrDate)}</button> : 'same day'}{l.arrTime ? ` · ${l.arrTime}` : ''}</Row>
+        {item && <Row label={l.itemRole === 'from' ? 'Getting back from' : 'Getting to'}><button className="link" onClick={() => onOpenItem(item)}>{item.title}</button></Row>}
+        {l.conf && <Row label="Confirmation"><Conf value={l.conf} /></Row>}
+        {(l.price || l.cost) && <Row label="Price">{l.price ? fmtPrice(l.price) : l.cost}</Row>}
+        {l.link && <Row label="Link"><a href={l.link} target="_blank" rel="noreferrer" className="iv-url">{l.link}</a></Row>}
+        {l.notes && <Row label="Notes"><span className="pre"><Linkified text={l.notes} /></span></Row>}
       </div>
     </Modal>
   );

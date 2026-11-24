@@ -1,8 +1,8 @@
 import { addDays, diffDays, dow, fmt, range, todayStr } from '../domain/dates';
 import { flightLabel, type Derived } from '../domain/derive';
-import type { Flight, TripDoc } from '../domain/types';
+import type { Flight, TransportLeg, TripDoc } from '../domain/types';
 import { daySummary } from '../domain/plan';
-import { MEALS, SLOTS, SLOT_LABEL, MEAL_LABEL } from '../domain/constants';
+import { MEALS, MODE_ICON, SLOTS, SLOT_LABEL, MEAL_LABEL } from '../domain/constants';
 import { LocDisplay, NightBadge, cssVars, dayStripe } from '../components/ui';
 
 export const flightChipText = (f: Flight, d: string) => {
@@ -10,7 +10,7 @@ export const flightChipText = (f: Flight, d: string) => {
   return `${f.flightNo || flightLabel(f)} →${f.to || '?'} arr ${f.arrTime || ''}`.trim();
 };
 
-export function OverviewView({ doc, dv, onDay, onAddStay }: { doc: TripDoc; dv: Derived; onDay: (d: string) => void; onAddStay: (d: string) => void }) {
+export function OverviewView({ doc, dv, onDay, onAddStay, onAddLeg }: { doc: TripDoc; dv: Derived; onDay: (d: string) => void; onAddStay: (d: string) => void; onAddLeg: (d: string) => void }) {
   const { dates, info, colorOf } = dv;
   if (!dates.length) return null;
   const start = dates[0];
@@ -42,14 +42,16 @@ export function OverviewView({ doc, dv, onDay, onAddStay }: { doc: TripDoc; dv: 
                 <div className="cd-loc">
                   {x.loc ? <LocDisplay loc={x.loc} colorOf={colorOf} size="sm" /> : <span className="loc unplanned sm">No location</span>}
                 </div>
-                {flights.length > 0 && (
+                {(flights.length > 0 || x.legDep.length > 0 || x.legArr.length > 0) && (
                   <div className="cd-flights">
                     {flights.map((f) => <span key={f.id + (f.depDate === d ? 'd' : 'a')} className={`fchip st-${f.status}`}>✈ {flightChipText(f, d)}</span>)}
+                    {[...x.legArr, ...x.legDep].map((l) => <span key={l.id + (l.date === d ? 'd' : 'a')} className={`fchip st-${l.status}`}>{MODE_ICON[l.mode]} {legChipText(l, d, dv)}</span>)}
                   </div>
                 )}
                 <DayMarks doc={doc} d={d} />
                 <div className="cd-bottom">
                   <NightBadge night={x.night} onClick={x.night.kind === 'none' ? (e) => { e.stopPropagation(); onAddStay(d); } : undefined} />
+                  {x.noTransport && <span className="night none" onClick={(e) => { e.stopPropagation(); onAddLeg(d); }} title="Location changes with no flight or transport booked">NO TRANSPORT</span>}
                   {x.notes && <span className="cd-note" title={x.notes}>✎</span>}
                 </div>
               </div>
@@ -76,6 +78,11 @@ function DayMarks({ doc, d }: { doc: TripDoc; d: string }) {
   );
 }
 
+export const legChipText = (l: TransportLeg, d: string, dv: Derived) => {
+  const to = l.toName || dv.locById.get(l.toLocationId || '')?.name || '?';
+  return l.date === d ? `${l.operator || to}${l.depTime ? ' ' + l.depTime : ''}` : `→${to}${l.arrTime ? ' arr ' + l.arrTime : ''}`;
+};
+
 export function Summary({ s }: { s: Derived['stats'] }) {
   const Stat = ({ v, l, tone }: { v: number | string; l: string; tone?: string }) => <div className={'stat ' + (tone || '')}><b>{v}</b><span>{l}</span></div>;
   return (
@@ -84,7 +91,8 @@ export function Summary({ s }: { s: Derived['stats'] }) {
       <Stat v={s.booked} l="booked" tone={s.booked ? 'good' : ''} />
       <Stat v={s.unbooked} l="unbooked" tone={s.unbooked ? 'warn' : 'good'} />
       {s.none > 0 && <Stat v={s.none} l="no stay at all" tone="bad" />}
-      {s.plane > 0 && <Stat v={s.plane} l="on a plane" />}
+      {s.plane > 0 && <Stat v={s.plane} l="in transit" />}
+      {s.noTransport > 0 && <Stat v={s.noTransport} l={`day${s.noTransport === 1 ? '' : 's'} no transport`} tone="bad" />}
       <Stat v={s.noLoc} l={`day${s.noLoc === 1 ? '' : 's'} no location`} tone={s.noLoc ? 'bad' : 'good'} />
       <Stat v={`${s.flightsBooked}/${s.flights}`} l="flights booked" tone={s.flights && s.flightsBooked < s.flights ? 'warn' : s.flights ? 'good' : ''} />
     </div>

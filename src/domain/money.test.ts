@@ -65,7 +65,7 @@ describe('cost report', () => {
     // 1 Jan dinner: ramen only option → counts; 2 Jan: ramen picked over sushi → counts
     const r = costReport(d);
     expect(r.total).toBe(400 + 600 + 40 + 60);
-    expect(r.byKind).toEqual({ stay: 400, flight: 600, activity: 40, food: 60 });
+    expect(r.byKind).toEqual({ stay: 400, flight: 600, transport: 0, activity: 40, food: 60 });
     expect(r.byStatus).toEqual({ booked: 400, planned: 600, idea: 100 });
     expect(r.ideas.map((l) => l.title)).toEqual(['someday']);
     expect(r.missing.map((m) => m.title).sort()).toEqual(['No price', 'noprice']);

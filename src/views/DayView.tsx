@@ -7,10 +7,12 @@ import { addDays, fmt, fmtShort } from '../domain/dates';
 import { CATEGORIES, MEALS, MEAL_LABEL, SLOTS, SLOT_LABEL } from '../domain/constants';
 import { flightLabel, type DayInfo, type Derived } from '../domain/derive';
 import { dayStops, fits, laneEntries, laneKey, overCapacity, parseLaneKey, slotLoad, swappable, type Entry, type Lane, type Ref } from '../domain/plan';
-import type { ActivityCategory, Flight, Item, ItemKind, Meal, Status, Stay, TripDoc } from '../domain/types';
+import type { ActivityCategory, Flight, Item, ItemKind, Meal, Status, Stay, TransportLeg, TripDoc } from '../domain/types';
+import { MODE_ICON } from '../domain/constants';
+import { legTitle } from '../components/BookingViews';
 import { ItemCard, MapLink, itemIcon } from '../components/ItemCard';
 import { MAX_WAYPOINTS, directionsLink, mapsLink, placeQuery } from '../domain/maps';
-import { LocChip, LocDisplay, Modal, StatusPill, cssVars, dayStripe } from '../components/ui';
+import { LocChip, LocDisplay, Modal, NightBadge, StatusPill, cssVars, dayStripe } from '../components/ui';
 
 export type DropTarget = { type: 'lane'; lane: Lane; index?: number } | { type: 'pool' } | { type: 'date'; date: string } | { type: 'swap'; with: Ref };
 
@@ -23,6 +25,10 @@ export interface PlanActions {
   openStay: (s: Stay) => void;
   patchStay: (id: string, p: Partial<Stay>) => void;
   openFlight: (f: Flight) => void;
+  openLeg: (l: TransportLeg) => void;
+  patchLeg: (id: string, p: Partial<TransportLeg>) => void;
+  /** New transport booking, prefilled. */
+  addLeg: (p: { date?: string; fromLoc?: string; toLoc?: string; itemId?: string; itemRole?: 'to' | 'from' }) => void;
   patchFlight: (id: string, p: Partial<Flight>) => void;
   editItem: (it: Item, pi: number) => void;
   /** Read-only view with clickable links. */
@@ -37,6 +43,7 @@ export interface PlanActions {
 
 /** Location id → name, so cards can search Maps as "title, city". */
 const AreaNames = createContext<Map<string, string>>(new Map());
+const DerivedCtx = createContext<Derived | null>(null);
 
 const refId = (r: Ref) => (r.pi < 0 ? `pool:${r.itemId}` : `pl:${r.itemId}:${r.pi}`);
 function parseRef(id: string): Ref | null {
@@ -118,6 +125,7 @@ export function DayView({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived;
 
   return (
     <AreaNames.Provider value={areaNames}>
+    <DerivedCtx.Provider value={dv}>
     <DndContext sensors={sensors} collisionDetection={collide} onDragStart={onStart} onDragEnd={onEnd} onDragCancel={() => setDragging(null)}>
       <div className={'dayview' + (poolOpen ? ' pool-open' : '') + (dragging ? ' is-dragging' : '')}
         style={x.endLoc ? cssVars({ '--day-c': dv.colorOf(x.endLoc).solid }) : undefined}>
@@ -128,7 +136,7 @@ export function DayView({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived;
           </aside>
           <section className="dv-day" {...swipe}>
             <DayHeader x={x} dv={dv} date={date} idx={idx} actions={actions} directions={directions(doc, dv, x, date)} />
-            <DayTimeline x={x} dv={dv} actions={actions} />
+            <DayTimeline x={x} dv={dv} doc={doc} actions={actions} />
             <LaneBox lane={{ date }} label="On this day" hint="slot not decided yet" doc={doc} actions={actions} onAdd={setPicker} compact />
             <h4 className="dv-h">Things to do</h4>
             <SlotLanes doc={doc} date={date} actions={actions} onAdd={setPicker} />
@@ -143,6 +151,7 @@ export function DayView({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived;
       </DragOverlay>
       {picker && <LanePicker doc={doc} dv={dv} lane={picker} locIds={dayLocIds} actions={actions} onClose={() => setPicker(null)} />}
     </DndContext>
+    </DerivedCtx.Provider>
     </AreaNames.Provider>
   );
 }
@@ -196,11 +205,16 @@ function DayHeader({ x, dv, date, idx, actions, directions: dir }: { x: DayInfo;
         </button>
         <span className="dv-stay">
           {n.kind === 'end' ? <span className="night end">Trip ends</span>
-            : n.kind === 'plane' ? <span className="night plane">✈ Night on plane</span>
+            : n.kind === 'plane' || n.kind === 'transit' ? <NightBadge night={n} />
             : n.kind === 'none' ? <button className="night none" onClick={() => actions.addStay(date, addDays(date, 1), x.loc?.b?.id ? x.loc.b.name : x.loc?.a.id ? x.loc.a.name : '')}>NO STAY · add</button>
             : <span className="staybit" onClick={() => actions.openStay(n.stay)}>🛏 {n.stay.name || 'Stay'} <StatusPill small value={n.stay.status} onChange={(s) => actions.patchStay(n.stay.id, { status: s })} /></span>}
         </span>
       </div>
+      {x.noTransport && (
+        <button className="night none notransport" onClick={() => actions.addLeg({ date, fromLoc: x.loc?.b ? x.loc.a.name : '', toLoc: (x.loc?.b ?? x.loc?.a)?.name })}>
+          NO TRANSPORT · add how you’re getting {x.loc?.b?.id ? `to ${x.loc.b.name}` : `to ${x.loc?.a.name}`}
+        </button>
+      )}
       <div className="dv-links">
         {!x.notes && <button type="button" className="link note-add" onClick={() => actions.editDay(date)}>+ Add a note</button>}
         {dir && <a className="btn sm" href={dir.url} target="_blank" rel="noreferrer" title={dir.stops > MAX_WAYPOINTS + 1 ? `Google Maps takes up to ${MAX_WAYPOINTS} stops in between; the rest are left off` : ''}>Directions for this day ↗</a>}
@@ -210,11 +224,14 @@ function DayHeader({ x, dv, date, idx, actions, directions: dir }: { x: DayInfo;
   );
 }
 
-function DayTimeline({ x, dv, actions }: { x: DayInfo; dv: Derived; actions: PlanActions }) {
+function DayTimeline({ x, dv, doc, actions }: { x: DayInfo; dv: Derived; doc: TripDoc; actions: PlanActions }) {
   const rows: { key: string; t: string; node: ReactNode; onClick: () => void; status: Status; set: (s: Status) => void }[] = [];
   for (const f of x.arr) rows.push({ key: 'a' + f.id, t: f.arrTime, node: <>✈ <b>{flightLabel(f)}</b> arrives {f.to} <span className="muted">· from {f.from}, left {fmtShort(f.depDate)} {f.depTime}</span></>, onClick: () => actions.openFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
   for (const s of x.checkOuts) rows.push({ key: 'o' + s.id, t: s.checkOutTime, node: <>🛏 Check out: <b>{s.name || 'Stay'}</b></>, onClick: () => actions.openStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
   for (const s of x.checkIns) rows.push({ key: 'i' + s.id, t: s.checkInTime, node: <>🛏 Check in: <b>{s.name || 'Stay'}</b>{s.address && <span className="muted"> · {s.address}</span>} <MapLink href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, dv.locById.get(s.locationId || '')?.name)} pinned={!!s.place?.mapsUrl} /></>, onClick: () => actions.openStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
+  const shownInLane = (l: TransportLeg) => !!l.itemId && doc.items.some((i) => i.id === l.itemId && i.placements.some((p) => p.date === l.date));
+  for (const l of x.legArr) rows.push({ key: 'la' + l.id, t: l.arrTime, node: <>{MODE_ICON[l.mode]} <b>{legTitle(l)}</b> arrives {l.toName || dv.locById.get(l.toLocationId || '')?.name || ''} <span className="muted">· left {fmtShort(l.date)} {l.depTime}</span></>, onClick: () => actions.openLeg(l), status: l.status, set: (s) => actions.patchLeg(l.id, { status: s }) });
+  for (const l of x.legDep.filter((l) => !shownInLane(l))) rows.push({ key: 'ld' + l.id, t: l.depTime, node: <LegText l={l} dv={dv} />, onClick: () => actions.openLeg(l), status: l.status, set: (s) => actions.patchLeg(l.id, { status: s }) });
   for (const f of x.dep) rows.push({ key: 'd' + f.id, t: f.depTime, node: <>✈ <b>{flightLabel(f)} {f.from || '?'} → {f.to || '?'}</b> <span className="muted">dep {f.depTime || '?'} · arr {f.arrTime || '?'}{f.arrDate !== f.depDate ? ` (${fmtShort(f.arrDate)})` : ''}{f.conf ? ` · ${f.conf}` : ''}</span></>, onClick: () => actions.openFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
   if (!rows.length) return null;
   rows.sort((p, q) => (p.t || '99').localeCompare(q.t || '99'));
@@ -224,6 +241,23 @@ function DayTimeline({ x, dv, actions }: { x: DayInfo; dv: Derived; actions: Pla
         <li key={r.key} onClick={r.onClick}><span className="ev-t">{r.t || ''}</span><span className="tl-main">{r.node}</span><StatusPill small value={r.status} onChange={r.set} /></li>
       ))}
     </ul>
+  );
+}
+
+function LegText({ l, dv }: { l: TransportLeg; dv: Derived }) {
+  const from = l.fromName || dv.locById.get(l.fromLocationId || '')?.name, to = l.toName || dv.locById.get(l.toLocationId || '')?.name;
+  return <>{MODE_ICON[l.mode]} <b>{legTitle(l)}</b> <span className="muted">{from || to ? `${from || '?'} → ${to || '?'}` : ''}{l.depTime || l.arrTime ? ` · ${l.depTime || '?'}–${l.arrTime || '?'}` : ''}{l.arrDate ? ` (${fmtShort(l.arrDate)})` : ''}{l.conf ? ` · ${l.conf}` : ''}</span></>;
+}
+
+/** A transport booking linked to an item, shown right before (getting there) or after (getting back) it. */
+function LinkedLeg({ l, actions }: { l: TransportLeg; actions: PlanActions }) {
+  const dv = useContext(DerivedCtx)!;
+  return (
+    <div className={'leg-link ' + (l.itemRole === 'from' ? 'after' : 'before')} onClick={() => actions.openLeg(l)} role="button">
+      <span className="ll-t">{l.depTime || ''}</span>
+      <span className="ll-main"><LegText l={l} dv={dv} /></span>
+      <span onClick={(e) => e.stopPropagation()}><StatusPill small value={l.status} onChange={(s) => actions.patchLeg(l.id, { status: s })} /></span>
+    </div>
   );
 }
 
@@ -257,9 +291,16 @@ function LaneBox({ lane, label, hint, doc, actions, onAdd, warn, ghosts, compact
       </div>
       <div className="lane-items">
         {ghosts?.map((g) => <div key={'g' + g.item.id} className="icard ghost" onClick={() => actions.viewItem(g.item, g.pi)}>↑ {g.item.title} <span className="muted">(full day)</span></div>)}
-        {entries.map((e) => (
-          <DnDCard key={e.item.id + ':' + e.pi} entry={e} actions={actions} dim={anyChosen && !e.placement.chosen} />
-        ))}
+        {entries.map((e) => {
+          const ls = doc.legs.filter((l) => l.itemId === e.item.id && l.date === lane.date);
+          return (
+            <div key={e.item.id + ':' + e.pi} className="entry">
+              {ls.filter((l) => l.itemRole !== 'from').map((l) => <LinkedLeg key={l.id} l={l} actions={actions} />)}
+              <DnDCard entry={e} actions={actions} dim={anyChosen && !e.placement.chosen} />
+              {ls.filter((l) => l.itemRole === 'from').map((l) => <LinkedLeg key={l.id} l={l} actions={actions} />)}
+            </div>
+          );
+        })}
         {!entries.length && !ghosts?.length && <div className="lane-empty">{compact ? 'Drop here if you’re not sure when' : 'Drop an idea here'}</div>}
       </div>
     </div>
