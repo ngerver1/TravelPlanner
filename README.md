@@ -160,6 +160,18 @@ No Google account or key needed for any of this:
 - Old text costs (like "HK$4,200" on a v1 stay) were converted to amounts automatically; anything that
   couldn't be read is kept as a note in the stay's editor.
 
+### Map (no key needed)
+
+- **Plan → Map** shows everything that has a map position: ideas as dots in their location's colour
+  (solid = on a day, hollow = still an idea) and stays as 🛏. Choose **Everything**, **a location** or
+  **a day** (a day shows its stops numbered in order, joined from hotel to hotel). Tap a pin to open it.
+- **Day map** (Day view) shows that day's route on a small map.
+- **Giving something a position:** in an idea's or stay's editor, tap **Find on map** (searches
+  OpenStreetMap by name and city; pick the right result), or paste a long Google Maps link from a
+  computer. Short `maps.app.goo.gl` share links don't include the position.
+- Map tiles: © OpenStreetMap contributors, © CARTO. Place search: OpenStreetMap Nominatim (only the
+  name and city you search for are sent).
+
 ## Moving your trip over from v1
 
 1. In the old (v1) planner, click **⇅ Backup → Export JSON** and save the file.

@@ -7,6 +7,7 @@ import { ConfirmDel, Field, Modal, Seg, StatusSelect, useForm } from './ui';
 import { LocationSelect } from './LocationSelect';
 import { parseMapsUrl } from '../domain/maps';
 import { MoneyField, type MoneyDraft } from './MoneyField';
+import { FindOnMap, type Pos } from './FindOnMap';
 
 const Footer = ({ isNew, onDelete, onClose, onSave, disabled, deleteLabel }: {
   isNew?: boolean; onDelete: () => void; onClose: () => void; onSave: () => void; disabled?: boolean; deleteLabel?: string;
@@ -52,7 +53,7 @@ export function FlightForm({ initial, onSave, onDelete, onClose }: {
 }
 
 // ---------- stay ----------
-export type StayDraft = Omit<Stay, 'locationId' | 'place' | 'price'> & { locationName: string; mapsUrl: string; priceDraft: MoneyDraft; _new?: boolean };
+export type StayDraft = Omit<Stay, 'locationId' | 'place' | 'price'> & { locationName: string; mapsUrl: string; pos: Pos; priceDraft: MoneyDraft; _new?: boolean };
 
 export function StayForm({ initial, onSave, onDelete, onClose }: {
   initial: StayDraft; onSave: (s: StayDraft) => void; onDelete: () => void; onClose: () => void;
@@ -66,7 +67,9 @@ export function StayForm({ initial, onSave, onDelete, onClose }: {
         <Field label="Name" span><input {...bind('name')} placeholder="Hotel / apartment" autoFocus /></Field>
         <Field label="Location" hint="City or area: sets the day's location"><LocationSelect {...bind('locationName')} /></Field>
         <Field label="Address"><input {...bind('address')} /></Field>
-        <MapsLinkField value={f.mapsUrl} onChange={(url, parsed) => setF((p) => ({ ...p, mapsUrl: url, name: p.name || parsed?.name || '' }))} />
+        <MapsLinkField value={f.mapsUrl} onChange={(url, parsed) => setF((p) => ({ ...p, mapsUrl: url, name: p.name || parsed?.name || '', pos: parsed?.lat != null ? { lat: parsed.lat, lng: parsed.lng! } : p.pos }))} />
+        <FindOnMap value={f.pos} query={[f.name, f.address || f.locationName].filter(Boolean).join(', ')}
+          onChange={(pos, r) => setF((p) => ({ ...p, pos, address: p.address || r?.address.split(',').slice(0, 3).join(',') || '' }))} />
         <Field label="Check-in"><DateInput {...bind('checkIn')} onChange={(e) => { const v = e.target.value; setF((p) => ({ ...p, checkIn: v, checkOut: !p.checkOut || p.checkOut <= v ? (v ? addDays(v, 1) : '') : p.checkOut })); }} /></Field>
         <Field label="Check-out" hint={n > 0 ? `${n} night${n > 1 ? 's' : ''}` : f.checkIn && f.checkOut ? 'Check-out must be after check-in' : ''}><DateInput {...bind('checkOut')} /></Field>
         <Field label="Check-in time (optional)"><TimeInput {...bind('checkInTime')} /></Field>
@@ -102,6 +105,7 @@ export interface ItemDraft {
   placeName: string;
   placeAddress: string;
   mapsUrl: string;
+  pos: Pos;
   link: string;
   notes: string;
   /** The placement being edited (-1: none; a date then adds one). */
@@ -165,12 +169,14 @@ export function ItemForm({ initial, trip, onSave, onDelete, onClose, onMove }: {
         <MoneyField label="Cost (optional)" value={f.price} onChange={(v) => set('price', v)} hint={f.kind === 'restaurant' ? 'Roughly what a meal costs' : undefined} />
         <Field label="Location" hint="Whose list of ideas it belongs to"><LocationSelect {...bind('locationName')} emptyLabel="— Choose —" /></Field>
         <MapsLinkField value={f.mapsUrl} onChange={(url, parsed) => setF((p) => ({
-          ...p, mapsUrl: url,
+          ...p, mapsUrl: url, pos: parsed?.lat != null ? { lat: parsed.lat, lng: parsed.lng! } : p.pos,
           placeName: p.placeName || parsed?.name || '',
           title: p.title || parsed?.name || '',
         }))} />
         <Field label="Place name"><input {...bind('placeName')} placeholder="If different from the title" /></Field>
         <Field label="Address"><input {...bind('placeAddress')} /></Field>
+        <FindOnMap value={f.pos} query={[f.placeName || f.title, f.placeAddress || f.locationName].filter(Boolean).join(', ')}
+          onChange={(pos, r) => setF((p) => ({ ...p, pos, placeAddress: p.placeAddress || r?.address.split(',').slice(0, 3).join(',') || '' }))} />
         <Field label="Link" span><input {...bind('link')} placeholder="https://" inputMode="url" /></Field>
         <Field label="Notes" span><textarea rows={3} {...bind('notes')} /></Field>
         <div className="field span sub-h"><span>{placed ? 'On this day' : 'Put it on a day (optional)'}</span></div>

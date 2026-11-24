@@ -642,3 +642,20 @@ a.btn{text-decoration:none;color:inherit}
 .ll-t{font-variant-numeric:tabular-nums;color:var(--muted);width:38px;flex:none}
 .ll-main{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sec-h{margin:16px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+
+/* maps */
+.mapcanvas{width:100%;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--soft);z-index:0}
+.mapcanvas.loading{display:flex;align-items:center;justify-content:center;color:var(--muted);min-height:260px}
+.map-bar{margin-bottom:8px}
+.map-bar select{max-width:100%}
+.map-missing{margin-top:10px}
+.map-missing summary{cursor:pointer;color:var(--muted);margin-bottom:6px}
+.daymap{flex-basis:100%;margin-top:8px}
+.pin{background:none;border:0}
+.pin-dot{display:block;width:16px;height:16px;border-radius:50%;border:3px solid;box-shadow:0 1px 3px rgba(0,0,0,.35);background:#fff}
+.pin-dot.hollow{background:#fff}
+.pin-num{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;color:#fff;font:700 12px/1 system-ui,sans-serif;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.pin-stay{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:#fff;border:2.5px solid;font-size:14px;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.geo-results{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.leaflet-container{font:inherit}
+.dv-links{flex-wrap:wrap}

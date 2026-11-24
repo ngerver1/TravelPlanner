@@ -19,6 +19,8 @@ import { ItemView } from './components/ItemView';
 import { FlightView, StayView, TransportView } from './components/BookingViews';
 import { TransportForm, type LegDraft } from './components/TransportForm';
 import { TravelPage } from './views/Travel';
+import { MapView } from './views/MapView';
+import type { MapPoint } from './domain/geo';
 import { TripSettings } from './components/TripSettings';
 import { SyncChip } from './components/SyncChip';
 import { useSync } from './sync/useSync';
@@ -55,7 +57,7 @@ function dayLocationId(x: TripDoc, date: string): string {
 }
 
 /** Place from the editor's fields; coordinates come from a pasted Maps link, or are kept if the link didn't change. */
-function buildPlace(prev: Place | undefined, name: string, address: string, mapsUrl: string): Place | undefined {
+function buildPlace(prev: Place | undefined, name: string, address: string, mapsUrl: string, pos?: { lat: number; lng: number } | null): Place | undefined {
   const url = mapsUrl.trim();
   const parsed = url ? parseMapsUrl(url) : null;
   const p: Place = { name };
@@ -68,7 +70,8 @@ function buildPlace(prev: Place | undefined, name: string, address: string, maps
     const id = parsed.googlePlaceId ?? (same ? prev?.googlePlaceId : undefined);
     if (id) p.googlePlaceId = id;
   } else if (url) p.mapsUrl = url;
-  return name || p.address || p.mapsUrl ? p : undefined;
+  if (pos !== undefined) { if (pos) { p.lat = pos.lat; p.lng = pos.lng; } else { delete p.lat; delete p.lng; } }
+  return name || p.address || p.mapsUrl || p.lat != null ? p : undefined;
 }
 
 const placementLabel = (p: Placement) => `${fmtLong(p.date)}${p.meal ? ' ' + p.meal : ''}`;
@@ -81,14 +84,14 @@ function itemDraft(doc: TripDoc, it: Item, pi: number): ItemDraft {
     category: it.category || 'other', size: it.size || 'half', includesEvening: !!it.includesEvening,
     meals: it.meals || [], cuisine: it.cuisine || '', price: fromMoney(it.price, home), booking: it.booking || '',
     status: it.status, mustDo: !!it.mustDo, done: !!it.done,
-    placeName: it.place?.name && it.place.name !== it.title ? it.place.name : '', placeAddress: it.place?.address || '', mapsUrl: it.place?.mapsUrl || '',
+    placeName: it.place?.name && it.place.name !== it.title ? it.place.name : '', placeAddress: it.place?.address || '', mapsUrl: it.place?.mapsUrl || '', pos: it.place?.lat != null && it.place.lng != null ? { lat: it.place.lat, lng: it.place.lng } : null,
     link: it.link || '', notes: it.notes || '',
     pi: p ? pi : -1, date: p?.date || '', time: p?.time || '', meal: p?.meal || it.meals?.[0] || mealFromTime(p?.time),
     elsewhere: it.kind === 'restaurant' ? it.placements.filter((_, i) => i !== pi).map(placementLabel) : [],
   };
 }
 
-const PLAN_VIEWS: [PlanView, string][] = [['calendar', 'Calendar'], ['overview', 'Overview'], ['day', 'Day']];
+const PLAN_VIEWS: [PlanView, string][] = [['calendar', 'Calendar'], ['overview', 'Overview'], ['day', 'Day'], ['map', 'Map']];
 
 export default function App() {
   const { doc, update, replace, undo, load, setRev, storageOk } = useTripStore();
@@ -146,8 +149,8 @@ export default function App() {
   }), [update]);
 
   const newFlight = (d?: string) => setModal({ type: 'flight', v: { _new: true, priceDraft: fromMoney(undefined, home), id: uid(), airline: '', flightNo: '', from: '', to: '', depDate: d || '', depTime: '', arrDate: d || '', arrTime: '', status: 'planned', conf: '', notes: '' } });
-  const addStay = (from?: string, to?: string, locName = '') => setModal({ type: 'stay', v: { _new: true, priceDraft: fromMoney(undefined, home), id: uid(), name: '', locationName: locName, address: '', checkIn: from || '', checkOut: to || (from ? addDays(from, 1) : ''), checkInTime: '', checkOutTime: '', status: 'planned', conf: '', cost: '', link: '', notes: '', mapsUrl: '' } });
-  const editStay = (s: Stay) => { const { locationId, place, price, ...rest } = s; setModal({ type: 'stay', v: { ...rest, priceDraft: fromMoney(price, home), mapsUrl: place?.mapsUrl || '', locationName: locationName(doc, locationId) } }); };
+  const addStay = (from?: string, to?: string, locName = '') => setModal({ type: 'stay', v: { _new: true, priceDraft: fromMoney(undefined, home), id: uid(), name: '', locationName: locName, address: '', checkIn: from || '', checkOut: to || (from ? addDays(from, 1) : ''), checkInTime: '', checkOutTime: '', status: 'planned', conf: '', cost: '', link: '', notes: '', mapsUrl: '', pos: null } });
+  const editStay = (s: Stay) => { const { locationId, place, price, ...rest } = s; setModal({ type: 'stay', v: { ...rest, priceDraft: fromMoney(price, home), mapsUrl: place?.mapsUrl || '', pos: place?.lat != null && place.lng != null ? { lat: place.lat, lng: place.lng } : null, locationName: locationName(doc, locationId) } }); };
   const patchStay = (id: string, p: Partial<Stay>) => update((x) => { x.stays = x.stays.map((s) => (s.id === id ? { ...s, ...p } : s)); });
   const openStay = (s: Stay) => setModal({ type: 'viewStay', id: s.id });
   const openFlight = (f: Flight) => setModal({ type: 'viewFlight', id: f.id });
@@ -182,6 +185,7 @@ export default function App() {
     });
     close();
   };
+  const openPoint = useCallback((p: MapPoint) => { if (p.ref.type === 'stay') setModal({ type: 'viewStay', id: p.ref.stay.id }); else setModal({ type: 'view', itemId: p.ref.item.id, pi: p.ref.pi }); }, []);
   const patchFlight = (id: string, p: Partial<Flight>) => update((x) => { x.flights = x.flights.map((f) => (f.id === id ? { ...f, ...p } : f)); });
 
   /** After putting an item on a day in another place, offer to move it to that place's list. */
@@ -231,7 +235,7 @@ export default function App() {
     // New ideas always open the full editor (prefilled); nothing is added until Save.
     newIdea: ({ locationId, kind, title, lane }) => setModal({ type: 'item', v: {
       _new: true, id: uid(), kind, title: title || '', locationName: locationName(doc, locationId), category: 'activity', size: 'half', includesEvening: false,
-      meals: [], cuisine: '', price: fromMoney(undefined, home), booking: '', status: 'idea', mustDo: false, done: false, placeName: '', placeAddress: '', mapsUrl: '', link: '', notes: '',
+      meals: [], cuisine: '', price: fromMoney(undefined, home), booking: '', status: 'idea', mustDo: false, done: false, placeName: '', placeAddress: '', mapsUrl: '', pos: null, link: '', notes: '',
       pi: -1, date: lane?.date || '', time: '', meal: lane?.meal || 'lunch', slot: lane?.slot, elsewhere: [],
     } }),
     patchItem: (id, p) => update((x) => { x.items = x.items.map((i) => (i.id === id ? { ...i, ...p } : i)); }),
@@ -260,7 +264,7 @@ export default function App() {
     close();
   };
   const saveStay = (v: StayDraft) => {
-    const { _new, locationName: ln, mapsUrl, priceDraft, ...rest } = v;
+    const { _new, locationName: ln, mapsUrl, pos, priceDraft, ...rest } = v;
     update((x) => {
       const s: Stay = { ...rest };
       const price = toMoney(priceDraft);
@@ -268,8 +272,8 @@ export default function App() {
       const lid = ensureLocation(x, ln);
       if (lid) s.locationId = lid;
       const prev = x.stays.find((e) => e.id === s.id);
-      const place = buildPlace(prev?.place, s.name, s.address, mapsUrl);
-      if (place && (mapsUrl.trim() || prev?.place)) s.place = place;
+      const place = buildPlace(prev?.place, s.name, s.address, mapsUrl, pos);
+      if (place && (mapsUrl.trim() || prev?.place || pos)) s.place = place;
       const i = x.stays.findIndex((e) => e.id === s.id);
       if (i >= 0) x.stays[i] = s; else x.stays.push(s);
     });
@@ -286,8 +290,8 @@ export default function App() {
       it.locationId = ensureLocation(x, f.locationName) ?? (prev?.locationId || dayLocationId(x, f.date));
       if (f.mustDo) it.mustDo = true; else delete it.mustDo;
       if (f.done) it.done = true; else delete it.done;
-      const place = buildPlace(it.place, f.placeName.trim() || it.title, f.placeAddress, f.mapsUrl);
-      if (place && (f.placeName.trim() || f.placeAddress.trim() || f.mapsUrl.trim() || it.place?.lat != null)) it.place = place; else delete it.place;
+      const place = buildPlace(it.place, f.placeName.trim() || it.title, f.placeAddress, f.mapsUrl, f.pos);
+      if (place && (f.placeName.trim() || f.placeAddress.trim() || f.mapsUrl.trim() || f.pos)) it.place = place; else delete it.place;
       if (f.link.trim()) it.link = f.link.trim(); else delete it.link;
       if (f.notes.trim()) it.notes = f.notes; else delete it.notes;
       const price = toMoney(f.price);
@@ -388,7 +392,7 @@ export default function App() {
           {PLAN_VIEWS.map(([v, l]) => <button key={v} className={view === v ? 'on' : ''} onClick={() => goPlan(v)}>{l}</button>)}
         </nav>
       </div>
-      {view !== 'day' && warnings}
+      {view !== 'day' && view !== 'map' && warnings}
       {isEmpty && (
         <div className="welcome">
           <h2>Empty trip: let’s fill it in</h2>
@@ -409,6 +413,7 @@ export default function App() {
         <OverviewView doc={doc} dv={dv} onDay={goDay} onAddStay={(d) => addStay(d)} onAddLeg={(d) => addLeg(gapPrefill(d))} />
         <Legend />
       </>)}
+      {view === 'map' && <MapView doc={doc} dv={dv} onOpen={openPoint} />}
       {view === 'day' && <DayView doc={doc} dv={dv} date={dayDate} actions={plan} />}
     </>);
   };

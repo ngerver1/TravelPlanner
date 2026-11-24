@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { isDate } from './domain/dates';
 
-export type PlanView = 'calendar' | 'overview' | 'day';
+export type PlanView = 'calendar' | 'overview' | 'day' | 'map';
 export type Route =
   | { page: 'plan'; view: PlanView; date?: string }
   | { page: 'locations' }
@@ -16,6 +16,7 @@ export function parseRoute(hash: string): Route {
   const [head, arg] = hash.replace(/^#\/?/, '').split('/');
   switch (head) {
     case 'overview': case 'weeks': return { page: 'plan', view: 'overview' };
+    case 'map': return { page: 'plan', view: 'map' };
     case 'day': case 'days': case 'itinerary': return { page: 'plan', view: 'day', date: isDate(arg) ? arg : undefined };
     case 'locations': case 'pools': return { page: 'locations' };
     case 'location': return arg ? { page: 'location', id: decodeURIComponent(arg) } : { page: 'locations' };

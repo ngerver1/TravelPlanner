@@ -1,4 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, lazy, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { dayRoute } from '../domain/geo';
+import { Lazy, toPins } from './MapView';
+const MapCanvas = lazy(() => import('../components/MapCanvas'));
 import {
   DndContext, DragOverlay, KeyboardSensor, MouseSensor, TouchSensor, pointerWithin, rectIntersection, useDraggable, useDroppable,
   useSensor, useSensors, type CollisionDetection, type DragEndEvent, type DragStartEvent,
@@ -135,7 +138,7 @@ export function DayView({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived;
             <Pool doc={doc} dv={dv} date={date} locIds={dayLocIds} actions={actions} onClose={() => setPoolOpen(false)} />
           </aside>
           <section className="dv-day" {...swipe}>
-            <DayHeader x={x} dv={dv} date={date} idx={idx} actions={actions} directions={directions(doc, dv, x, date)} />
+            <DayHeader x={x} dv={dv} doc={doc} date={date} idx={idx} actions={actions} directions={directions(doc, dv, x, date)} />
             <DayTimeline x={x} dv={dv} doc={doc} actions={actions} />
             <LaneBox lane={{ date }} label="On this day" hint="slot not decided yet" doc={doc} actions={actions} onAdd={setPicker} compact />
             <h4 className="dv-h">Things to do</h4>
@@ -189,7 +192,7 @@ function directions(doc: TripDoc, dv: Derived, x: DayInfo, date: string): { url:
   return url ? { url, stops: stops.length } : null;
 }
 
-function DayHeader({ x, dv, date, idx, actions, directions: dir }: { x: DayInfo; dv: Derived; date: string; idx: number; actions: PlanActions; directions: { url: string; stops: number } | null }) {
+function DayHeader({ x, dv, doc, date, idx, actions, directions: dir }: { x: DayInfo; dv: Derived; doc: TripDoc; date: string; idx: number; actions: PlanActions; directions: { url: string; stops: number } | null }) {
   const prev = dv.dates[idx - 1], next = dv.dates[idx + 1];
   const n = x.night;
   return (
@@ -217,10 +220,29 @@ function DayHeader({ x, dv, date, idx, actions, directions: dir }: { x: DayInfo;
       )}
       <div className="dv-links">
         {!x.notes && <button type="button" className="link note-add" onClick={() => actions.editDay(date)}>+ Add a note</button>}
+        <DayMapToggle doc={doc} dv={dv} date={date} actions={actions} />
         {dir && <a className="btn sm" href={dir.url} target="_blank" rel="noreferrer" title={dir.stops > MAX_WAYPOINTS + 1 ? `Google Maps takes up to ${MAX_WAYPOINTS} stops in between; the rest are left off` : ''}>Directions for this day ↗</a>}
       </div>
       {x.notes && <p className="iday-notes" onClick={() => actions.editDay(date)}>{x.notes}</p>}
     </header>
+  );
+}
+
+/** "Day map": that day's stops on a small map, numbered in order, from last night's to tonight's stay. */
+function DayMapToggle({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived; date: string; actions: PlanActions }) {
+  const [open, setOpen] = useState(false);
+  const route = useMemo(() => dayRoute(doc, dv, date), [doc, dv, date]);
+  const pins = useMemo(() => toPins(route, dv, (p) => (p.ref.type === 'stay' ? actions.openStay(p.ref.stay) : actions.viewItem(p.ref.item, p.ref.pi))), [route, dv, actions]);
+  return (
+    <>
+      <button type="button" className={'btn sm' + (open ? ' on' : '')} onClick={() => setOpen(!open)}>{open ? 'Hide map' : `Day map${route.length ? ` (${route.filter((p) => p.number).length})` : ''}`}</button>
+      {open && (
+        <div className="daymap">
+          {route.length ? <Lazy><MapCanvas pins={pins} route height={260} /></Lazy>
+            : <p className="muted small">None of today’s stops have a map position yet. Open one → Edit → Find on map.</p>}
+        </div>
+      )}
+    </>
   );
 }
 
