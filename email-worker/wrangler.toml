@@ -1,0 +1,20 @@
+# Cloudflare Email Worker for Trip Planner. Receives mail for trips@aleagueapart.com (set up in Email Routing),
+# reads bookings and adds them to inbox.json in your trip's Gist for review in the app.
+# No keys here: GITHUB_TOKEN, GIST_ID and ALLOWED_SENDERS are set as secrets in the Cloudflare dashboard
+# (Workers & Pages → trip-planner-email → Settings → Variables and Secrets). See SETUP.md.
+name = "trip-planner-email"
+main = "src/index.ts"
+compatibility_date = "2025-11-01"
+compatibility_flags = ["nodejs_compat"]
+keep_vars = true
+
+# Workers AI (free allowance: 10,000 Neurons/day). Used only when an email has no booking markup.
+[ai]
+binding = "AI"
+
+[vars]
+# Must support JSON mode: https://developers.cloudflare.com/workers-ai/features/json-mode/
+AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+
+[observability]
+enabled = true

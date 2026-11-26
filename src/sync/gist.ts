@@ -2,6 +2,9 @@
 // never in a URL, never logged.
 import { readTripFile } from '../domain/migrate';
 import type { TripDoc } from '../domain/types';
+import { normalizeInbox, type InboxEntry } from '../domain/inbox';
+
+export const INBOX_FILE = 'inbox.json';
 
 const API = 'https://api.github.com';
 export const FILE = 'trip.json';
@@ -50,7 +53,7 @@ export async function listTripGists(token: string): Promise<GistInfo[]> {
   return out;
 }
 
-export type Fetched = { notModified: true } | { notModified: false; doc: TripDoc | null; etag: string | null };
+export type Fetched = { notModified: true } | { notModified: false; doc: TripDoc | null; etag: string | null; inbox: InboxEntry[] };
 
 /** Read the trip from a Gist. With an etag, an unchanged Gist answers 304 (cheap). */
 export async function readGist(token: string, id: string, etag?: string | null): Promise<Fetched> {
@@ -59,16 +62,17 @@ export async function readGist(token: string, id: string, etag?: string | null):
   const body = await res.json();
   const f = body.files?.[FILE] as { content?: string; truncated?: boolean; raw_url?: string } | undefined;
   const newEtag = res.headers.get('etag');
-  if (!f) return { notModified: false, doc: null, etag: newEtag };
+  const inbox = await readInboxFile(body.files?.[INBOX_FILE]);
+  if (!f) return { notModified: false, doc: null, etag: newEtag, inbox };
   let text = f.content ?? '';
   if (f.truncated && f.raw_url) {
     // Large files are cut short in the API response; the full text is at raw_url.
     try { text = await (await fetch(f.raw_url, { cache: 'no-store' })).text(); }
     catch { throw new SyncError('offline', 'Can’t reach GitHub'); }
   }
-  if (!text.trim()) return { notModified: false, doc: null, etag: newEtag };
+  if (!text.trim()) return { notModified: false, doc: null, etag: newEtag, inbox };
   try {
-    return { notModified: false, doc: readTripFile(JSON.parse(text)).doc, etag: newEtag };
+    return { notModified: false, doc: readTripFile(JSON.parse(text)).doc, etag: newEtag, inbox };
   } catch {
     throw new SyncError('other', 'The Gist’s trip.json isn’t a trip file');
   }
@@ -85,4 +89,20 @@ export async function createGist(token: string, doc: TripDoc): Promise<GistInfo>
   });
   const g = await res.json();
   return { id: g.id, description: g.description || '', updatedAt: g.updated_at, url: g.html_url };
+}
+
+async function readInboxFile(f: { content?: string; truncated?: boolean; raw_url?: string } | undefined): Promise<InboxEntry[]> {
+  if (!f) return [];
+  let text = f.content ?? '';
+  if (f.truncated && f.raw_url) { try { text = await (await fetch(f.raw_url, { cache: 'no-store' })).text(); } catch { return []; } }
+  try { return normalizeInbox(JSON.parse(text)); } catch { return []; }
+}
+
+/** Change the inbox (e.g. remove a reviewed booking): reads the latest copy first, so new emails aren't lost. */
+export async function updateInbox(token: string, id: string, change: (entries: InboxEntry[]) => InboxEntry[]): Promise<InboxEntry[]> {
+  const res = await call(token, `/gists/${encodeURIComponent(id)}`);
+  const body = await res.json();
+  const next = change(await readInboxFile(body.files?.[INBOX_FILE]));
+  await call(token, `/gists/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ files: { [INBOX_FILE]: { content: JSON.stringify({ entries: next }, null, 1) } } }) });
+  return next;
 }

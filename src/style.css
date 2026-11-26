@@ -673,3 +673,17 @@ a.btn{text-decoration:none;color:inherit}
 .hop-arrow{color:var(--muted);font-size:11px;line-height:1}
 .hop-links{display:flex;gap:6px}
 .hop-links .btn{min-height:36px}
+
+/* inbox */
+.inbox-chip{flex:none;border:1px solid var(--accent-line);background:var(--accent-bg);color:var(--accent);border-radius:999px;padding:3px 10px;font-weight:650;font-size:12.5px;cursor:pointer;min-height:30px}
+.inbox-banner{align-items:center}
+.inbox-entry{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px;box-shadow:var(--shadow)}
+.ie-head{display:flex;gap:8px;align-items:flex-start}
+.ie-source{display:flex;align-items:center;gap:6px;margin:6px 0}
+.ie-source.warn{color:var(--warn)} .ie-source.good{color:var(--good)}
+.ie-booking{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;border-top:1px solid var(--line);padding:8px 0}
+.ie-actions{display:flex;gap:6px;flex-wrap:wrap}
+.ie-match{color:var(--accent);margin-top:2px}
+.ie-manual{border-top:1px solid var(--line);padding:8px 0;display:flex;flex-direction:column;gap:6px}
+.ie-text summary{cursor:pointer;color:var(--muted);padding:4px 0}
+.ie-text pre{white-space:pre-wrap;font:12.5px/1.45 ui-monospace,Menlo,monospace;background:var(--soft);border-radius:8px;padding:8px;max-height:320px;overflow:auto;margin:6px 0}

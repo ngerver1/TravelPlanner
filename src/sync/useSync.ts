@@ -5,7 +5,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TripDoc } from '../domain/types';
 import { decide, isDirty } from './decide';
-import { SyncError, createGist, readGist, writeGist, checkToken, listTripGists, type GistInfo } from './gist';
+import { SyncError, createGist, readGist, writeGist, checkToken, listTripGists, updateInbox, type GistInfo } from './gist';
+import type { InboxEntry } from '../domain/inbox';
 
 export type SyncStatus = 'local' | 'saved' | 'saving' | 'offline' | 'conflict' | 'auth' | 'error';
 
@@ -27,6 +28,8 @@ export function useSync({ doc, load, setRev }: { doc: TripDoc; load: (d: TripDoc
   const [status, setStatus] = useState<SyncStatus>(token && meta.gistId ? 'saving' : 'local');
   const [message, setMessage] = useState('');
   const [conflict, setConflict] = useState<{ remote: TripDoc } | null>(null);
+  /** Bookings from forwarded emails, waiting for review (inbox.json in the Gist). */
+  const [inbox, setInbox] = useState<InboxEntry[]>([]);
 
   const docRef = useRef(doc); docRef.current = doc;
   const metaRef = useRef(meta); metaRef.current = meta;
@@ -63,6 +66,7 @@ export function useSync({ doc, load, setRev }: { doc: TripDoc; load: (d: TripDoc
         else {
           remote = got.doc;
           remoteRev = remote?.rev ?? 0;
+          setInbox(got.inbox);
           setMeta({ etag: got.etag, remoteRev });
         }
         const local = docRef.current;
@@ -199,13 +203,21 @@ export function useSync({ doc, load, setRev }: { doc: TripDoc; load: (d: TripDoc
   const disconnect = useCallback(() => {
     ls.set(TOKEN, null); ls.set(META, null);
     setTokenState(null); tokenRef.current = null;
-    metaRef.current = EMPTY; setMetaState(EMPTY);
+    metaRef.current = EMPTY; setMetaState(EMPTY); setInbox([]);
     conflictRef.current = null; setConflict(null);
     setStatus('local'); setMessage('');
   }, []);
 
+  /** Change the inbox in the Gist (after Add / Update / Dismiss). */
+  const changeInbox = useCallback(async (change: (entries: InboxEntry[]) => InboxEntry[]) => {
+    const t = tokenRef.current, id = metaRef.current.gistId;
+    if (!t || !id) return;
+    setInbox((cur) => change(cur)); // show it straight away
+    try { setInbox(await updateInbox(t, id, change)); setMeta({ etag: null }); } catch (e) { fail(e); }
+  }, [setMeta]);
+
   return {
-    status, message, conflict, resolve, syncNow: sync,
+    status, message, conflict, resolve, syncNow: sync, inbox, changeInbox,
     token, login: meta.login, gistId: meta.gistId,
     connect, list, useGist, peek, create, disconnect,
   };

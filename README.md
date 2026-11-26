@@ -139,6 +139,17 @@ No Google account or key needed for any of this:
 - Tapping a booking shows it with **Directions** (Google Maps public transport, or driving for a car),
   the booking link and a copyable confirmation number.
 
+## Email inbox (forward bookings)
+
+Forward booking confirmations (flights, hotels, transport, restaurants, tours, tickets) to
+**trips@aleagueapart.com**. They appear under **📥 Inbox** (top of the app) for you to review:
+**Add** (opens the right editor, already filled in), **Update existing** (when the confirmation number or flight
+matches something already in the trip), or **Dismiss**. Nothing goes into the trip on its own. Emails that
+couldn't be read keep their text so you can add them by hand.
+
+Setup (once, free): see [`email-worker/SETUP.md`](email-worker/SETUP.md). Needs sync set up, because the inbox
+lives in the same Gist.
+
 ## Costs
 
 - **Prices:** stays, flights, things to do and places to eat each have an optional **amount and currency**
@@ -244,6 +255,7 @@ Layout:
 
 - `src/domain/`: types, derive logic (auto location, nights, overlaps, out-of-range,
   colours), v1 migration, normalisation. No React. Unit tested with Vitest.
+- `email-worker/`: the Cloudflare Email Worker (reads forwarded bookings into the Gist's `inbox.json`); `src/domain/inbox.ts` holds the shared booking format, markup reader and matching.
 - `src/sync/`: local storage, the Gist client (`gist.ts`), sync rules (`decide.ts`, tested) and the sync hook (`useSync.ts`).
 - `src/domain/plan.ts`: placing, moving, swapping, ordering and slot capacity.
 - `src/views/`: Month (Calendar), Overview, DayView, Locations, Settings.

@@ -87,7 +87,9 @@ export function SyncSettings({ sync, doc }: { sync: Sync; doc: TripDoc }) {
   return (
     <div className="sync-setup">
       <p className="small"><span className={'sync-dot ' + tone} /> <b>{label}</b>{sync.message ? <span className="muted"> · {sync.message}</span> : null}</p>
-      <p className="muted small">Connected as {sync.login} · Gist <a href={`https://gist.github.com/${sync.gistId}`} target="_blank" rel="noreferrer">{sync.gistId?.slice(0, 8)}…</a></p>
+      <p className="muted small">Connected as {sync.login} · Gist <a href={`https://gist.github.com/${sync.gistId}`} target="_blank" rel="noreferrer">{sync.gistId?.slice(0, 8)}…</a>
+        {' '}<button className="link sm" onClick={() => navigator.clipboard?.writeText(sync.gistId || '')}>Copy Gist ID</button>
+        <span> (needed for the email inbox setup)</span></p>
       {sync.status === 'auth' && <p className="alert bad small">The token was refused (expired or deleted). Disconnect, then connect with a new token; your trip stays on this device.</p>}
       <div className="row gap wrap">
         <button className="btn" onClick={() => sync.syncNow()}>Sync now</button>

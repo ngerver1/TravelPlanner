@@ -10,5 +10,5 @@ export default defineConfig({
   base: `/${repo}/`,
   plugins: [react()],
   server: { port: 5173 },
-  test: { include: ['src/**/*.test.ts'] },
+  test: { include: ['src/**/*.test.ts', 'email-worker/src/**/*.test.ts'] },
 });

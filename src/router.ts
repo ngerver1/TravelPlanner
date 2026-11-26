@@ -10,7 +10,8 @@ export type Route =
   | { page: 'stays' }
   | { page: 'flights' }
   | { page: 'settings' }
-  | { page: 'costs' };
+  | { page: 'costs' }
+  | { page: 'inbox' };
 
 export function parseRoute(hash: string): Route {
   const [head, arg] = hash.replace(/^#\/?/, '').split('/');
@@ -24,6 +25,7 @@ export function parseRoute(hash: string): Route {
     case 'flights': case 'travel': return { page: 'flights' };
     case 'settings': return { page: 'settings' };
     case 'costs': case 'budget': return { page: 'costs' };
+    case 'inbox': return { page: 'inbox' };
     default: return { page: 'plan', view: 'calendar' };
   }
 }

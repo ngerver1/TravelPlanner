@@ -33,6 +33,8 @@ import { DayView, type DropTarget, type PlanActions } from './views/DayView';
 import { LocationPage, LocationsList, type LocationActions } from './views/Locations';
 import { SettingsPage } from './views/Settings';
 import { CostsPage } from './views/Costs';
+import { InboxPage, type InboxActions } from './views/Inbox';
+import type { Booking, BookingType } from './domain/inbox';
 
 type ModalState =
   | { type: 'flight'; v: FlightDraft }
@@ -171,6 +173,7 @@ export default function App() {
   const gapPrefill = (d: string) => { const l = dv.info[d]?.loc; const prev = dv.info[addDays(d, -1)]?.endLoc; return { date: d, fromLoc: l?.b ? l.a.name : prev?.id ? prev.name : '', toLoc: (l?.b ?? l?.a)?.name }; };
   const patchLeg = (id: string, p: Partial<TransportLeg>) => update((x) => { x.legs = x.legs.map((l) => (l.id === id ? { ...l, ...p } : l)); });
   const saveLeg = (v: LegDraft) => {
+    doneInbox();
     const { _new, fromLoc, toLoc, priceDraft, itemId, itemRole, ...rest } = v;
     update((x) => {
       const l: TransportLeg = { ...rest, fromName: rest.fromName.trim(), toName: rest.toName.trim(), operator: rest.operator.trim() };
@@ -226,6 +229,56 @@ export default function App() {
     checkLocation(it.id, date);
   };
 
+  // ---------- Inbox (bookings from forwarded emails) ----------
+  // When an editor is opened from the inbox, saving it marks that booking (or the whole email) as done.
+  const pendingInbox = useRef<{ entryId: string; index?: number } | null>(null);
+  useEffect(() => { if (!modal) pendingInbox.current = null; }, [modal]);
+  const removeFromInbox = (entryId: string, index?: number) => sync.changeInbox((list) => list
+    .map((e) => (e.id === entryId && index != null ? { ...e, bookings: e.bookings.filter((_, i) => i !== index) } : e))
+    .filter((e) => e.id !== entryId || (index != null && e.bookings.length > 0)));
+  const doneInbox = () => { const p = pendingInbox.current; pendingInbox.current = null; if (p) removeFromInbox(p.entryId, p.index); };
+  const guessLoc = (text?: string) => {
+    const t = (text || '').toLowerCase();
+    return t ? [...doc.locations].sort((a, b) => b.name.length - a.name.length).find((l) => t.includes(l.name.toLowerCase()))?.name || '' : '';
+  };
+  const defined = <T extends object>(o: T): Partial<T> => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== '')) as Partial<T>;
+  /** Fill an editor's draft from an email booking; only fields the email has are changed. */
+  const patchModal = (b: Booking) => setModal((m) => {
+    if (!m) return m;
+    const price = b.price ? { priceDraft: fromMoney(b.price, home) } : {};
+    if (m.type === 'flight') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ airline: b.airline, flightNo: b.flightNo, from: b.from, to: b.to, depDate: b.depDate, depTime: b.depTime, arrDate: b.arrDate || b.depDate, arrTime: b.arrTime, conf: b.conf }) } };
+    if (m.type === 'stay') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ name: b.name, address: b.address, checkIn: b.checkIn, checkOut: b.checkOut, checkInTime: b.checkInTime, checkOutTime: b.checkOutTime, conf: b.conf, locationName: m.v.locationName || guessLoc(`${b.city || ''} ${b.address || ''}`) || b.city }) } };
+    if (m.type === 'leg') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ mode: b.mode, operator: b.operator, fromName: b.fromName, toName: b.toName, date: b.date, depTime: b.depTime, arrDate: b.arrDate, arrTime: b.arrTime, conf: b.conf, fromLoc: m.v.fromLoc || guessLoc(b.fromName), toLoc: m.v.toLoc || guessLoc(b.toName) }) } };
+    if (m.type === 'item') {
+      const ref = [b.conf && `Ref ${b.conf}`, b.partySize && `${b.partySize} people`].filter(Boolean).join(' · ');
+      const loc = m.v.locationName || guessLoc(`${b.city || ''} ${b.address || ''}`) || b.city || (b.date ? dv.info[b.date]?.endLoc?.name : '') || '';
+      return { ...m, v: { ...m.v, status: 'booked', ...defined({ title: m.v.title || b.name, placeAddress: b.address, date: b.date, time: b.time, locationName: loc }),
+        ...(b.time ? { meal: mealFromTime(b.time) } : {}), ...(b.price ? { price: fromMoney(b.price, home) } : {}),
+        ...(ref ? (m.v.kind === 'restaurant' ? { booking: [m.v.booking, ref].filter(Boolean).join(' · ') } : { notes: [m.v.notes, ref].filter(Boolean).join('\n') }) : {}) } };
+    }
+    return m;
+  });
+  const openNew = (type: BookingType, date?: string) => {
+    if (type === 'flight') newFlight(date);
+    else if (type === 'stay') addStay(date);
+    else if (type === 'transport') addLeg({ date });
+    else plan.newIdea({ kind: type === 'restaurant' ? 'restaurant' : 'activity' });
+  };
+  const inboxActions: InboxActions = {
+    add: (entryId, index, b) => { openNew(b.type, b.depDate || b.checkIn || b.date); pendingInbox.current = { entryId, index }; patchModal(b); },
+    update: (entryId, index, b, m) => {
+      if (m.type === 'flight') { const f = doc.flights.find((x) => x.id === m.id); if (f) editFlight(f); }
+      else if (m.type === 'stay') { const x = doc.stays.find((y) => y.id === m.id); if (x) editStay(x); }
+      else if (m.type === 'leg') { const x = doc.legs.find((y) => y.id === m.id); if (x) editLeg(x); }
+      else { const it = doc.items.find((y) => y.id === m.id); if (it) plan.editItem(it, it.placements.length ? 0 : -1); }
+      pendingInbox.current = { entryId, index };
+      patchModal(b);
+    },
+    addManual: (entryId, type) => { openNew(type); pendingInbox.current = { entryId }; },
+    dismissBooking: (entryId, index) => { removeFromInbox(entryId, index); toast('Dismissed'); },
+    dismissEntry: (entryId) => { removeFromInbox(entryId); toast('Email dismissed'); },
+  };
+
   const plan: PlanActions = {
     goDay, setDayLoc,
     editDay: (d) => setModal({ type: 'day', date: d }),
@@ -256,6 +309,7 @@ export default function App() {
 
   // ---------- saving forms ----------
   const saveFlight = (v: FlightDraft) => {
+    doneInbox();
     const { _new, priceDraft, ...rest } = v;
     const f: Flight = { ...rest };
     const price = toMoney(priceDraft);
@@ -264,6 +318,7 @@ export default function App() {
     close();
   };
   const saveStay = (v: StayDraft) => {
+    doneInbox();
     const { _new, locationName: ln, mapsUrl, pos, priceDraft, ...rest } = v;
     update((x) => {
       const s: Stay = { ...rest };
@@ -280,6 +335,7 @@ export default function App() {
     close();
   };
   const saveItem = (f: ItemDraft) => {
+    doneInbox();
     let placedOn: string | undefined;
     update((x) => {
       const prev = x.items.find((i) => i.id === f.id);
@@ -426,6 +482,7 @@ export default function App() {
     <div className={'app page-' + page + (page === 'plan' ? ' view-' + route.view : '')}>
       <header className="top" ref={headerRef}>
         <TripSettings trip={doc.trip} onChange={(p) => update((x) => { x.trip = { ...x.trip, ...p }; })} />
+        {sync.inbox.length > 0 && <button type="button" className="inbox-chip" onClick={() => navTo({ page: 'inbox' })} title="Bookings from email to review">📥 {sync.inbox.length}</button>}
         <SyncChip status={sync.status} onClick={() => navTo({ page: 'settings' })} />
       </header>
 
@@ -437,6 +494,12 @@ export default function App() {
             <button className="icon sm" aria-label="Hide" onClick={() => { setBannerHidden(true); try { localStorage.setItem('tripPlanner.syncBannerHidden', '1'); } catch { /* ignore */ } }}>✕</button>
           </div>
         )}
+        {page === 'plan' && sync.inbox.length > 0 && (
+          <div className="sync-banner inbox-banner">
+            <span>📥 {sync.inbox.length} email{sync.inbox.length > 1 ? 's' : ''} with bookings to review.</span>
+            <button className="btn sm primary" onClick={() => navTo({ page: 'inbox' })}>Review</button>
+          </div>
+        )}
         {page === 'plan' && planPage()}
         {page === 'locations' && <LocationsList doc={doc} dv={dv} actions={locActions} />}
         {page === 'location' && <LocationPage key={route.id} doc={doc} dv={dv} id={route.id} actions={locActions} plan={plan} onBack={() => navTo({ page: 'locations' })} />}
@@ -445,6 +508,7 @@ export default function App() {
         {page === 'costs' && <CostsPage doc={doc} dv={dv} update={update} onOpen={(ref) => {
           if (ref.type === 'stay') openStay(ref.stay); else if (ref.type === 'flight') openFlight(ref.flight); else if (ref.type === 'leg') openLeg(ref.leg); else plan.viewItem(ref.item, ref.pi);
         }} />}
+        {page === 'inbox' && <InboxPage entries={sync.inbox} doc={doc} actions={inboxActions} syncing={!!sync.gistId} />}
         {page === 'settings' && <SettingsPage doc={doc} toast={toast} theme={theme} onTheme={setTheme} sync={sync} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
       </main>
 
