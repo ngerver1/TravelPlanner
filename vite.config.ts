@@ -8,8 +8,12 @@ import { VitePWA } from 'vite-plugin-pwa';
 const repo = process.env.GITHUB_REPOSITORY?.split('/')[1] ?? 'TravelPlanner';
 const base = `/${repo}/`;
 
+// Shown in Settings, so you can tell which version a device is running.
+const version = `${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC${process.env.GITHUB_SHA ? ' · ' + process.env.GITHUB_SHA.slice(0, 7) : ''}`;
+
 export default defineConfig({
   base,
+  define: { __APP_VERSION__: JSON.stringify(version) },
   plugins: [
     react(),
     // Installable app that opens offline. The service worker precaches only the app's own files

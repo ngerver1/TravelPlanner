@@ -8,6 +8,7 @@ import { SyncSettings } from './SyncSettings';
 import { loadLandscape, saveLandscape } from '../components/LocalCard';
 import { clearDeviceGoogleKey, deviceGoogleKey, testGoogleKey } from '../sync/google';
 import { exportJson, isGoogleKey } from '../domain/normalize';
+import { APP_VERSION } from '../pwa';
 import type { Sync } from '../sync/useSync';
 
 export function downloadJson(filename: string, json: string, type = 'application/json') {
@@ -25,8 +26,9 @@ export function downloadJson(filename: string, json: string, type = 'application
 export const exportName = (doc: TripDoc, suffix = '') =>
   `${(doc.trip.name || 'trip').replace(/[^\w-]+/g, '-').toLowerCase()}${suffix}-${todayStr()}.json`;
 
-export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, onTheme, sync, onGoogleKey }: {
-  doc: TripDoc; onImport: (d: TripDoc) => void; onGoogleKey: (key: string | undefined) => void; toast: (m: string) => void; status: string; statusOk: boolean; theme: Theme; onTheme: (t: Theme) => void; sync: Sync;
+export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, onTheme, sync, onGoogleKey, onCheckUpdate }: {
+  doc: TripDoc; onImport: (d: TripDoc) => void; onGoogleKey: (key: string | undefined) => void;
+  onCheckUpdate: () => Promise<'found' | 'latest' | 'offline' | 'unsupported'>; toast: (m: string) => void; status: string; statusOk: boolean; theme: Theme; onTheme: (t: Theme) => void; sync: Sync;
 }) {
   const hasKey = !!doc.settings?.googleMapsKey;
   const [withKey, setWithKey] = useState(false);
@@ -103,6 +105,23 @@ export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, on
           <div className="row gap"><button className="btn danger" onClick={() => { onImport(p); setPending(null); setPaste(''); }}>Replace trip</button><button className="btn ghost" onClick={() => setPending(null)}>Cancel</button></div>
         </div>
       )}
+      <h4>About this app</h4>
+      <AppVersion onCheck={onCheckUpdate} />
+    </div>
+  );
+}
+
+function AppVersion({ onCheck }: { onCheck: () => Promise<'found' | 'latest' | 'offline' | 'unsupported'> }) {
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const text = { found: 'A new version is ready: tap “Update available” at the bottom.', latest: 'This is the latest version.', offline: 'You’re offline: try again with a connection.', unsupported: 'Updates are checked when the app opens.' };
+  return (
+    <div className="app-version">
+      <p className="small">Version <b>{APP_VERSION}</b></p>
+      <div className="row gap wrap">
+        <button className="btn" disabled={busy} onClick={async () => { setBusy(true); setMsg(''); setMsg(text[await onCheck()]); setBusy(false); }}>{busy ? 'Checking…' : 'Check for updates'}</button>
+        {msg && <span className="small">{msg}</span>}
+      </div>
     </div>
   );
 }

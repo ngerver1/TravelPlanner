@@ -534,7 +534,7 @@ export default function App() {
           if (ref.type === 'stay') openStay(ref.stay); else if (ref.type === 'flight') openFlight(ref.flight); else if (ref.type === 'leg') openLeg(ref.leg); else plan.viewItem(ref.item, ref.pi);
         }} />}
         {page === 'inbox' && <InboxPage entries={sync.inbox} doc={doc} actions={inboxActions} syncing={!!sync.gistId} />}
-        {page === 'settings' && <SettingsPage doc={doc} toast={toast} onGoogleKey={setGoogleKey} theme={theme} onTheme={setTheme} sync={sync} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
+        {page === 'settings' && <SettingsPage doc={doc} toast={toast} onGoogleKey={setGoogleKey} onCheckUpdate={appUpdate.check} theme={theme} onTheme={setTheme} sync={sync} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
       </main>
 
       <nav className="bottombar" aria-label="Menu">
