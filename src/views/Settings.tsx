@@ -155,7 +155,7 @@ function GoogleKey({ tripKey, onSave }: { tripKey: string; onSave: (key: string 
   );
   return (
     <div className="gkey">
-      <p className="muted small">Paste your Google Maps key to use Google for the Map, Find on map and Get local name (OpenStreetMap until then).
+      <p className="muted small">Paste your Google Maps key to turn on the Map, Find on map and Get local name.
         It’s saved with the trip, so your other devices get it after sync. Only use a key that is <b>restricted to this website, restricted to the
         Maps JavaScript and Places APIs, and capped</b> (see the README).</p>
       <div className="row gap">

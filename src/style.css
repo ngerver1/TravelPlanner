@@ -657,10 +657,8 @@ a.btn{text-decoration:none;color:inherit}
 .pin-num{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;color:#fff;font:700 12px/1 system-ui,sans-serif;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 .pin-stay{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:#fff;border:2.5px solid;font-size:14px;box-shadow:0 1px 4px rgba(0,0,0,.35)}
 .geo-results{display:flex;flex-direction:column;gap:6px;margin-top:6px}
-.leaflet-container{font:inherit}
 .dv-links{flex-wrap:wrap}
 
-.mapcanvas.dark-tiles .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9)}
 
 .gmap{width:100%;border:1px solid var(--line);border-radius:12px;margin:4px 0 10px;display:block;background:var(--soft)}
 .airport-maps{margin-bottom:6px}

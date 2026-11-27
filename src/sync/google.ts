@@ -4,7 +4,8 @@
 // tap a button: nothing runs in the background.
 import { GOOGLE_LANG, localFromGoogle, type LocalLang } from '../domain/local';
 import type { LocalText } from '../domain/types';
-import type { GeoResult } from './geocode';
+/** A place found by Find on map. */
+export interface GeoResult { name: string; address: string; lat: number; lng: number; placeId?: string }
 
 const KEY = 'tripPlanner.googleKey';
 /** A key saved on this device only (how it worked before keys synced). */

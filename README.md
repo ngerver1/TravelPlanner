@@ -187,15 +187,15 @@ lives in the same Gist.
   last night's hotel (or the arrival airport after a flight) → the day's stops in order → tonight's
   hotel (or the departure airport before an overnight flight). Up to 10 stops.
 
-- **Plan → Map → Everything / a location** pins everything that has a map position (on Google Maps once you've
-  added a key, below; OpenStreetMap until then): ideas as dots in their location's colour
+- **Plan → Map → Everything / a location** pins everything that has a map position on a Google map (needs your
+  Google Maps key, below): ideas as dots in their location's colour
   (solid = on a day, hollow = still an idea) and stays as 🛏. Choose **Everything**, **a location** or
   **a day** (a day shows its stops numbered in order, joined from hotel to hotel). Tap a pin to open it.
 - **Giving something a position:** in an idea's or stay's editor, tap **Find on map** (searches
-  OpenStreetMap by name and city; pick the right result), or paste a long Google Maps link from a
+  Google by name and city; pick the right result; needs the key), or paste a long Google Maps link from a
   computer. Short `maps.app.goo.gl` share links don't include the position.
-- Without a key: map tiles © OpenStreetMap contributors, place search by OpenStreetMap Nominatim (only the name and
-  city you search for are sent). With a key, OpenStreetMap isn't used at all.
+- Without a key, the Map tab says it needs one, and Find on map and Get local name are switched off. Everything
+  above that says "no key needed" keeps working.
 
 ### Google Maps with your own key (free, capped)
 
@@ -274,10 +274,10 @@ if there's a phone number. Black on white, even in dark mode, and it keeps the s
 - **From emails:** forward the booking as usual. Japanese hotel and restaurant emails often include the name and
   address in Japanese; the reader copies them exactly (it never translates) and the Inbox shows them next to 文.
   Add or Update fills them in.
-- **Get local name:** in a stay's or idea's editor, under the address, tap **Get local name**. It looks the place up
-  on OpenStreetMap in the local language (日本語 for Japan, 繁體中文 for Hong Kong: change it in the little menu if
-  needed) and shows what it found. Tap **Use this** or **Ignore**. Setting the map position first (Find on map)
-  gives better results. One search per tap; nothing is looked up by itself.
+- **Get local name:** in a stay's or idea's editor, under the address, tap **Get local name**. It asks Google Maps
+  for the place in the local language (日本語 for Japan, 繁體中文 for Hong Kong: change it in the little menu if
+  needed) and shows what it found. Tap **Use this** or **Ignore**. Using **Find on map** first gives the exact
+  place. One request per tap; nothing is looked up by itself. Needs the Google Maps key.
 - **Paste it:** copy the name and address from the booking, the hotel's website or Google Maps (switch Google Maps
   to Japanese to see them) and paste them into the two boxes.
 

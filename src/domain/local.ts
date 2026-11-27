@@ -62,50 +62,6 @@ export function langForPlace(pos: { lat: number; lng: number } | null | undefine
   return 'ja';
 }
 
-/** For Chinese, OpenStreetMap often holds "香港站 Hong Kong Station": keep the Chinese words only. */
-function chineseOnly(s: string): string {
-  if (!hasCjk(s) || !/[A-Za-z]{3,}/.test(s)) return s;
-  return s.split(/\s+/).filter((t) => hasCjk(t) || /^[\d\-–/]+[號号]?$/.test(t)).join(' ') || s;
-}
-/** Join address parts: no space between Japanese/Chinese parts, a space between Latin words or numbers. */
-function joinParts(parts: string[]): string {
-  let out = '';
-  for (const p of parts) {
-    if (out && /[A-Za-z0-9.]$/.test(out) && /^[A-Za-z0-9]/.test(p)) out += ' ';
-    else if (out && !hasCjk(out.slice(-1)) && !hasCjk(p[0]) && !/[\s-]$/.test(out)) out += ' ';
-    out += p;
-  }
-  return out;
-}
-
-export interface NominatimResult {
-  name?: string; display_name?: string;
-  address?: Record<string, string>; namedetails?: Record<string, string>;
-}
-/**
- * A place's local name and address from an OpenStreetMap (Nominatim) result fetched with accept-language
- * set to the local language. Names only count if they are written in the local script.
- */
-export function localFromNominatim(r: NominatimResult, lang: LocalLang): LocalText | undefined {
-  const nd = r.namedetails || {};
-  const cands = lang === 'zh-Hant'
-    ? [nd['name:zh-Hant'], nd['name:zh_TW'], nd['name:zh-HK'], nd['name:zh'], nd.name, r.name]
-    : [nd[`name:${lang}`], nd.name, r.name];
-  let name = cands.find((c) => hasCjk(c)) || '';
-  if (lang === 'zh-Hant') name = chineseOnly(name);
-  const a = r.address || {};
-  let parts = (r.display_name || '').split(/,\s*/).map((p) => p.trim()).filter(Boolean);
-  const drop = new Set([r.name, nd.name, name, a.country, a.postcode, a.country_code].filter(Boolean).map((x) => x!.trim()));
-  if (parts.length && (drop.has(parts[0]) || (name && parts[0] === name))) parts = parts.slice(1);
-  parts = parts.filter((p) => !drop.has(p) && !/^\d{3}-?\d{4}$/.test(p) && !/^(日本|中国|中國|대한민국|Japan|China)$/i.test(p));
-  if (lang === 'zh-Hant') parts = parts.map(chineseOnly);
-  parts.reverse();
-  let address = joinParts(parts);
-  if (lang === 'ja' && a.postcode && address) address = `〒${a.postcode} ${address}`;
-  if (!hasCjk(address)) address = '';
-  return toLocal(name, address);
-}
-
 /**
  * Split local text into pieces that should stay together when the line wraps: words, and in Japanese and
  * Chinese addresses the prefecture, county, city and ward, the street, and the numbers.

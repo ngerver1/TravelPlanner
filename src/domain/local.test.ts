@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cleanPhone, copiedFrom, findLocalAddress, findLocalName, findPhone, guessLang, hasLocal, langForPlace, localFromNominatim, toLocal, wrapPieces,
+  cleanPhone, copiedFrom, findLocalAddress, findLocalName, findPhone, guessLang, hasLocal, langForPlace, toLocal, wrapPieces,
 } from './local';
 import { normalizeDoc } from './normalize';
 
@@ -58,30 +58,6 @@ describe('language', () => {
     expect(langForPlace({ lat: 42.85, lng: 140.9 })).toBe('ja');
     expect(langForPlace(null, 'Nathan Road, Tsim Sha Tsui, Hong Kong')).toBe('zh-Hant');
     expect(langForPlace(null, 'Rusutsu')).toBe('ja');
-  });
-});
-
-describe('OpenStreetMap results', () => {
-  it('Japanese: local name, address big-to-small with the postcode', () => {
-    const r = {
-      name: 'ザ・ウェスティン ルスツリゾート',
-      display_name: 'ザ・ウェスティン ルスツリゾート, 133, 泉川, 留寿都村, 虻田郡, 後志総合振興局, 北海道, 048-1711, 日本',
-      address: { postcode: '048-1711', country: '日本', country_code: 'jp' },
-      namedetails: { name: 'ザ・ウェスティン ルスツリゾート', 'name:en': 'The Westin Rusutsu Resort' },
-    };
-    expect(localFromNominatim(r, 'ja')).toEqual({ name: 'ザ・ウェスティン ルスツリゾート', address: '〒048-1711 北海道後志総合振興局虻田郡留寿都村泉川133' });
-  });
-  it('Hong Kong: Chinese words only from bilingual names', () => {
-    const r = {
-      name: '半島酒店 The Peninsula Hong Kong',
-      display_name: '半島酒店 The Peninsula Hong Kong, 22, 梳士巴利道 Salisbury Road, 尖沙咀 Tsim Sha Tsui, 油尖旺區 Yau Tsim Mong District, 九龍 Kowloon, 香港 Hong Kong, 中国',
-      address: { country: '中国', country_code: 'hk' },
-      namedetails: { name: '半島酒店 The Peninsula Hong Kong', 'name:zh': '半島酒店', 'name:en': 'The Peninsula Hong Kong' },
-    };
-    expect(localFromNominatim(r, 'zh-Hant')).toEqual({ name: '半島酒店', address: '香港九龍油尖旺區尖沙咀梳士巴利道22' });
-  });
-  it('no local script: nothing to offer', () => {
-    expect(localFromNominatim({ name: 'Some Hut', display_name: 'Some Hut, Hill Road, Niseko', namedetails: { name: 'Some Hut' } }, 'ja')).toBeUndefined();
   });
 });
 

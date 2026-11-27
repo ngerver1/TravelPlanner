@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { Icon } from './Icons';
-import { geocode, type GeoResult } from '../sync/geocode';
-import { hasGoogle, searchPlaces } from '../sync/google';
+import { hasGoogle, searchPlaces, type GeoResult } from '../sync/google';
 import { Field } from './ui';
 
 /** A map position, and the Google place it came from (if found with Google). */
 export type Pos = { lat: number; lng: number; placeId?: string } | null;
 
-/** Shows the saved map position and lets you find one by name (OpenStreetMap search). */
+/** Shows the saved map position and lets you find one by name (Google Places, with your key). */
 export function FindOnMap({ value, query, onChange }: { value: Pos; query: string; onChange: (p: Pos, r?: GeoResult) => void }) {
   const [results, setResults] = useState<GeoResult[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -15,15 +14,15 @@ export function FindOnMap({ value, query, onChange }: { value: Pos; query: strin
   const google = hasGoogle();
   const find = async () => {
     setBusy(true); setErr(''); setResults(null);
-    try { const r = google ? await searchPlaces(query) : await geocode(query); setResults(r); if (!r.length) setErr('Nothing found. Try adding the area or the address.'); }
-    catch (e) { setErr(google && e instanceof Error ? e.message : 'Couldn’t reach the map search. Check your connection.'); }
+    try { const r = await searchPlaces(query); setResults(r); if (!r.length) setErr('Nothing found. Try adding the area or the address.'); }
+    catch (e) { setErr(e instanceof Error ? e.message : 'Couldn’t reach Google Maps. Check your connection.'); }
     finally { setBusy(false); }
   };
   return (
-    <Field label="Map position" span hint={value ? undefined : 'Needed for the map. A long Google Maps link sets it too.'}>
+    <Field label="Map position" span hint={!google ? 'Find on map needs a Google Maps key: add it in Settings. A long Google Maps link sets the position too.' : value ? undefined : 'Needed for the map. A long Google Maps link sets it too.'}>
       <span className="row gap wrap">
         {value ? <span className="small"><Icon name="location" /> {value.lat.toFixed(4)}, {value.lng.toFixed(4)}</span> : <span className="muted small">Not set</span>}
-        <button type="button" className="btn sm" disabled={!query.trim() || busy} onClick={find}>{busy ? 'Searching…' : `Find on map${query.trim() ? ': ' + query.slice(0, 30) : ''}`}</button>
+        <button type="button" className="btn sm" disabled={!google || !query.trim() || busy} onClick={find} title={google ? undefined : 'Needs a Google Maps key (Settings)'}>{busy ? 'Searching…' : `Find on map${query.trim() ? ': ' + query.slice(0, 30) : ''}`}</button>
         {value && <button type="button" className="link sm" onClick={() => onChange(null)}>clear</button>}
       </span>
       {results && results.length > 0 && (
@@ -33,7 +32,7 @@ export function FindOnMap({ value, query, onChange }: { value: Pos; query: strin
               <span className="grow"><b>{r.name}</b><br /><span className="muted small">{r.address}</span></span>
             </button>
           ))}
-          <span className="muted small">{google ? 'Search by Google' : 'Search by OpenStreetMap'}</span>
+          <span className="muted small">Search by Google</span>
         </span>
       )}
       {err && <span className="small" style={{ color: 'var(--warn)' }}>{err}</span>}

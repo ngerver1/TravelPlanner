@@ -5,10 +5,9 @@ import type { Derived } from '../domain/derive';
 import { dayRouteQueries, mapPoints, type MapFilter, type MapPoint } from '../domain/geo';
 import { GoogleMap } from '../components/GoogleMap';
 import type { TripDoc } from '../domain/types';
-import type { Pin } from '../components/MapCanvas';
+import type { Pin } from '../components/GoogleCanvas';
 import { useOnline } from '../pwa';
 
-const MapCanvas = lazy(() => import('../components/MapCanvas'));
 const GoogleCanvas = lazy(() => import('../components/GoogleCanvas'));
 import { hasGoogle } from '../sync/google';
 
@@ -51,7 +50,11 @@ export function MapView({ doc, dv, onOpen }: { doc: TripDoc; dv: Derived; onOpen
       {filter.by === 'day' ? (
         dayRoute?.length ? <GoogleMap route={dayRoute} height={h} title="Day route" /> : <p className="muted small">Nothing planned on this day yet.</p>
       ) : (<>
-        <Lazy>{hasGoogle() ? <GoogleCanvas pins={pins} height={h} /> : <MapCanvas pins={pins} height={h} />}</Lazy>
+        {hasGoogle() ? <Lazy><GoogleCanvas pins={pins} height={h} /></Lazy> : (
+          <div className="mapcanvas map-offline" style={{ height: h }}>
+            <span>The map needs a Google Maps key. <a href="#settings">Add it in Settings</a>.</span>
+          </div>
+        )}
         <p className="muted small">This overview pins things with an exact map position. To add one: open it → Edit → <b>Find on map</b>, or paste a long Google Maps link. Pick a day above to see it on Google Maps (by name, no position needed).</p>
       </>)}
       {filter.by !== 'day' && missing.length > 0 && (

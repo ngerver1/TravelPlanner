@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { iconSvg } from './Icons';
 import { googleAuthError, loadGoogle } from '../sync/google';
-import type { Pin } from './MapCanvas';
+export interface Pin {
+  key: string; lat: number; lng: number; color: string; title: string;
+  filled: boolean; stay?: boolean; number?: number; onClick?: () => void;
+}
 
 const dark = () => {
   const t = document.documentElement.dataset.theme;
