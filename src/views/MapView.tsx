@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
+import { Icon } from '../components/Icons';
 import { fmtLong } from '../domain/dates';
 import type { Derived } from '../domain/derive';
 import { dayRouteQueries, mapPoints, type MapFilter, type MapPoint } from '../domain/geo';
@@ -61,7 +62,7 @@ export function MapView({ doc, dv, onOpen }: { doc: TripDoc; dv: Derived; onOpen
               <button key={m.id} className="btn sm" onClick={() => onOpen('title' in m
                 ? { key: m.id, kind: 'item', lat: 0, lng: 0, title: m.title, placed: false, ref: { type: 'item', item: m, pi: m.placements.length ? 0 : -1 } }
                 : { key: m.id, kind: 'stay', lat: 0, lng: 0, title: m.name, placed: true, ref: { type: 'stay', stay: m } })}>
-                {'title' in m ? m.title || 'Untitled' : '🛏 ' + (m.name || 'Stay')}
+                {'title' in m ? m.title || 'Untitled' : <><Icon name="stay" /> {m.name || 'Stay'}</>}
               </button>
             ))}
           </div>

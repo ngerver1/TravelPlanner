@@ -1,4 +1,5 @@
 import { addDays, diffDays, fmtLong, fmtShort } from '../domain/dates';
+import { Icon } from './Icons';
 import { flightLabel, nightsOf, type Derived } from '../domain/derive';
 import type { Flight, Stay, Status } from '../domain/types';
 import { LocChip, StatusPill } from './ui';
@@ -71,7 +72,7 @@ export function FlightsPanel({ dv, actions }: { dv: Derived; actions: PanelActio
       {flights.length === 0 && <p className="muted small">No flights yet. Times are local to each airport; an overnight flight shows on both days.</p>}
       {flights.map((f) => (
         <div key={f.id} className="card" onClick={() => actions.openFlight(f)}>
-          <div className="card-row"><b>✈ {flightLabel(f)} {f.from || '?'} → {f.to || '?'}</b><StatusPill small value={f.status} onChange={(s) => actions.patchFlight(f.id, { status: s })} /></div>
+          <div className="card-row"><b><Icon name="flight" /> {flightLabel(f)} {f.from || '?'} → {f.to || '?'}</b><StatusPill small value={f.status} onChange={(s) => actions.patchFlight(f.id, { status: s })} /></div>
           <div className="card-row muted small">
             <span>{f.airline}</span>
             <span>{fmtLong(f.depDate)} {f.depTime} → {f.arrDate && f.arrDate !== f.depDate ? fmtShort(f.arrDate) + ' ' : ''}{f.arrTime}</span>

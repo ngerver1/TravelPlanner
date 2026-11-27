@@ -1,6 +1,7 @@
 // Leaflet map with OpenStreetMap's standard tiles (no API key). Dark mode darkens the tiles with a CSS filter.
 // Loaded lazily (only when a map is shown).
 import { useEffect, useRef } from 'react';
+import { iconSvg } from './Icons';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -43,7 +44,7 @@ export default function MapCanvas({ pins, route, height = 420 }: { pins: Pin[]; 
     if (route && pins.length > 1) L.polyline(pins.map((p) => [p.lat, p.lng] as [number, number]), { color: '#667085', weight: 2.5, dashArray: '5 6', opacity: 0.8 }).addTo(g);
     for (const p of pins) {
       const html = p.stay
-        ? `<span class="pin-stay" style="border-color:${p.color}">🛏</span>`
+        ? `<span class="pin-stay" style="border-color:${p.color};color:${p.color}">${iconSvg('stay', 15, 2.2)}</span>`
         : p.number != null
           ? `<span class="pin-num" style="background:${p.color}">${p.number}</span>`
           : `<span class="pin-dot${p.filled ? '' : ' hollow'}" style="border-color:${p.color};${p.filled ? `background:${p.color}` : ''}"></span>`;

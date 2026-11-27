@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
-import { CATEGORIES, RESTAURANT_ICON } from '../domain/constants';
+import { ItemIcon } from './Icons';
 import type { Item, Placement, Status } from '../domain/types';
 import { StatusPill } from './ui';
 import { mapsLink } from '../domain/maps';
 import { fmtPrice } from '../domain/money';
 import { LocalButton, cardFor } from './LocalCard';
 
-export const itemIcon = (it: Item) => (it.kind === 'restaurant' ? RESTAURANT_ICON : CATEGORIES[it.category || 'other'].icon);
+export const itemIcon = (it: Item) => <ItemIcon item={it} />;
 export const sizeLabel = (it: Item) =>
   it.kind !== 'activity' ? '' : it.size === 'full' ? (it.includesEvening ? 'Full day + eve' : 'Full day') : it.size === 'half' ? '½ day' : '';
 

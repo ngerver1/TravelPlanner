@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Icon } from './components/Icons';
 import { addDays, diffDays, fmtLong, fmtShort, range, todayStr } from './domain/dates';
 import { uid } from './domain/ids';
 import { UNASSIGNED, mealFromTime, slotFromTime } from './domain/constants';
@@ -444,7 +445,7 @@ export default function App() {
     {dv.outside.length > 0 && (
       <div className="alert warn">
         <div className="row between wrap">
-          <b>⚠ {dv.outside.length} thing{dv.outside.length > 1 ? 's are' : ' is'} outside the trip dates: kept, not deleted</b>
+          <b><Icon name="warn" /> {dv.outside.length} thing{dv.outside.length > 1 ? 's are' : ' is'} outside the trip dates: kept, not deleted</b>
           {dv.fit && <button className="btn sm" onClick={() => update((x) => { x.trip.start = dv.fit!.start; x.trip.end = dv.fit!.end; })}>Extend trip to {fmtShort(dv.fit.start)} – {fmtShort(dv.fit.end)}</button>}
         </div>
         <ul className="outside">{dv.outside.map((o, i) => <li key={i}><button className="link" onClick={() => openOutside(o)}>{o.label}</button></li>)}</ul>
@@ -463,7 +464,7 @@ export default function App() {
       <div className="welcome">
         <h2>Start a new trip</h2>
         <p>Give your trip a name and choose its first and last day at the top. The calendar appears once the dates are set.</p>
-        <p className="muted small">Moving over from the old trip planner? Use <button className="link" onClick={() => navTo({ page: 'settings' })}>⚙ Settings → Restore</button> with your v1 JSON export; it is converted automatically.</p>
+        <p className="muted small">Moving over from the old trip planner? Use <button className="link" onClick={() => navTo({ page: 'settings' })}>Settings → Restore</button> with your v1 JSON export; it is converted automatically.</p>
       </div>
     );
     const view = route.page === 'plan' ? route.view : 'calendar';
@@ -481,7 +482,7 @@ export default function App() {
           <div className="row gap wrap">
             <button className="btn primary" onClick={() => newFlight(doc.trip.start)}>+ Add a flight</button>
             <button className="btn primary" onClick={() => addStay(doc.trip.start)}>+ Add a stay</button>
-            <button className="btn" onClick={() => setModal({ type: 'range', v: { from: doc.trip.start, to: doc.trip.start, loc: '', loc2: '' } })}>📍 Set locations for some days</button>
+            <button className="btn" onClick={() => setModal({ type: 'range', v: { from: doc.trip.start, to: doc.trip.start, loc: '', loc2: '' } })}><Icon name="location" /> Set locations for some days</button>
           </div>
         </div>
       )}
@@ -508,7 +509,7 @@ export default function App() {
     <div className={'app page-' + page + (page === 'plan' ? ' view-' + route.view : '')}>
       <header className="top" ref={headerRef}>
         <TripSettings trip={doc.trip} onChange={(p) => update((x) => { x.trip = { ...x.trip, ...p }; })} />
-        {sync.inbox.length > 0 && <button type="button" className="inbox-chip" onClick={() => navTo({ page: 'inbox' })} title="Bookings from email to review">📥 {sync.inbox.length}</button>}
+        {sync.inbox.length > 0 && <button type="button" className="inbox-chip" onClick={() => navTo({ page: 'inbox' })} title="Bookings from email to review"><Icon name="inbox" /> {sync.inbox.length}</button>}
         <SyncChip status={sync.status} onClick={() => navTo({ page: 'settings' })} />
       </header>
 
@@ -522,7 +523,7 @@ export default function App() {
         )}
         {page === 'plan' && sync.inbox.length > 0 && (
           <div className="sync-banner inbox-banner">
-            <span>📥 {sync.inbox.length} email{sync.inbox.length > 1 ? 's' : ''} with bookings to review.</span>
+            <span><Icon name="inbox" /> {sync.inbox.length} email{sync.inbox.length > 1 ? 's' : ''} with bookings to review.</span>
             <button className="btn sm primary" onClick={() => navTo({ page: 'inbox' })}>Review</button>
           </div>
         )}

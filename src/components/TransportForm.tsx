@@ -1,5 +1,6 @@
 import { addDays, isDate } from '../domain/dates';
-import { MODES, MODE_ICON, MODE_LABEL, MEAL_LABEL, SLOT_LABEL } from '../domain/constants';
+import { MODES, MODE_LABEL, MEAL_LABEL, SLOT_LABEL } from '../domain/constants';
+import { ModeIcon } from './Icons';
 import type { Item, TransportLeg } from '../domain/types';
 import { DateInput, TimeInput } from './inputs';
 import { LocationSelect } from './LocationSelect';
@@ -39,7 +40,7 @@ export function TransportForm({ initial, items, onSave, onDelete, onClose }: {
       </>}>
       <div className="grid2">
         <Field label="Type" span>
-          <div className="seg">{MODES.map((m) => <button type="button" key={m} className={f.mode === m ? 'on' : ''} onClick={() => set('mode', m)}>{MODE_ICON[m]} {MODE_LABEL[m]}</button>)}</div>
+          <div className="seg">{MODES.map((m) => <button type="button" key={m} className={f.mode === m ? 'on' : ''} onClick={() => set('mode', m)}><ModeIcon mode={m} /> {MODE_LABEL[m]}</button>)}</div>
         </Field>
         <Field label="Operator / service" span><input {...bind('operator')} placeholder="e.g. JR Hokkaido · Super Hokuto 3" /></Field>
         <Field label="From" hint="Station, stop or address"><input {...bind('fromName')} /></Field>

@@ -743,3 +743,5 @@ a.btn{text-decoration:none;color:inherit}
 .warn-text{color:var(--warn);font-weight:600}
 .export-key{margin:6px 0;display:flex;flex-wrap:wrap;align-items:center}
 .export-key .warn-text{flex-basis:100%;padding-left:22px}
+.ico{display:inline-block;vertical-align:-0.18em;flex:none}
+.pin-stay svg{display:block}

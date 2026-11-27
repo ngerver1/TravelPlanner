@@ -6,7 +6,8 @@ import { mapsLink, placeQuery } from '../domain/maps';
 import { GoogleMap } from './GoogleMap';
 import { fmtPrice } from '../domain/money';
 import type { Item, Status, TransportLeg } from '../domain/types';
-import { MODE_ICON, MODE_LABEL, STATUS_LABEL } from '../domain/constants';
+import { MODE_LABEL, STATUS_LABEL } from '../domain/constants';
+import { ModeIcon } from './Icons';
 import { itemIcon, sizeLabel } from './ItemCard';
 import { LocChip, Modal, StatusPill, type ColorOf } from './ui';
 import { LocalButton, cardFor } from './LocalCard';
@@ -69,7 +70,7 @@ export function ItemView({ item, location, colorOf, onEdit, onMove, onStatus, on
             <span className="iv-days">
               {legs.map((l) => (
                 <button key={l.id} className="link" onClick={() => onOpenLeg?.(l)}>
-                  {l.itemRole === 'from' ? 'Back: ' : 'There: '}{MODE_ICON[l.mode]} {l.operator || MODE_LABEL[l.mode]}{l.depTime ? ` · ${l.depTime}` : ''} <span className={`pill sm st-${l.status}`}>{STATUS_LABEL[l.status]}</span>
+                  {l.itemRole === 'from' ? 'Back: ' : 'There: '}<ModeIcon mode={l.mode} /> {l.operator || MODE_LABEL[l.mode]}{l.depTime ? ` · ${l.depTime}` : ''} <span className={`pill sm st-${l.status}`}>{STATUS_LABEL[l.status]}</span>
                 </button>
               ))}
               {onAddLeg && item.placements.length > 0 && (

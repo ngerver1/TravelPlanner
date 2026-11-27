@@ -1,6 +1,7 @@
 // The full-screen "Show local" card: a place's name and address in the local language, big, black on white,
 // to show a taxi driver or a local. Works offline (it only uses the trip's saved data).
 import { createContext, Fragment, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Icon } from './Icons';
 import { createPortal } from 'react-dom';
 import { guessLang, telHref, wrapPieces, type LocalCardData } from '../domain/local';
 
@@ -139,7 +140,7 @@ function LocalCard({ data, onClose }: { data: LocalCardData; onClose: () => void
         {data.address && <div ref={addrEl} className="lc-addr" lang={lang}><Wrapped text={data.address} /></div>}
         <div className="lc-foot">
           <span className="lc-en">{data.english}</span>
-          {data.phone && <a className="lc-phone" href={telHref(data.phone)} onTouchStart={(e) => e.stopPropagation()}>📞 {data.phone}</a>}
+          {data.phone && <a className="lc-phone" href={telHref(data.phone)} onTouchStart={(e) => e.stopPropagation()}><Icon name="phone" size={20} stroke={2.2} /> {data.phone}</a>}
         </div>
       </div>
     </div>,

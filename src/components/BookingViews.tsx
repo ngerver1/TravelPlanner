@@ -6,7 +6,8 @@ import { airportQuery, mapsLink, placeQuery } from '../domain/maps';
 import { GoogleMap } from './GoogleMap';
 import { fmtPrice } from '../domain/money';
 import type { Flight, Item, Status, Stay, TransportLeg } from '../domain/types';
-import { MODE_ICON, MODE_LABEL } from '../domain/constants';
+import { MODE_LABEL } from '../domain/constants';
+import { Icon, ModeIcon } from './Icons';
 import { Linkified } from './ItemView';
 import { LocChip, Modal, StatusPill, type ColorOf } from './ui';
 import { LocalButton, cardFor } from './LocalCard';
@@ -41,7 +42,7 @@ export function StayView({ stay: s, location, colorOf, onEdit, onStatus, onGoDay
   return (
     <Modal title={s.name || 'Stay'} onClose={onClose} footer={<><span className="grow" /><button className="btn primary" onClick={onEdit}>Edit</button></>}>
       <div className="iv-top">
-        <span className="iv-icon">🛏</span>
+        <span className="iv-icon"><Icon name="stay" /></span>
         <span className="muted small">Stay{nights ? ` · ${nights} night${nights > 1 ? 's' : ''}` : ''}</span>
         <span className="grow" />
         <StatusPill value={s.status} onChange={onStatus} />
@@ -93,7 +94,7 @@ export function FlightView({ flight: f, onEdit, onStatus, onGoDay, onClose }: {
   return (
     <Modal title={`${flightLabel(f)} ${f.from || '?'} → ${f.to || '?'}`} onClose={onClose} footer={<><span className="grow" /><button className="btn primary" onClick={onEdit}>Edit</button></>}>
       <div className="iv-top">
-        <span className="iv-icon">✈</span>
+        <span className="iv-icon"><Icon name="flight" /></span>
         <span className="muted small">{f.airline || 'Flight'}{overnight ? ' · overnight' : ''}</span>
         <span className="grow" />
         <StatusPill value={f.status} onChange={onStatus} />
@@ -127,8 +128,9 @@ export function TransportView({ leg: l, locName, item, onEdit, onStatus, onGoDay
   const from = l.fromName || locName(l.fromLocationId), to = l.toName || locName(l.toLocationId);
   const p = new URLSearchParams({ api: '1', ...(from ? { origin: [from, locName(l.fromLocationId)].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ') } : {}), destination: [to, locName(l.toLocationId)].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ') || '?', travelmode: l.mode === 'car' ? 'driving' : 'transit' });
   return (
-    <Modal title={`${MODE_ICON[l.mode]} ${legTitle(l)}`} onClose={onClose} footer={<><span className="grow" /><button className="btn primary" onClick={onEdit}>Edit</button></>}>
+    <Modal title={legTitle(l)} onClose={onClose} footer={<><span className="grow" /><button className="btn primary" onClick={onEdit}>Edit</button></>}>
       <div className="iv-top">
+        <span className="iv-icon"><ModeIcon mode={l.mode} /></span>
         <span className="muted small">{MODE_LABEL[l.mode]} · {legRoute(l, locName)}</span>
         <span className="grow" />
         <StatusPill value={l.status} onChange={onStatus} />

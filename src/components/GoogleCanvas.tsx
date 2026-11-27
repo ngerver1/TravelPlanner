@@ -1,6 +1,7 @@
 // The trip map on Google Maps (your own key): the same pins as before, drawn as HTML on a Google map.
 // Loaded only when the Map is opened.
 import { useEffect, useRef, useState } from 'react';
+import { iconSvg } from './Icons';
 import { googleAuthError, loadGoogle } from '../sync/google';
 import type { Pin } from './MapCanvas';
 
@@ -12,7 +13,7 @@ const dark = () => {
 function pinHtml(p: Pin): { html: string; size: number } {
   const size = p.stay ? 26 : p.number != null ? 24 : 16;
   const html = p.stay
-    ? `<span class="pin-stay" style="border-color:${p.color}">🛏</span>`
+    ? `<span class="pin-stay" style="border-color:${p.color};color:${p.color}">${iconSvg('stay', 15, 2.2)}</span>`
     : p.number != null
       ? `<span class="pin-num" style="background:${p.color}">${p.number}</span>`
       : `<span class="pin-dot${p.filled ? '' : ' hollow'}" style="border-color:${p.color};${p.filled ? `background:${p.color}` : ''}"></span>`;

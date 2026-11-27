@@ -10,7 +10,7 @@ import { CATEGORIES, MEALS, MEAL_LABEL, SLOTS, SLOT_LABEL } from '../domain/cons
 import { flightLabel, type DayInfo, type Derived } from '../domain/derive';
 import { fits, laneEntries, laneKey, overCapacity, parseLaneKey, slotLoad, swappable, type Entry, type Lane, type Ref } from '../domain/plan';
 import type { ActivityCategory, Flight, Item, ItemKind, Meal, Status, Stay, TransportLeg, TripDoc } from '../domain/types';
-import { MODE_ICON } from '../domain/constants';
+import { Icon, ModeIcon } from '../components/Icons';
 import { legTitle } from '../components/BookingViews';
 import { ItemCard, MapLink, itemIcon } from '../components/ItemCard';
 import { directionsLink, mapsLink } from '../domain/maps';
@@ -147,7 +147,7 @@ export function DayView({ doc, dv, date, actions }: { doc: TripDoc; dv: Derived;
             {MEALS.map((m) => <LaneBox key={m} lane={{ date, meal: m }} label={MEAL_LABEL[m]} doc={doc} actions={actions} onAdd={setPicker} />)}
           </section>
         </div>
-        <button type="button" className="pool-fab" onClick={() => setPoolOpen(!poolOpen)}>💡 Ideas</button>
+        <button type="button" className="pool-fab" onClick={() => setPoolOpen(!poolOpen)}><Icon name="idea" /> Ideas</button>
       </div>
       <DragOverlay dropAnimation={null}>
         {dragging && <div className="icard overlay-card"><span className="ic-i">{itemIcon(dragging.item)}</span><span className="ic-main"><span className="ic-title">{dragging.item.title}</span></span></div>}
@@ -200,7 +200,7 @@ function DayHeader({ x, dv, date, idx, actions, route }: { x: DayInfo; dv: Deriv
           {n.kind === 'end' ? <span className="night end">Trip ends</span>
             : n.kind === 'plane' || n.kind === 'transit' ? <NightBadge night={n} />
             : n.kind === 'none' ? <button className="night none" onClick={() => actions.addStay(date, addDays(date, 1), x.loc?.b?.id ? x.loc.b.name : x.loc?.a.id ? x.loc.a.name : '')}>NO STAY · add</button>
-            : <span className="staybit" onClick={() => actions.openStay(n.stay)}>🛏 {n.stay.name || 'Stay'} <StatusPill small value={n.stay.status} onChange={(s) => actions.patchStay(n.stay.id, { status: s })} /></span>}
+            : <span className="staybit" onClick={() => actions.openStay(n.stay)}><Icon name="stay" /> {n.stay.name || 'Stay'} <StatusPill small value={n.stay.status} onChange={(s) => actions.patchStay(n.stay.id, { status: s })} /></span>}
         </span>
       </div>
       <HotelButton x={x} dv={dv} />
@@ -273,13 +273,13 @@ function DayRoute({ points }: { points: RoutePoint[] }) {
 
 function DayTimeline({ x, dv, doc, actions }: { x: DayInfo; dv: Derived; doc: TripDoc; actions: PlanActions }) {
   const rows: { key: string; t: string; node: ReactNode; onClick: () => void; status: Status; set: (s: Status) => void }[] = [];
-  for (const f of x.arr) rows.push({ key: 'a' + f.id, t: f.arrTime, node: <>✈ <b>{flightLabel(f)}</b> arrives {f.to} <span className="muted">· from {f.from}, left {fmtShort(f.depDate)} {f.depTime}</span></>, onClick: () => actions.openFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
-  for (const s of x.checkOuts) rows.push({ key: 'o' + s.id, t: s.checkOutTime, node: <>🛏 Check out: <b>{s.name || 'Stay'}</b></>, onClick: () => actions.openStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
-  for (const s of x.checkIns) rows.push({ key: 'i' + s.id, t: s.checkInTime, node: <>🛏 Check in: <b>{s.name || 'Stay'}</b>{s.address && <span className="muted"> · {s.address}</span>} <MapLink href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, dv.locById.get(s.locationId || '')?.name)} pinned={!!s.place?.mapsUrl} /></>, onClick: () => actions.openStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
+  for (const f of x.arr) rows.push({ key: 'a' + f.id, t: f.arrTime, node: <><Icon name="flight" /> <b>{flightLabel(f)}</b> arrives {f.to} <span className="muted">· from {f.from}, left {fmtShort(f.depDate)} {f.depTime}</span></>, onClick: () => actions.openFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
+  for (const s of x.checkOuts) rows.push({ key: 'o' + s.id, t: s.checkOutTime, node: <><Icon name="stay" /> Check out: <b>{s.name || 'Stay'}</b></>, onClick: () => actions.openStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
+  for (const s of x.checkIns) rows.push({ key: 'i' + s.id, t: s.checkInTime, node: <><Icon name="stay" /> Check in: <b>{s.name || 'Stay'}</b>{s.address && <span className="muted"> · {s.address}</span>} <MapLink href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, dv.locById.get(s.locationId || '')?.name)} pinned={!!s.place?.mapsUrl} /></>, onClick: () => actions.openStay(s), status: s.status, set: (st) => actions.patchStay(s.id, { status: st }) });
   const shownInLane = (l: TransportLeg) => !!l.itemId && doc.items.some((i) => i.id === l.itemId && i.placements.some((p) => p.date === l.date));
-  for (const l of x.legArr) rows.push({ key: 'la' + l.id, t: l.arrTime, node: <>{MODE_ICON[l.mode]} <b>{legTitle(l)}</b> arrives {l.toName || dv.locById.get(l.toLocationId || '')?.name || ''} <span className="muted">· left {fmtShort(l.date)} {l.depTime}</span></>, onClick: () => actions.openLeg(l), status: l.status, set: (s) => actions.patchLeg(l.id, { status: s }) });
+  for (const l of x.legArr) rows.push({ key: 'la' + l.id, t: l.arrTime, node: <><ModeIcon mode={l.mode} /> <b>{legTitle(l)}</b> arrives {l.toName || dv.locById.get(l.toLocationId || '')?.name || ''} <span className="muted">· left {fmtShort(l.date)} {l.depTime}</span></>, onClick: () => actions.openLeg(l), status: l.status, set: (s) => actions.patchLeg(l.id, { status: s }) });
   for (const l of x.legDep.filter((l) => !shownInLane(l))) rows.push({ key: 'ld' + l.id, t: l.depTime, node: <LegText l={l} dv={dv} />, onClick: () => actions.openLeg(l), status: l.status, set: (s) => actions.patchLeg(l.id, { status: s }) });
-  for (const f of x.dep) rows.push({ key: 'd' + f.id, t: f.depTime, node: <>✈ <b>{flightLabel(f)} {f.from || '?'} → {f.to || '?'}</b> <span className="muted">dep {f.depTime || '?'} · arr {f.arrTime || '?'}{f.arrDate !== f.depDate ? ` (${fmtShort(f.arrDate)})` : ''}{f.conf ? ` · ${f.conf}` : ''}</span></>, onClick: () => actions.openFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
+  for (const f of x.dep) rows.push({ key: 'd' + f.id, t: f.depTime, node: <><Icon name="flight" /> <b>{flightLabel(f)} {f.from || '?'} → {f.to || '?'}</b> <span className="muted">dep {f.depTime || '?'} · arr {f.arrTime || '?'}{f.arrDate !== f.depDate ? ` (${fmtShort(f.arrDate)})` : ''}{f.conf ? ` · ${f.conf}` : ''}</span></>, onClick: () => actions.openFlight(f), status: f.status, set: (s) => actions.patchFlight(f.id, { status: s }) });
   if (!rows.length) return null;
   rows.sort((p, q) => (p.t || '99').localeCompare(q.t || '99'));
   return (
@@ -293,7 +293,7 @@ function DayTimeline({ x, dv, doc, actions }: { x: DayInfo; dv: Derived; doc: Tr
 
 function LegText({ l, dv }: { l: TransportLeg; dv: Derived }) {
   const from = l.fromName || dv.locById.get(l.fromLocationId || '')?.name, to = l.toName || dv.locById.get(l.toLocationId || '')?.name;
-  return <>{MODE_ICON[l.mode]} <b>{legTitle(l)}</b> <span className="muted">{from || to ? `${from || '?'} → ${to || '?'}` : ''}{l.depTime || l.arrTime ? ` · ${l.depTime || '?'}–${l.arrTime || '?'}` : ''}{l.arrDate ? ` (${fmtShort(l.arrDate)})` : ''}{l.conf ? ` · ${l.conf}` : ''}</span></>;
+  return <><ModeIcon mode={l.mode} /> <b>{legTitle(l)}</b> <span className="muted">{from || to ? `${from || '?'} → ${to || '?'}` : ''}{l.depTime || l.arrTime ? ` · ${l.depTime || '?'}–${l.arrTime || '?'}` : ''}{l.arrDate ? ` (${fmtShort(l.arrDate)})` : ''}{l.conf ? ` · ${l.conf}` : ''}</span></>;
 }
 
 /** A transport booking linked to an item, shown right before (getting there) or after (getting back) it. */
@@ -424,7 +424,7 @@ function Pool({ doc, dv, date, locIds, actions, onClose }: { doc: TripDoc; dv: D
           {kind === 'activity' && (
             <select value={cat} onChange={(e) => setCat(e.target.value as ActivityCategory | '')} aria-label="Category">
               <option value="">Any kind</option>
-              {(Object.keys(CATEGORIES) as ActivityCategory[]).map((k) => <option key={k} value={k}>{CATEGORIES[k].icon} {CATEGORIES[k].label}</option>)}
+              {(Object.keys(CATEGORIES) as ActivityCategory[]).map((k) => <option key={k} value={k}>{CATEGORIES[k].label}</option>)}
             </select>
           )}
           {kind === 'restaurant' && (

@@ -2,7 +2,8 @@ import { addDays, diffDays, dow, fmt, range, todayStr } from '../domain/dates';
 import { flightLabel, type Derived } from '../domain/derive';
 import type { Flight, TransportLeg, TripDoc } from '../domain/types';
 import { daySummary } from '../domain/plan';
-import { MEALS, MODE_ICON, SLOTS, SLOT_LABEL, MEAL_LABEL } from '../domain/constants';
+import { MEALS, SLOTS, SLOT_LABEL, MEAL_LABEL } from '../domain/constants';
+import { Icon, ModeIcon } from '../components/Icons';
 import { LocDisplay, NightBadge, cssVars, dayStripe } from '../components/ui';
 
 export const flightChipText = (f: Flight, d: string) => {
@@ -44,8 +45,8 @@ export function OverviewView({ doc, dv, onDay, onAddStay, onAddLeg }: { doc: Tri
                 </div>
                 {(flights.length > 0 || x.legDep.length > 0 || x.legArr.length > 0) && (
                   <div className="cd-flights">
-                    {flights.map((f) => <span key={f.id + (f.depDate === d ? 'd' : 'a')} className={`fchip st-${f.status}`}>✈ {flightChipText(f, d)}</span>)}
-                    {[...x.legArr, ...x.legDep].map((l) => <span key={l.id + (l.date === d ? 'd' : 'a')} className={`fchip st-${l.status}`}>{MODE_ICON[l.mode]} {legChipText(l, d, dv)}</span>)}
+                    {flights.map((f) => <span key={f.id + (f.depDate === d ? 'd' : 'a')} className={`fchip st-${f.status}`}><Icon name="flight" /> {flightChipText(f, d)}</span>)}
+                    {[...x.legArr, ...x.legDep].map((l) => <span key={l.id + (l.date === d ? 'd' : 'a')} className={`fchip st-${l.status}`}><ModeIcon mode={l.mode} /> {legChipText(l, d, dv)}</span>)}
                   </div>
                 )}
                 <DayMarks doc={doc} d={d} />

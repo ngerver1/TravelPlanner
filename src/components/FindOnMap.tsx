@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from './Icons';
 import { geocode, type GeoResult } from '../sync/geocode';
 import { hasGoogle, searchPlaces } from '../sync/google';
 import { Field } from './ui';
@@ -21,7 +22,7 @@ export function FindOnMap({ value, query, onChange }: { value: Pos; query: strin
   return (
     <Field label="Map position" span hint={value ? undefined : 'Needed for the map. A long Google Maps link sets it too.'}>
       <span className="row gap wrap">
-        {value ? <span className="small">📍 {value.lat.toFixed(4)}, {value.lng.toFixed(4)}</span> : <span className="muted small">Not set</span>}
+        {value ? <span className="small"><Icon name="location" /> {value.lat.toFixed(4)}, {value.lng.toFixed(4)}</span> : <span className="muted small">Not set</span>}
         <button type="button" className="btn sm" disabled={!query.trim() || busy} onClick={find}>{busy ? 'Searching…' : `Find on map${query.trim() ? ': ' + query.slice(0, 30) : ''}`}</button>
         {value && <button type="button" className="link sm" onClick={() => onChange(null)}>clear</button>}
       </span>

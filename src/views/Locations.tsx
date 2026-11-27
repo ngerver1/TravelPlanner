@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from '../components/Icons';
 import { fmt, fmtShort, addDays } from '../domain/dates';
 import { MEAL_LABEL, SLOT_LABEL } from '../domain/constants';
 import { PICKER, swatchAt } from '../domain/colors';
@@ -98,13 +99,13 @@ export function LocationPage({ doc, dv, id, actions, plan, onBack }: {
           <div className="row gap wrap">{runs(days).map((r) => <button key={r.from} className="btn sm" onClick={() => plan.goDay(r.from)}>{runLabel(r)}</button>)}</div>
         ) : <p className="muted small">Not on any day yet.</p>}
         <div className="row gap wrap lp-actions">
-          <button className="btn" onClick={() => actions.assignDates(loc.name)}>📍 Assign to dates</button>
-          <button className="btn" onClick={() => plan.addStay(days[0], days[0] ? addDays(days[days.length - 1], 1) : undefined, loc.name)}>🛏 Add stay here</button>
+          <button className="btn" onClick={() => actions.assignDates(loc.name)}><Icon name="location" /> Assign to dates</button>
+          <button className="btn" onClick={() => plan.addStay(days[0], days[0] ? addDays(days[days.length - 1], 1) : undefined, loc.name)}><Icon name="stay" /> Add stay here</button>
           <a className="btn" href={mapsLink(undefined, loc.name)} target="_blank" rel="noreferrer">Open {loc.name} in Google Maps ↗</a>
         </div>
         {stays.map((s: Stay) => (
           <div key={s.id} className="card" onClick={() => plan.openStay(s)}>
-            <div className="card-row"><b>🛏 {s.name || 'Untitled stay'}</b><StatusPill small value={s.status} onChange={(st) => plan.patchStay(s.id, { status: st })} /></div>
+            <div className="card-row"><b><Icon name="stay" /> {s.name || 'Untitled stay'}</b><StatusPill small value={s.status} onChange={(st) => plan.patchStay(s.id, { status: st })} /></div>
             <div className="muted small">{fmtShort(s.checkIn)} → {fmtShort(s.checkOut)} <MapLink href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, loc.name)} pinned={!!s.place?.mapsUrl} /></div>
           </div>
         ))}

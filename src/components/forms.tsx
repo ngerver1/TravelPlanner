@@ -1,6 +1,7 @@
 import { DateInput, TimeInput } from './inputs';
 import { addDays, diffDays, fmt, isDate } from '../domain/dates';
-import { CATEGORIES, MEALS, MEAL_LABEL, RESTAURANT_ICON, SIZES, SIZE_LABEL } from '../domain/constants';
+import { CATEGORIES, MEALS, MEAL_LABEL, SIZES, SIZE_LABEL } from '../domain/constants';
+import { CatIcon, Icon } from './Icons';
 import type { ActivityCategory, Flight, ItemKind, ItemSize, Meal, Slot, Stay, Status } from '../domain/types';
 import type { DayInfo } from '../domain/derive';
 import { ConfirmDel, Field, Modal, Seg, StatusSelect, useForm } from './ui';
@@ -145,7 +146,7 @@ export function ItemForm({ initial, trip, onSave, onDelete, onClose, onMove }: {
       <div className="grid2">
         <Field label="Title" span><input {...bind('title')} autoFocus={initial._new && !initial.title} /></Field>
         <Field label="Type" span>
-          <Seg value={f.kind} onChange={(k) => set('kind', k)} options={[['activity', '🎟 Thing to do'], ['restaurant', `${RESTAURANT_ICON} Place to eat`]]} />
+          <Seg value={f.kind} onChange={(k) => set('kind', k)} options={[['activity', <><Icon name="activity" /> Thing to do</>], ['restaurant', <><Icon name="restaurant" /> Place to eat</>]]} />
         </Field>
         <Field label="Status" span><StatusSelect value={f.status} onChange={(s) => set('status', s)} /></Field>
         <Field label="Flags" span>
@@ -163,7 +164,7 @@ export function ItemForm({ initial, trip, onSave, onDelete, onClose, onMove }: {
           </Field>
           <Field label="Category" span>
             <div className="seg">{(Object.keys(CATEGORIES) as ActivityCategory[]).map((k) => (
-              <button type="button" key={k} className={f.category === k ? 'on' : ''} onClick={() => set('category', k)}>{CATEGORIES[k].icon} {CATEGORIES[k].label}</button>
+              <button type="button" key={k} className={f.category === k ? 'on' : ''} onClick={() => set('category', k)}><CatIcon cat={k} /> {CATEGORIES[k].label}</button>
             ))}</div>
           </Field>
         </>) : (<>

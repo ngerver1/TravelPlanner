@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
+import { Icon, ModeIcon } from '../components/Icons';
 import { fmt, todayStr } from '../domain/dates';
 import { STATUS_LABEL } from '../domain/constants';
 import { flightLabel, type Derived } from '../domain/derive';
 import { barsInWeek, monthBars, weeksCovering, type MonthBarItem } from '../domain/month';
 import type { Flight, Stay, TransportLeg } from '../domain/types';
-import { MODE_ICON } from '../domain/constants';
 import { legChipText } from './Overview';
 import { cssVars, dayStripe } from '../components/ui';
 
@@ -84,14 +84,14 @@ export function MonthView({ dv, onDay, onStay, onFlight, onAddStay, onLeg, onAdd
                       {fl.map(({ f, dep }) => (
                         <button key={f.id + dep} type="button" className={`mv-fl st-${f.status}`} onClick={() => onFlight(f)}
                           title={`${flightLabel(f)} ${f.from}→${f.to} · dep ${f.depTime || '?'} · arr ${f.arrTime || '?'}`}>
-                          <span className="long">✈ {f.flightNo || flightLabel(f)} {dep ? `${f.from || '?'}→${f.to || '?'} ${f.depTime}` : `→${f.to || '?'} ${f.arrTime}`}</span>
-                          <span className="short">✈{f.to || '?'}</span>
+                          <span className="long"><Icon name="flight" /> {f.flightNo || flightLabel(f)} {dep ? `${f.from || '?'}→${f.to || '?'} ${f.depTime}` : `→${f.to || '?'} ${f.arrTime}`}</span>
+                          <span className="short"><Icon name="flight" />{f.to || '?'}</span>
                         </button>
                       ))}
                       {legs.map((l) => (
                         <button key={l.id + (l.date === d)} type="button" className={`mv-fl st-${l.status}`} onClick={() => onLeg(l)} title={`${l.operator || l.mode} ${l.fromName}→${l.toName}`}>
-                          <span className="long">{MODE_ICON[l.mode]} {legChipText(l, d, dv)}</span>
-                          <span className="short">{MODE_ICON[l.mode]}</span>
+                          <span className="long"><ModeIcon mode={l.mode} /> {legChipText(l, d, dv)}</span>
+                          <span className="short"><ModeIcon mode={l.mode} /></span>
                         </button>
                       ))}
                       {x?.noTransport && <button type="button" className="mv-fl notr" onClick={() => onAddLeg(d)} title="Location changes with no flight or transport booked"><span className="long">NO TRANSPORT</span><span className="short">NO TRANSP.</span></button>}

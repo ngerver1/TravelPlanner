@@ -1,5 +1,5 @@
 import { fmtLong, fmtShort } from '../domain/dates';
-import { MODE_ICON } from '../domain/constants';
+import { Icon, ModeIcon } from '../components/Icons';
 import { flightLabel, type Derived } from '../domain/derive';
 import { fmtPrice } from '../domain/money';
 import type { Flight, Status, TransportLeg } from '../domain/types';
@@ -51,7 +51,7 @@ export function TravelPage({ dv, actions }: { dv: Derived; actions: TravelAction
       {!rows.length && <p className="muted small">No flights or transport yet. Times are local; overnight trips show on both days.</p>}
       {rows.map((r) => r.kind === 'flight' ? (
         <div key={r.key} className="card" onClick={() => actions.openFlight(r.f)}>
-          <div className="card-row"><b>✈ {flightLabel(r.f)} {r.f.from || '?'} → {r.f.to || '?'}</b><StatusPill small value={r.f.status} onChange={(s: Status) => actions.patchFlight(r.f.id, { status: s })} /></div>
+          <div className="card-row"><b><Icon name="flight" /> {flightLabel(r.f)} {r.f.from || '?'} → {r.f.to || '?'}</b><StatusPill small value={r.f.status} onChange={(s: Status) => actions.patchFlight(r.f.id, { status: s })} /></div>
           <div className="card-row muted small">
             <span>{r.f.airline}</span>
             <span>{fmtLong(r.f.depDate)} {r.f.depTime} → {r.f.arrDate && r.f.arrDate !== r.f.depDate ? fmtShort(r.f.arrDate) + ' ' : ''}{r.f.arrTime}</span>
@@ -60,7 +60,7 @@ export function TravelPage({ dv, actions }: { dv: Derived; actions: TravelAction
         </div>
       ) : (
         <div key={r.key} className="card" onClick={() => actions.openLeg(r.l)}>
-          <div className="card-row"><b>{MODE_ICON[r.l.mode]} {legTitle(r.l)}</b><StatusPill small value={r.l.status} onChange={(s: Status) => actions.patchLeg(r.l.id, { status: s })} /></div>
+          <div className="card-row"><b><ModeIcon mode={r.l.mode} /> {legTitle(r.l)}</b><StatusPill small value={r.l.status} onChange={(s: Status) => actions.patchLeg(r.l.id, { status: s })} /></div>
           <div className="card-row muted small">
             <span>{legRoute(r.l, locName)}</span>
             <span>{r.l.date ? fmtLong(r.l.date) : 'No date'} {r.l.depTime}{r.l.arrDate ? ` → ${fmtShort(r.l.arrDate)} ${r.l.arrTime}` : r.l.arrTime ? `–${r.l.arrTime}` : ''}</span>

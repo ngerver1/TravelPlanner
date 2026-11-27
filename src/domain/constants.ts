@@ -8,15 +8,14 @@ export const MEALS: Meal[] = ['breakfast', 'lunch', 'dinner'];
 export const MEAL_LABEL: Record<Meal, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner' };
 export const SIZES: ItemSize[] = ['quick', 'half', 'full'];
 export const SIZE_LABEL: Record<ItemSize, string> = { quick: 'Quick', half: 'Half day', full: 'Full day' };
-export const CATEGORIES: Record<ActivityCategory, { label: string; icon: string }> = {
-  sight: { label: 'Sight', icon: '🏛' },
-  activity: { label: 'Activity', icon: '🎟' },
-  shopping: { label: 'Shopping', icon: '🛍' },
-  coffee: { label: 'Coffee', icon: '☕' },
-  nightlife: { label: 'Nightlife', icon: '🍸' },
-  other: { label: 'Other', icon: '•' },
+export const CATEGORIES: Record<ActivityCategory, { label: string }> = {
+  sight: { label: 'Sight' },
+  activity: { label: 'Activity' },
+  shopping: { label: 'Shopping' },
+  coffee: { label: 'Coffee' },
+  nightlife: { label: 'Nightlife' },
+  other: { label: 'Other' },
 };
-export const RESTAURANT_ICON = '🍴';
 export const UNASSIGNED = 'Unassigned';
 
 /** Activity slot from a fixed time: before 12:00 morning, before 17:00 afternoon, otherwise evening. */
@@ -37,4 +36,3 @@ export function mealFromTime(t: string | undefined): Meal {
 import type { TransportMode } from './types';
 export const MODES: TransportMode[] = ['train', 'bus', 'ferry', 'car', 'transfer', 'other'];
 export const MODE_LABEL: Record<TransportMode, string> = { train: 'Train', bus: 'Bus', ferry: 'Ferry', car: 'Car', transfer: 'Transfer', other: 'Other' };
-export const MODE_ICON: Record<TransportMode, string> = { train: '🚆', bus: '🚌', ferry: '⛴', car: '🚗', transfer: '🚐', other: '➜' };
