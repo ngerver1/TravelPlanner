@@ -1,6 +1,7 @@
 // Bookings read from forwarded emails. The email Worker (email-worker/) writes them to inbox.json in the
 // trip's Gist; the app shows them for review (Add / Update existing / Dismiss). Nothing goes straight in.
 import type { Money, TripDoc } from './types';
+import { looseDate, looseTime, type DateContext } from './looseDates';
 
 export type BookingType = 'flight' | 'stay' | 'transport' | 'restaurant' | 'activity';
 
@@ -19,7 +20,11 @@ export interface Booking {
   // transport
   mode?: 'train' | 'bus' | 'ferry' | 'car' | 'transfer' | 'other'; operator?: string; fromName?: string; toName?: string;
   notes?: string;
+  /** Web link to view or manage the booking. */
+  link?: string;
 }
+
+export interface EmailLink { text: string; url: string }
 
 export interface InboxEntry {
   id: string;
@@ -31,7 +36,35 @@ export interface InboxEntry {
   /** Plain text of the email (trimmed), so anything not read can be filled in by hand. */
   text: string;
   note?: string;                // e.g. why nothing was read
+  /** Useful links found in the email (manage booking, itinerary, tickets...). */
+  links?: EmailLink[];
 }
+
+// ---------- links in an email ----------
+const SKIP = /unsubscribe|privacy|preferences|terms|cookie|facebook|twitter|x\.com|instagram|youtube|linkedin|tiktok|pinterest|app ?store|google ?play|apps\.apple|play\.google|mailto:|tel:|survey|feedback|newsletter|help ?cent|contact ?us|\.(png|jpe?g|gif)(\?|$)/i;
+const GOOD = /manage|my ?booking|my ?trip|view (your )?(booking|reservation|itinerary|trip|order|ticket)|itinerary|reservation|booking|e-?ticket|ticket|voucher|check-?in|confirm|order|details|receipt|boarding/i;
+const decode = (t: string) => t.replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"');
+
+/** Links in an email's HTML (or text), most useful first: booking/itinerary links rank above everything else. */
+export function extractLinks(html: string, text = ''): EmailLink[] {
+  const found: (EmailLink & { score: number; i: number })[] = [];
+  const seen = new Set<string>();
+  const add = (url: string, label: string) => {
+    url = decode(url.trim()).replace(/[).,;]+$/, '');
+    if (!/^https?:\/\//i.test(url) || seen.has(url)) return;
+    label = decode(label.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+    if (SKIP.test(url) || SKIP.test(label)) return;
+    seen.add(url);
+    found.push({ url, text: label.slice(0, 80), score: (GOOD.test(label) ? 2 : 0) + (GOOD.test(url) ? 1 : 0), i: found.length });
+  };
+  const re = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) add(m[1], m[2]);
+  for (const u of text.match(/https?:\/\/[^\s<>"')\]]+/g) || []) add(u, '');
+  return found.sort((a, b) => b.score - a.score || a.i - b.i).map(({ url, text }) => ({ url, text: text || new URL(url).hostname.replace(/^www\./, '') }));
+}
+/** The single best link for a booking: the top-ranked one if it looks like a booking link. */
+export const bestLink = (links: EmailLink[]): string | undefined => (links[0] && (GOOD.test(links[0].text) || GOOD.test(links[0].url)) ? links[0].url : undefined);
 
 // ---------- reading schema.org booking markup (JSON-LD) ----------
 type J = Record<string, unknown>;
@@ -61,7 +94,9 @@ function fromReservation(r: J): Booking | null {
   const f = o(r.reservationFor);
   const conf = s(r.reservationNumber) || s(r.confirmationNumber);
   const price = money(r);
-  const base = { ...(conf ? { conf } : {}), ...(price ? { price } : {}) };
+  const actions = ([] as unknown[]).concat(r.potentialAction ?? [], f.potentialAction ?? []).map(o);
+  const link = [s(r.modifyReservationUrl), s(r.url), ...actions.map((a) => s(a.url) || s(o(a.target).urlTemplate) || s(a.target)), s(f.url)].find((u) => /^https?:\/\//.test(u));
+  const base = { ...(conf ? { conf } : {}), ...(price ? { price } : {}), ...(link ? { link } : {}) };
   if (t.includes('FlightReservation')) {
     const dep = splitIso(f.departureTime), arr = splitIso(f.arrivalTime);
     const airline = o(f.airline);
@@ -114,12 +149,15 @@ export function parseMarkup(html: string): Booking[] {
 }
 
 // ---------- tidying what the AI returns ----------
-const DATE = /^\d{4}-\d{2}-\d{2}$/, TIME = /^\d{2}:\d{2}$/;
 const TYPES: BookingType[] = ['flight', 'stay', 'transport', 'restaurant', 'activity'];
 const MODES = ['train', 'bus', 'ferry', 'car', 'transfer', 'other'];
 
-/** Keep only well-formed fields from an AI answer; drop bookings that are empty. */
-export function normalizeBookings(raw: unknown): Booking[] {
+/**
+ * Keep only well-formed fields from an AI answer (or a stored entry); drop bookings that are empty.
+ * Dates and times are read leniently ("26 Jan", "4:05 PM"...), using the trip's dates for missing years.
+ * `links` lets an answer point at a link by number (linkIndex, 1-based).
+ */
+export function normalizeBookings(raw: unknown, ctx: DateContext = {}, links: EmailLink[] = []): Booking[] {
   const list = Array.isArray(raw) ? raw : Array.isArray(o(raw).bookings) ? (o(raw).bookings as unknown[]) : [];
   const out: Booking[] = [];
   for (const r0 of list) {
@@ -129,14 +167,20 @@ export function normalizeBookings(raw: unknown): Booking[] {
     const b: Booking = { type };
     for (const k of ['conf', 'airline', 'flightNo', 'name', 'address', 'city', 'operator', 'fromName', 'toName', 'notes'] as const) if (s(r[k])) (b as unknown as J)[k] = s(r[k]);
     for (const k of ['from', 'to'] as const) if (/^[A-Za-z]{3}$/.test(s(r[k]))) b[k] = s(r[k]).toUpperCase();
-    for (const k of ['depDate', 'arrDate', 'checkIn', 'checkOut', 'date'] as const) if (DATE.test(s(r[k]))) b[k] = s(r[k]);
-    for (const k of ['depTime', 'arrTime', 'checkInTime', 'checkOutTime', 'time'] as const) { const t = s(r[k]).padStart(5, '0'); if (TIME.test(t)) b[k] = t; }
+    for (const k of ['depDate', 'arrDate', 'checkIn', 'checkOut', 'date'] as const) { const d = looseDate(r[k], ctx); if (d) b[k] = d; }
+    for (const k of ['depTime', 'arrTime', 'checkInTime', 'checkOutTime', 'time'] as const) { const t = looseTime(r[k]); if (t) b[k] = t; }
+    // A date written with its time ("2027-01-28T16:05", "28 Jan 16:05") also gives the time.
+    const pairs = [['depDate', 'depTime'], ['arrDate', 'arrTime'], ['checkIn', 'checkInTime'], ['checkOut', 'checkOutTime'], ['date', 'time']] as const;
+    for (const [d, t] of pairs) if (!b[t] && /\d[:.h時]\d\d|\d\s*[ap]\.?m/i.test(s(r[d]))) { const tt = looseTime(s(r[d]).replace(/^.*?(\d{1,2}[:.h時]\d{2}.*|\d{1,2}\s*[ap]\.?m.*)$/i, '$1')); if (tt) b[t] = tt; }
     if (MODES.includes(s(r.mode))) b.mode = s(r.mode) as Booking['mode'];
-    const amount = Number(r.priceAmount ?? o(r.price).amount), currency = s(r.priceCurrency || o(r.price).currency).toUpperCase();
+    const amount = Number(String(r.priceAmount ?? o(r.price).amount ?? '').replace(/[^\d.]/g, '')), currency = s(r.priceCurrency || o(r.price).currency).toUpperCase();
     if (amount > 0 && /^[A-Z]{3}$/.test(currency)) b.price = { amount, currency };
     if (Number(r.partySize) > 0) b.partySize = Number(r.partySize);
     if (b.flightNo) b.flightNo = b.flightNo.replace(/\s+/g, '').toUpperCase();
-    const meaningful = Object.keys(b).filter((k) => k !== 'type').length >= 2;
+    const li = Number(r.linkIndex);
+    const link = /^https?:\/\//.test(s(r.link)) ? s(r.link) : li >= 1 && links[li - 1] ? links[li - 1].url : '';
+    if (link) b.link = link;
+    const meaningful = Object.keys(b).filter((k) => k !== 'type' && k !== 'link').length >= 2;
     if (meaningful) out.push(b);
   }
   return out;
@@ -153,6 +197,7 @@ export function normalizeInbox(raw: unknown): InboxEntry[] {
       source: (src === 'markup' || src === 'ai' ? src : 'none') as InboxEntry['source'],
       bookings: normalizeBookings(e.bookings),
       text: s(e.text), ...(s(e.note) ? { note: s(e.note) } : {}),
+      ...(Array.isArray(e.links) ? { links: (e.links as unknown[]).map(o).filter((l) => /^https?:\/\//.test(s(l.url))).map((l) => ({ url: s(l.url), text: s(l.text) || s(l.url) })).slice(0, 12) } : {}),
     };
   }).filter((e) => e.receivedAt || e.subject || e.text);
 }

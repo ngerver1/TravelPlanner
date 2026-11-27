@@ -47,8 +47,8 @@ describe('AI answers are tidied', () => {
       { type: 'activity' },
     ] });
     expect(b[0]).toEqual({ type: 'flight', conf: 'ABC', flightNo: 'CX581', from: 'CTS', to: 'HKG', depDate: '2027-01-28', depTime: '09:05', price: { amount: 850, currency: 'AUD' } });
-    expect(b[1]).toBeUndefined(); // only a name (bad date dropped) is too little to be useful
-    expect(b).toHaveLength(1);
+    expect(b[1]).toEqual({ type: 'stay', name: 'X', checkIn: '2027-01-28' }); // day-first dates are read
+    expect(b).toHaveLength(2);
   });
   it('reads the inbox file safely', () => {
     expect(normalizeInbox({ entries: [{ id: 'a', receivedAt: '2026-11-26T00:00:00Z', subject: 'Hi', source: 'weird', text: 'x', bookings: 'no' }] }))
@@ -67,5 +67,33 @@ describe('matching an email to an existing booking', () => {
     expect(findExisting(d, { type: 'stay', conf: 'h-77' })?.id).toBe('s');
     expect(findExisting(d, { type: 'transport', conf: 'T9' })?.id).toBe('l');
     expect(findExisting(d, { type: 'stay', conf: 'nope' })).toBeNull();
+  });
+});
+
+import { extractLinks, bestLink } from './inbox';
+describe('links in emails', () => {
+  const html = `<a href="https://www.facebook.com/cathay">Like us</a>
+    <a href="https://www.cathaypacific.com/manage?ref=ABC&amp;x=1">Manage booking</a>
+    <a href="https://www.cathaypacific.com/">Home</a>
+    <a href="https://email.example.com/unsubscribe?u=1">Unsubscribe</a>
+    <a href="mailto:help@cx.com">Email us</a><img src="https://t.example.com/p.gif">`;
+  it('finds the useful ones, booking links first, without unsubscribe/social/mailto', () => {
+    const l = extractLinks(html);
+    expect(l.map((x) => x.text)).toEqual(['Manage booking', 'Home']);
+    expect(l[0].url).toBe('https://www.cathaypacific.com/manage?ref=ABC&x=1');
+    expect(bestLink(l)).toBe('https://www.cathaypacific.com/manage?ref=ABC&x=1');
+    expect(bestLink([{ text: 'Home', url: 'https://x.com/home' }])).toBeUndefined();
+  });
+  it('also finds links written out in plain text', () => {
+    expect(extractLinks('', 'View your itinerary: https://booking.example.com/itinerary/123.')[0].url).toBe('https://booking.example.com/itinerary/123');
+  });
+  it('an AI answer can point at a link by number, and dates without a year use the trip', () => {
+    const b = normalizeBookings({ bookings: [{ type: 'activity', name: 'teamLab', date: 'Fri 29 Jan', time: '10am', linkIndex: 1 }] },
+      { tripStart: '2027-01-22', tripEnd: '2027-02-08', received: '2026-11-27' }, [{ text: 'Your tickets', url: 'https://tl.example/t/1' }]);
+    expect(b).toEqual([{ type: 'activity', name: 'teamLab', date: '2027-01-29', time: '10:00', link: 'https://tl.example/t/1' }]);
+  });
+  it('reads booking links from markup', () => {
+    const m = parseMarkup(`<script type="application/ld+json">${JSON.stringify({ '@type': 'LodgingReservation', reservationNumber: 'H1', modifyReservationUrl: 'https://hotel.example/manage/H1', reservationFor: { name: 'Hotel' }, checkinTime: '2027-01-24' })}</script>`);
+    expect(m[0].link).toBe('https://hotel.example/manage/H1');
   });
 });

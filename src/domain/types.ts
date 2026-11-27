@@ -93,6 +93,8 @@ export interface Flight {
   conf: string;
   notes: string;
   price?: Money;
+  /** Airline booking / manage-trip link. */
+  link?: string;
 }
 
 export interface Stay {

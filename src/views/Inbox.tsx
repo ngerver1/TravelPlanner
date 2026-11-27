@@ -14,6 +14,8 @@ export interface InboxActions {
   dismissEntry: (entryId: string) => void;
 }
 
+const hostOf = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return 'Link'; } };
+
 const SOURCE: Record<InboxEntry['source'], [string, string]> = {
   markup: ['Read from the booking details in the email', 'good'],
   ai: ['Read by AI: check the details', 'warn'],
@@ -28,6 +30,7 @@ function details(b: Booking): string[] {
   if (b.type === 'transport') lines.push([b.date && `${d(b.date)} ${b.depTime || ''}${b.arrTime ? '–' + b.arrTime : ''}`.trim(), b.arrDate && `arrives ${d(b.arrDate)}`].filter(Boolean).join(' · '));
   if (b.type === 'restaurant' || b.type === 'activity') lines.push([b.date && `${d(b.date)} ${b.time || ''}`.trim(), b.city, b.partySize && `${b.partySize} people`, b.address].filter(Boolean).join(' · '));
   lines.push([b.conf && `Ref ${b.conf}`, b.price && fmtPrice(b.price)].filter(Boolean).join(' · '));
+  if (!lines[0] && !b.depDate && !b.checkIn && !b.date) lines.unshift('No date found: add it when you save');
   return lines.filter(Boolean);
 }
 
@@ -66,6 +69,7 @@ function Entry({ e, doc, actions }: { e: InboxEntry; doc: TripDoc; actions: Inbo
             <div className="grow">
               <b>{bookingTitle(b)}</b>
               {details(b).map((l, j) => <div key={j} className="small muted">{l}</div>)}
+              {b.link && <div className="small"><a href={b.link} target="_blank" rel="noreferrer">{hostOf(b.link)} ↗</a></div>}
               {m && <div className="small ie-match">Matches <b>{m.label}</b> already in your trip</div>}
             </div>
             <div className="ie-actions">
@@ -86,6 +90,12 @@ function Entry({ e, doc, actions }: { e: InboxEntry; doc: TripDoc; actions: Inbo
               <button key={t} className="btn sm" onClick={() => actions.addManual(e.id, t)}>{t === 'stay' ? 'Stay' : t === 'activity' ? 'Thing to do' : t === 'restaurant' ? 'Place to eat' : t[0].toUpperCase() + t.slice(1)}</button>
             ))}
           </div>
+        </div>
+      )}
+      {e.links && e.links.length > 0 && (
+        <div className="ie-links small">
+          <span className="muted">Links in the email:</span>
+          {e.links.slice(0, 6).map((l) => <a key={l.url} href={l.url} target="_blank" rel="noreferrer">{l.text} ↗</a>)}
         </div>
       )}
       {e.text && (

@@ -46,6 +46,7 @@ export function FlightForm({ initial, onSave, onDelete, onClose }: {
         <Field label="Status" span><StatusSelect value={f.status} onChange={(s) => setF((p) => ({ ...p, status: s }))} /></Field>
         <Field label="Confirmation #"><input {...bind('conf')} /></Field>
         <MoneyField label="Price (optional)" value={f.priceDraft} onChange={(v) => setF((p) => ({ ...p, priceDraft: v }))} />
+        <Field label="Booking link" span><input {...bind('link')} placeholder="https://" inputMode="url" /></Field>
         <Field label="Notes" span><textarea rows={2} {...bind('notes')} /></Field>
       </div>
     </Modal>

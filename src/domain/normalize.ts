@@ -58,6 +58,7 @@ export function normFlight(f: Raw): Flight {
     status: status(f.status),
     conf: str(f.conf),
     notes: str(f.notes),
+    ...(/^https?:\/\//.test(str(f.link)) ? { link: str(f.link) } : {}),
   };
 }
 

@@ -86,13 +86,17 @@ export function FlightView({ flight: f, onEdit, onStatus, onGoDay, onClose }: {
         <span className="grow" />
         <StatusPill value={f.status} onChange={onStatus} />
       </div>
-      {statusUrl && <div className="iv-links"><a className="btn" href={statusUrl} target="_blank" rel="noreferrer">Flight status ↗</a></div>}
+      {(statusUrl || f.link) && <div className="iv-links">
+        {statusUrl && <a className="btn" href={statusUrl} target="_blank" rel="noreferrer">Flight status ↗</a>}
+        {f.link && <a className="btn" href={f.link} target="_blank" rel="noreferrer">{host(f.link)} ↗</a>}
+      </div>}
       <AirportMaps from={f.from} to={f.to} />
       <div className="iv-rows">
         <Row label="Departs">{airport(f.from)} · {f.depDate ? <button className="link" onClick={() => onGoDay(f.depDate)}>{day(f.depDate)}</button> : '—'}{f.depTime ? ` · ${f.depTime}` : ''} <span className="muted small">(local)</span></Row>
         <Row label="Arrives">{airport(f.to)} · {f.arrDate ? <button className="link" onClick={() => onGoDay(f.arrDate)}>{day(f.arrDate)}</button> : '—'}{f.arrTime ? ` · ${f.arrTime}` : ''} <span className="muted small">(local)</span></Row>
         {f.conf && <Row label="Confirmation"><Conf value={f.conf} /></Row>}
         {f.price && <Row label="Price">{fmtPrice(f.price)}</Row>}
+        {f.link && <Row label="Link"><a href={f.link} target="_blank" rel="noreferrer" className="iv-url">{f.link}</a></Row>}
         {f.notes && <Row label="Notes"><span className="pre"><Linkified text={f.notes} /></span></Row>}
       </div>
     </Modal>

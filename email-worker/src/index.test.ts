@@ -11,7 +11,7 @@ beforeEach(() => {
     expect(String(url)).toBe('https://api.github.com/gists/G1');
     expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer ghp_test');
     if (init?.method === 'PATCH') { gist.content = JSON.parse(String(init.body)).files['inbox.json'].content; patches++; return new Response('{}'); }
-    return new Response(JSON.stringify({ files: gist.content ? { 'inbox.json': { content: gist.content } } : {} }));
+    return new Response(JSON.stringify({ files: { 'trip.json': { content: JSON.stringify({ trip: { start: '2027-01-22', end: '2027-02-08' } }) }, ...(gist.content ? { 'inbox.json': { content: gist.content } } : {}) } }));
   }));
 });
 
@@ -58,6 +58,20 @@ describe('email worker', () => {
     expect(entries[1]).toMatchObject({ source: 'ai', sender: 'Rusutsu Resort', bookings: [{ type: 'stay', name: 'Snow Lodge', price: { amount: 42000, currency: 'JPY' } }] });
     const input = (e.AI.run as ReturnType<typeof vi.fn>).mock.calls[0][1];
     expect(input.response_format.type).toBe('json_schema');
+  });
+
+  it('gives the AI the trip dates and numbered links; reads loose dates; attaches the booking link', async () => {
+    const e = env((input) => {
+      const user = (input as { messages: { content: string }[] }).messages[1].content;
+      expect(user).toContain('Trip dates: 2027-01-22 to 2027-02-08');
+      expect(user).toContain('[1] View your tickets — https://tl.example/t/9');
+      return { response: { bookings: [{ type: 'activity', name: 'teamLab Planets', date: 'Fri 29 Jan', time: '10:00 AM', linkIndex: 1 }] } };
+    });
+    const html = '<p>Your tickets for Fri 29 Jan, 10:00 AM</p><a href="https://tl.example/t/9">View your tickets</a><a href="https://x.example/unsubscribe">Unsubscribe</a>';
+    await worker.email(msg(ME, 'Fwd: teamLab tickets', html, true).m, e);
+    const [entry] = inbox();
+    expect(entry.bookings[0]).toEqual({ type: 'activity', name: 'teamLab Planets', date: '2027-01-29', time: '10:00', link: 'https://tl.example/t/9' });
+    expect(entry.links).toEqual([{ text: 'View your tickets', url: 'https://tl.example/t/9' }]);
   });
 
   it('keeps the email text for hand entry when nothing can be read (e.g. AI quota used up)', async () => {
