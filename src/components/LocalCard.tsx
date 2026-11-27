@@ -15,16 +15,10 @@ export { cardFor } from '../domain/local';
 const Ctx = createContext<(d: LocalCardData) => void>(() => {});
 export const useShowLocal = () => useContext(Ctx);
 
-type Orient = ScreenOrientation & { lock?: (o: string) => Promise<void>; unlock?: () => void };
-/** Landscape where the phone allows it without going full screen (e.g. an installed app on some Android phones).
- *  Fails quietly everywhere else; the card fits either way. */
-function goLandscape() { try { (screen.orientation as Orient | undefined)?.lock?.('landscape').catch(() => {}); } catch { /* ignore */ } }
-function leaveLandscape() { try { (screen.orientation as Orient | undefined)?.unlock?.(); } catch { /* ignore */ } }
-
 export function LocalCardProvider({ children }: { children: ReactNode }) {
   const [card, setCard] = useState<LocalCardData | null>(null);
-  const show = useCallback((d: LocalCardData) => { if (loadLandscape()) goLandscape(); setCard(d); }, []);
-  const close = useCallback(() => { setCard(null); leaveLandscape(); }, []);
+  const show = useCallback((d: LocalCardData) => setCard(d), []);
+  const close = useCallback(() => setCard(null), []);
   return (
     <Ctx.Provider value={show}>
       {children}
@@ -68,10 +62,13 @@ function fitText(el: HTMLElement, max: number, min = 14) {
 
 const Wrapped = ({ text }: { text: string }) => <>{wrapPieces(text).map((p, i) => <Fragment key={i}>{i > 0 && <wbr />}{p}</Fragment>)}</>;
 
+/** Whether to draw the card sideways: the phone is upright and the setting is on. The phone's own rotation is never changed. */
+const sideways = () => loadLandscape() && innerHeight > innerWidth;
+
 function LocalCard({ data, onClose }: { data: LocalCardData; onClose: () => void }) {
-  const root = useRef<HTMLDivElement>(null), nameEl = useRef<HTMLDivElement>(null), addrEl = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null), nameEl = useRef<HTMLDivElement>(null), addrEl = useRef<HTMLDivElement>(null);
   const lang = guessLang(`${data.name || ''} ${data.address || ''}`, data.lang);
-  const [portrait, setPortrait] = useState(() => innerHeight > innerWidth);
+  const [rotated, setRotated] = useState(sideways);
   const [awake, setAwake] = useState(false);
   const [drag, setDrag] = useState(0);
   const touch = useRef<{ y: number; x: number } | null>(null);
@@ -82,9 +79,11 @@ function LocalCard({ data, onClose }: { data: LocalCardData; onClose: () => void
     if (!(history.state as { localCard?: boolean } | null)?.localCard) history.pushState({ ...(history.state || {}), localCard: true }, '');
     const pop = () => onClose();
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') requestClose(); };
+    const resize = () => setRotated(sideways());
     window.addEventListener('popstate', pop);
     window.addEventListener('keydown', key);
-    return () => { window.removeEventListener('popstate', pop); window.removeEventListener('keydown', key); };
+    window.addEventListener('resize', resize);
+    return () => { window.removeEventListener('popstate', pop); window.removeEventListener('keydown', key); window.removeEventListener('resize', resize); };
   }, [onClose, requestClose]);
 
   // Keep the screen on while it's open (where the browser supports it).
@@ -100,14 +99,13 @@ function LocalCard({ data, onClose }: { data: LocalCardData; onClose: () => void
 
   // Text as large as fits, again whenever the screen turns or resizes.
   useLayoutEffect(() => {
-    const el = root.current;
+    const el = inner.current;
     if (!el) return;
     const run = () => {
       const unit = Math.min(el.clientWidth, el.clientHeight);
-      setPortrait(el.clientHeight > el.clientWidth);
       const n = nameEl.current;
       if (n) {
-        // Size the name inside its share of the screen, then give the address any room the name doesn't use.
+        // Size the name inside its share of the card, then give the address any room the name doesn't use.
         n.style.flexBasis = ''; n.style.maxHeight = '';
         fitText(n, unit * (data.address ? 0.2 : 0.3));
         if (data.address) { n.style.maxHeight = `${n.clientHeight}px`; n.style.flexBasis = 'auto'; }
@@ -119,27 +117,31 @@ function LocalCard({ data, onClose }: { data: LocalCardData; onClose: () => void
     ro.observe(el);
     document.fonts?.ready.then(run, () => {});
     return () => ro.disconnect();
-  }, [data]);
+  }, [data, rotated]);
 
+  // Swipe "down" as the card reads: drawn sideways, that is towards the left edge of the upright screen.
+  const along = (t: { y: number; x: number }, x: number, y: number) => (rotated ? { down: t.x - x, across: Math.abs(y - t.y) } : { down: y - t.y, across: Math.abs(x - t.x) });
+  const move = drag ? `translateY(${drag}px)` : '';
   return createPortal(
-    <div ref={root} className={'lcard' + (data.name && data.address ? '' : ' single')} role="dialog" aria-label={`${data.english}: local name and address`}
-      data-awake={awake ? 'on' : 'off'} style={drag ? { transform: `translateY(${drag}px)`, opacity: Math.max(0.4, 1 - drag / 400) } : undefined}
+    <div className="lcard" role="dialog" aria-label={`${data.english}: local name and address`} data-awake={awake ? 'on' : 'off'} data-rotated={rotated ? 'yes' : 'no'}
       onTouchStart={(e) => { touch.current = { y: e.touches[0].clientY, x: e.touches[0].clientX }; }}
-      onTouchMove={(e) => { const t = touch.current; if (t) setDrag(Math.max(0, e.touches[0].clientY - t.y)); }}
+      onTouchMove={(e) => { const t = touch.current; if (t) setDrag(Math.max(0, along(t, e.touches[0].clientX, e.touches[0].clientY).down)); }}
       onTouchEnd={(e) => {
         const t = touch.current; touch.current = null;
-        const dy = t ? e.changedTouches[0].clientY - t.y : 0, dx = t ? Math.abs(e.changedTouches[0].clientX - t.x) : 0;
+        const m = t ? along(t, e.changedTouches[0].clientX, e.changedTouches[0].clientY) : { down: 0, across: 0 };
         setDrag(0);
-        if (dy > 90 && dx < 80) requestClose();
+        if (m.down > 90 && m.across < 80) requestClose();
       }}>
-      <button type="button" className="lc-close" onClick={requestClose} aria-label="Close">✕</button>
-      {data.name && <div ref={nameEl} className="lc-name" lang={lang}><Wrapped text={data.name} /></div>}
-      {data.address && <div ref={addrEl} className="lc-addr" lang={lang}><Wrapped text={data.address} /></div>}
-      <div className="lc-foot">
-        <span className="lc-en">{data.english}</span>
-        {data.phone && <a className="lc-phone" href={telHref(data.phone)} onTouchStart={(e) => e.stopPropagation()}>📞 {data.phone}</a>}
+      <div ref={inner} className={'lc-in' + (rotated ? ' rotated' : '') + (data.name && data.address ? '' : ' single')}
+        style={{ transform: (rotated ? 'translateX(100vw) rotate(90deg) ' : '') + move || undefined, opacity: drag ? Math.max(0.4, 1 - drag / 400) : undefined }}>
+        <button type="button" className="lc-close" onClick={requestClose} aria-label="Close">✕</button>
+        {data.name && <div ref={nameEl} className="lc-name" lang={lang}><Wrapped text={data.name} /></div>}
+        {data.address && <div ref={addrEl} className="lc-addr" lang={lang}><Wrapped text={data.address} /></div>}
+        <div className="lc-foot">
+          <span className="lc-en">{data.english}</span>
+          {data.phone && <a className="lc-phone" href={telHref(data.phone)} onTouchStart={(e) => e.stopPropagation()}>📞 {data.phone}</a>}
+        </div>
       </div>
-      {portrait && <div className="lc-hint">Turn your phone sideways for bigger text · swipe down to close</div>}
     </div>,
     document.body,
   );

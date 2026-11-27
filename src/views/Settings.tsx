@@ -58,7 +58,7 @@ export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, on
       <Seg value={theme} onChange={onTheme} options={[['system', 'Match my phone'], ['light', 'Light'], ['dark', 'Dark']]} />
       <label className="check switch-row">
         <input type="checkbox" checked={landscape} onChange={(e) => { setLandscape(e.target.checked); saveLandscape(e.target.checked); }} />
-        <span><b>Open local card in landscape</b><br /><span className="muted small">The 文 card turns sideways where the phone allows. Saved on this device only.</span></span>
+        <span><b>Open local card in landscape</b><br /><span className="muted small">With the phone upright, the 文 card is drawn sideways: turn the phone to read it. Your phone’s rotation setting isn’t changed. Saved on this device only.</span></span>
       </label>
       <h4>Sync between devices</h4>
       <SyncSettings sync={sync} doc={doc} />
