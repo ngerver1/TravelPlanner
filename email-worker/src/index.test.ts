@@ -82,7 +82,7 @@ describe('email worker', () => {
     expect(inbox()[0].bookings[0]).toEqual({
       type: 'stay', name: 'Shinjuku Granbell Hotel', checkIn: '2027-01-26', checkOut: '2027-01-28', conf: '4821.993.120',
       price: { amount: 52400, currency: 'JPY' }, link: 'https://secure.booking.example/mybooking.html?bn=4821993120',
-      mapsUrl: 'https://maps.app.goo.gl/AbC123', cancelBy: 'Free cancellation until 23:59 on 24 January 2027',
+      mapsUrl: 'https://maps.app.goo.gl/AbC123', cancelBy: 'Free cancellation until 24 Jan 23:59',
     });
   });
 

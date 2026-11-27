@@ -107,22 +107,46 @@ export function findPrice(text: string, home = 'AUD'): Money | undefined {
   const { perPerson: _pp, ...m } = cands[0].m;
   return m;
 }
-/** Cancellation terms: "Free cancellation until …", "Cancel by …", "Non-refundable". */
-export function findCancel(text: string): string | undefined {
-  for (const line of text.split(/\n/)) {
-    const l = line.replace(/\s+/g, ' ').trim();
-    const m = l.match(/(free cancell?ation[^.;\n]{0,90}|cancel(?:lation)? (?:for free )?(?:by|before|until|up to)[^.;\n]{0,80}|cancell?ation deadline[^.;\n]{0,80}|non-?refundable)/i);
-    if (m) return m[1].replace(/\s+/g, ' ').trim().replace(/^./, (c) => c.toUpperCase()).slice(0, 140);
+const shortDate = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-AU', { timeZone: 'UTC', day: 'numeric', month: 'short' });
+};
+/**
+ * Only the key cancellation terms, kept short: "Free cancellation until 24 Jan 23:59 · 50% refund until 26 Jan",
+ * or "Non-refundable". Terms without a date (and all other policy text) are left out.
+ */
+export function summariseCancel(text: string, ctx: DateContext = {}): string | undefined {
+  const parts: string[] = [];
+  let free = '', partial = '', nonRefundable = false;
+  for (const raw of text.split(/\n|(?<=[.;])\s+/)) {
+    const l = raw.replace(/\s+/g, ' ').trim();
+    if (!l || l.length > 400) continue;
+    // For a range ("between 25 January and 26 January"), the terms last until the later date.
+    const tail = l.split(/\s(?:and|to|until|till|-|–)\s/i).pop() || l;
+    const date = looseDate(tail, ctx) || looseDate(l, ctx);
+    const time = date ? looseTime(l.replace(/\b\d{4}\b/g, '')) : undefined;
+    const when = date ? `${shortDate(date)}${time ? ' ' + time : ''}` : '';
+    if (!free && /free cancell?ation|cancel(?:lation)? (?:is )?free|cancel for free|full(?:y)? refund/i.test(l) && when) free = `Free cancellation until ${when}`;
+    else if (!partial && when) {
+      const pct = l.match(/(\d{1,3})\s*%\s*(?:refund|of (?:the )?(?:total|amount|price) (?:refunded|back))/i) || l.match(/refund(?:ed)? (?:of )?(\d{1,3})\s*%/i);
+      if (pct) partial = `${pct[1]}% refund until ${when}`;
+      else if (/partial(?:ly)? refund/i.test(l)) partial = `Partial refund until ${when}`;
+    }
+    if (/non-?refundable|no refunds?\b/i.test(l) && !/fully refundable/i.test(l)) nonRefundable = true;
   }
-  return undefined;
+  if (free) parts.push(free);
+  if (partial) parts.push(partial);
+  if (!parts.length && nonRefundable) parts.push('Non-refundable');
+  return parts.length ? parts.join(' · ') : undefined;
 }
+export const findCancel = summariseCancel;
 
 /**
  * Fill gaps in what was read, from rules over the email text and its links. Shared details (reference,
  * cancellation, maps) go on every booking; the total price only on the first booking.
  */
-export function enrichBookings(bookings: Booking[], text: string, links: EmailLink[], home = 'AUD'): Booking[] {
-  const conf = findConf(text), price = findPrice(text, home), cancel = findCancel(text);
+export function enrichBookings(bookings: Booking[], text: string, links: EmailLink[], home = 'AUD', ctx: DateContext = {}): Booking[] {
+  const conf = findConf(text), price = findPrice(text, home), cancel = summariseCancel(text, ctx);
   const link = bestLink(links), maps = mapsLinkIn(links);
   return bookings.map((b, i) => ({
     ...b,
@@ -130,7 +154,7 @@ export function enrichBookings(bookings: Booking[], text: string, links: EmailLi
     ...(!b.price && price && i === 0 ? { price } : {}),
     ...(!b.link && link ? { link } : {}),
     ...(!b.mapsUrl && maps && (b.type === 'stay' || b.type === 'restaurant' || b.type === 'activity') ? { mapsUrl: maps } : {}),
-    ...(!b.cancelBy && cancel ? { cancelBy: cancel } : {}),
+    ...(cancel ? { cancelBy: cancel } : {}), // the rules' short summary wins over the AI's wording
   }));
 }
 
@@ -233,7 +257,9 @@ export function normalizeBookings(raw: unknown, ctx: DateContext = {}, links: Em
     const type = s(r.type).toLowerCase() as BookingType;
     if (!TYPES.includes(type)) continue;
     const b: Booking = { type };
-    for (const k of ['conf', 'airline', 'flightNo', 'name', 'address', 'city', 'operator', 'fromName', 'toName', 'notes', 'cancelBy'] as const) if (s(r[k])) (b as unknown as J)[k] = s(r[k]);
+    for (const k of ['conf', 'airline', 'flightNo', 'name', 'address', 'city', 'operator', 'fromName', 'toName'] as const) if (s(r[k])) (b as unknown as J)[k] = s(r[k]);
+    const cancel = s(r.cancelBy) && summariseCancel(s(r.cancelBy), ctx); // only short, dated terms
+    if (cancel) b.cancelBy = cancel;
     if (/^https?:\/\//.test(s(r.mapsUrl))) b.mapsUrl = s(r.mapsUrl);
     for (const k of ['from', 'to'] as const) if (/^[A-Za-z]{3}$/.test(s(r[k]))) b[k] = s(r[k]).toUpperCase();
     for (const k of ['depDate', 'arrDate', 'checkIn', 'checkOut', 'date'] as const) { const d = looseDate(r[k], ctx); if (d) b[k] = d; }

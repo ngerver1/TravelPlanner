@@ -119,7 +119,7 @@ Get directions <https://maps.app.goo.gl/AbC123>`;
     expect(findPrice(hotel)).toEqual({ amount: 52400, currency: 'JPY' });
     expect(findPrice('Subtotal HK$900\nTotal amount paid: HK$1,034.50')).toEqual({ amount: 1034.5, currency: 'HKD' });
     expect(findPrice('Room rate: 3 nights')).toBeUndefined();
-    expect(findCancel(hotel)).toBe('Free cancellation until 23:59 on 24 January 2027');
+    expect(findCancel(hotel)).toBe('Free cancellation until 24 Jan 23:59');
     expect(findCancel('This rate is non-refundable.')).toBe('Non-refundable');
   });
   it('labels plain-text links by the words before them, manage-booking first, maps kept apart', () => {
@@ -130,11 +130,34 @@ Get directions <https://maps.app.goo.gl/AbC123>`;
   it('fills only the gaps', () => {
     const links = extractLinks('', hotel);
     const [b] = enrichBookings([{ type: 'stay', name: 'Granbell', checkIn: '2027-01-26' }], hotel, links, 'AUD');
-    expect(b).toMatchObject({ price: { amount: 52400, currency: 'JPY' }, cancelBy: 'Free cancellation until 23:59 on 24 January 2027',
+    expect(b).toMatchObject({ price: { amount: 52400, currency: 'JPY' }, cancelBy: 'Free cancellation until 24 Jan 23:59',
       link: 'https://secure.booking.example/mybooking.html?bn=4821993120&pincode=7731', mapsUrl: 'https://maps.app.goo.gl/AbC123' });
     expect(b.conf).toBe('4821.993.120');
     const [kept] = enrichBookings([{ type: 'stay', name: 'X', checkIn: '2027-01-26', conf: 'MINE', price: { amount: 1, currency: 'AUD' } }], hotel, links);
     expect(kept.conf).toBe('MINE');
     expect(kept.price).toEqual({ amount: 1, currency: 'AUD' });
+  });
+});
+
+import { summariseCancel } from './inbox';
+describe('cancellation notes are short', () => {
+  const ctx = { tripStart: '2027-01-22', tripEnd: '2027-02-08', received: '2026-11-27' };
+  it('keeps only dated free / partial refund terms', () => {
+    const policy = `Cancellation policy: You can cancel for free until 23:59 on 24 January 2027.
+If you cancel between 25 January and 26 January 2027 you will receive a 50% refund of the total.
+After that the booking is non-refundable. All prices are in JPY and include 10% consumption tax.
+The property may pre-authorise your card. Please note currency conversion fees may apply.`;
+    expect(summariseCancel(policy, ctx)).toBe('Free cancellation until 24 Jan 23:59 · 50% refund until 26 Jan');
+  });
+  it('says Non-refundable when that is all there is, and nothing for undated waffle', () => {
+    expect(summariseCancel('This rate is non-refundable. Taxes included.', ctx)).toBe('Non-refundable');
+    expect(summariseCancel('Free cancellation up to 48 hours before arrival. Currency: JPY.', ctx)).toBeUndefined();
+    expect(summariseCancel('Prices include GST. Terms and conditions apply.', ctx)).toBeUndefined();
+  });
+  it('shortens what the AI wrote, or drops it', () => {
+    const [b] = normalizeBookings({ bookings: [{ type: 'stay', name: 'X', checkIn: '2027-01-26', cancelBy: 'Free cancellation until Jan 24, 2027 (local time). Payment in JPY at the property.' }] }, ctx);
+    expect(b.cancelBy).toBe('Free cancellation until 24 Jan');
+    const [c] = normalizeBookings({ bookings: [{ type: 'stay', name: 'X', checkIn: '2027-01-26', cancelBy: 'Standard terms apply; see website for currency conditions' }] }, ctx);
+    expect(c.cancelBy).toBeUndefined();
   });
 });
