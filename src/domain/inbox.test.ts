@@ -164,9 +164,14 @@ The property may pre-authorise your card. Please note currency conversion fees m
 
 import { parseAiAnswer } from './inbox';
 describe('AI answers cut off part-way', () => {
-  it('keeps the complete bookings', () => {
+  it('keeps the complete bookings and the finished fields of a cut-off one', () => {
     const cut = '{"bookings":[{"type":"flight","flightNo":"CX581","depDate":"2027-01-28","note":"has a } brace and \\"quote\\""},{"type":"flight","flightNo":"CX502","depDate":"2027-02-0';
-    expect(parseAiAnswer(cut)).toEqual({ bookings: [{ type: 'flight', flightNo: 'CX581', depDate: '2027-01-28', note: 'has a } brace and "quote"' }] });
+    expect(parseAiAnswer(cut)).toEqual({ bookings: [{ type: 'flight', flightNo: 'CX581', depDate: '2027-01-28', note: 'has a } brace and "quote"' }, { type: 'flight', flightNo: 'CX502' }] });
+  });
+  it('keeps the fields before a value that ran on, even in the first booking', () => {
+    const runaway = '{"bookings":[{"type":"stay","name":"Hotel Niseko","conf":"AB12","checkIn":"2027-01-25","address":"1-2 Kabayama ' + 'and so on '.repeat(400);
+    expect(parseAiAnswer(runaway)).toEqual({ bookings: [{ type: 'stay', name: 'Hotel Niseko', conf: 'AB12', checkIn: '2027-01-25' }] });
+    expect(parseAiAnswer('{"bookings":[{"type":"stay","name":"Hotel ' + 'x'.repeat(99))).toBeNull();
   });
   it('passes whole answers and objects through, and gives up on junk', () => {
     expect(parseAiAnswer('{"bookings":[]}')).toEqual({ bookings: [] });

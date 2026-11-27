@@ -107,15 +107,15 @@ const SCHEMA = {
         type: 'object',
         properties: {
           type: { type: 'string', enum: ['flight', 'stay', 'transport', 'restaurant', 'activity'] },
-          conf: { type: 'string' }, priceAmount: { type: 'number' }, priceCurrency: { type: 'string' },
-          airline: { type: 'string' }, flightNo: { type: 'string' }, from: { type: 'string' }, to: { type: 'string' },
-          depDate: { type: 'string' }, depTime: { type: 'string' }, arrDate: { type: 'string' }, arrTime: { type: 'string' },
-          name: { type: 'string' }, address: { type: 'string' }, city: { type: 'string' },
-          checkIn: { type: 'string' }, checkOut: { type: 'string' }, checkInTime: { type: 'string' }, checkOutTime: { type: 'string' },
-          date: { type: 'string' }, time: { type: 'string' }, partySize: { type: 'number' },
+          conf: { type: 'string', maxLength: 80 }, priceAmount: { type: 'number' }, priceCurrency: { type: 'string', maxLength: 80 },
+          airline: { type: 'string', maxLength: 80 }, flightNo: { type: 'string', maxLength: 80 }, from: { type: 'string', maxLength: 80 }, to: { type: 'string', maxLength: 80 },
+          depDate: { type: 'string', maxLength: 80 }, depTime: { type: 'string', maxLength: 80 }, arrDate: { type: 'string', maxLength: 80 }, arrTime: { type: 'string', maxLength: 80 },
+          name: { type: 'string', maxLength: 80 }, address: { type: 'string', maxLength: 200 }, city: { type: 'string', maxLength: 80 },
+          checkIn: { type: 'string', maxLength: 80 }, checkOut: { type: 'string', maxLength: 80 }, checkInTime: { type: 'string', maxLength: 80 }, checkOutTime: { type: 'string', maxLength: 80 },
+          date: { type: 'string', maxLength: 80 }, time: { type: 'string', maxLength: 80 }, partySize: { type: 'number' },
           mode: { type: 'string', enum: ['train', 'bus', 'ferry', 'car', 'transfer', 'other'] },
-          operator: { type: 'string' }, fromName: { type: 'string' }, toName: { type: 'string' },
-          linkIndex: { type: 'number' }, cancelBy: { type: 'string' },
+          operator: { type: 'string', maxLength: 80 }, fromName: { type: 'string', maxLength: 80 }, toName: { type: 'string', maxLength: 80 },
+          linkIndex: { type: 'number' }, cancelBy: { type: 'string', maxLength: 200 },
         },
         required: ['type'],
       },
@@ -151,15 +151,28 @@ async function readWithAi(env: Env, subject: string, text: string, links: EmailL
   if (!env.AI) throw new Error('Workers AI not bound');
   const linkList = links.slice(0, 15).map((l, i) => `[${i + 1}] ${l.text} — ${l.url.slice(0, 120)}`).join('\n');
   const facts = [`Email received: ${ctx.received}`, ctx.tripStart && `Trip dates: ${ctx.tripStart} to ${ctx.tripEnd}`].filter(Boolean).join('\n');
-  const out = await env.AI.run(env.AI_MODEL as keyof AiModels, {
-    messages: [
-      { role: 'system', content: PROMPT },
-      { role: 'user', content: `${facts}\n\nLinks in the email:\n${linkList || '(none)'}\n\nSubject: ${subject}\n\n${text.slice(0, AI_TEXT)}` },
-    ],
-    response_format: { type: 'json_schema', json_schema: SCHEMA },
-    max_tokens: 4000,
-  } as never) as { response?: unknown };
-  const parsed = parseAiAnswer(out?.response); // tolerates an answer cut off part-way
+  const user = `${facts}\n\nLinks in the email:\n${linkList || '(none)'}\n\nSubject: ${subject}\n\n${text.slice(0, AI_TEXT)}`;
+  const ask = async (strict: boolean): Promise<unknown> => {
+    const out = await env.AI!.run(env.AI_MODEL as keyof AiModels, {
+      messages: [
+        { role: 'system', content: strict ? PROMPT : `${PROMPT}\nReply with compact JSON on one line: {"bookings":[...]}. Every value under 80 characters.` },
+        { role: 'user', content: user },
+      ],
+      ...(strict ? { response_format: { type: 'json_schema', json_schema: SCHEMA } } : {}),
+      max_tokens: 4000,
+      temperature: 0.1,
+    } as never) as { response?: unknown };
+    const parsed = parseAiAnswer(out?.response); // repairs an answer cut off part-way
+    if (parsed == null) {
+      const r = typeof out?.response === 'string' ? out.response : JSON.stringify(out?.response ?? null);
+      console.log(`AI answer unreadable (${strict ? 'json mode' : 'plain'}, ${r.length} chars): ${r.slice(0, 600)} … ${r.slice(-300)}`);
+    }
+    return parsed;
+  };
+  // JSON mode first; if that fails or its answer can't be read at all, ask once more in plain mode.
+  let parsed: unknown = null;
+  try { parsed = await ask(true); } catch (e) { console.log(`AI json mode failed: ${e instanceof Error ? e.message : e}`); }
+  if (parsed == null) parsed = await ask(false);
   if (parsed == null) throw new Error('the AI answer could not be read');
   return normalizeBookings(parsed, ctx, links);
 }

@@ -333,18 +333,32 @@ export function parseAiAnswer(raw: unknown): unknown {
   if (raw && typeof raw === 'object') return raw;
   const text = typeof raw === 'string' ? raw.trim().replace(/^```(?:json)?\s*|\s*```$/g, '') : '';
   if (!text) return null;
-  try { return JSON.parse(text); } catch { /* cut off: salvage below */ }
-  const start = text.indexOf('[', text.indexOf('"bookings"') + 1);
-  if (start < 0) return null;
-  const items: unknown[] = [];
-  let depth = 0, inStr = false, esc = false, from = -1;
-  for (let i = start + 1; i < text.length; i++) {
+  try { return JSON.parse(text); } catch { /* cut off: repair below */ }
+  // Cut off part-way (usually one value ran on until the answer limit): keep everything written
+  // up to the last complete value, close the open brackets, and drop bookings left with only a type.
+  const fixed = repairJson(text) as { bookings?: unknown } | null;
+  const items = Array.isArray(fixed?.bookings)
+    ? fixed.bookings.filter((b) => b && typeof b === 'object' && Object.keys(b).length >= 2)
+    : [];
+  return items.length ? { bookings: items } : null;
+}
+
+/** Parses JSON that stops part-way, by cutting back to the last complete value and closing brackets. */
+export function repairJson(text: string): unknown {
+  const cuts: { at: number; close: string }[] = [];
+  const stack: string[] = [];
+  let inStr = false, esc = false;
+  const closers = () => stack.slice().reverse().map((c) => (c === '{' ? '}' : ']')).join('');
+  for (let i = 0; i < text.length; i++) {
     const c = text[i];
     if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
     if (c === '"') inStr = true;
-    else if (c === '{') { if (depth === 0) from = i; depth++; }
-    else if (c === '}') { depth--; if (depth === 0 && from >= 0) { try { items.push(JSON.parse(text.slice(from, i + 1))); } catch { /* skip */ } from = -1; } }
-    else if (c === ']' && depth === 0) break;
+    else if (c === '{' || c === '[') stack.push(c);
+    else if (c === '}' || c === ']') { stack.pop(); cuts.push({ at: i + 1, close: closers() }); }
+    else if (c === ',') cuts.push({ at: i, close: closers() });
   }
-  return items.length ? { bookings: items } : null;
+  for (let k = cuts.length - 1, tries = 0; k >= 0 && tries < 300; k--, tries++) {
+    try { return JSON.parse(text.slice(0, cuts[k].at) + cuts[k].close); } catch { /* try an earlier cut */ }
+  }
+  return null;
 }
