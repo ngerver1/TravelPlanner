@@ -86,6 +86,12 @@ describe('email worker', () => {
     });
   });
 
+  it('keeps the complete bookings when the AI answer is cut off', async () => {
+    const cut = '{"bookings":[{"type":"flight","flightNo":"CX581","from":"CTS","to":"HKG","depDate":"2027-01-28","depTime":"16:05"},{"type":"flight","flightNo":"CX5';
+    await worker.email(msg(ME, 'Itinerary', 'Your flights...').m, env(() => ({ response: cut })));
+    expect(inbox()[0]).toMatchObject({ source: 'ai', bookings: [{ type: 'flight', flightNo: 'CX581', depDate: '2027-01-28' }] });
+  });
+
   it('keeps the email text for hand entry when nothing can be read (e.g. AI quota used up)', async () => {
     await worker.email(msg(ME, 'Ski school', 'Lesson Tuesday 9am, ref SK-1').m, env());
     const [entry] = inbox();

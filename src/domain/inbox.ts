@@ -324,3 +324,27 @@ export const bookingTitle = (b: Booking): string => {
     case 'activity': return `Activity: ${b.name || ''}`;
   }
 };
+
+/**
+ * Parse an AI answer that may have been cut off mid-way: if the JSON is incomplete, keep every booking object
+ * that came through whole. Returns null if nothing usable.
+ */
+export function parseAiAnswer(raw: unknown): unknown {
+  if (raw && typeof raw === 'object') return raw;
+  const text = typeof raw === 'string' ? raw.trim().replace(/^```(?:json)?\s*|\s*```$/g, '') : '';
+  if (!text) return null;
+  try { return JSON.parse(text); } catch { /* cut off: salvage below */ }
+  const start = text.indexOf('[', text.indexOf('"bookings"') + 1);
+  if (start < 0) return null;
+  const items: unknown[] = [];
+  let depth = 0, inStr = false, esc = false, from = -1;
+  for (let i = start + 1; i < text.length; i++) {
+    const c = text[i];
+    if (inStr) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (c === '{') { if (depth === 0) from = i; depth++; }
+    else if (c === '}') { depth--; if (depth === 0 && from >= 0) { try { items.push(JSON.parse(text.slice(from, i + 1))); } catch { /* skip */ } from = -1; } }
+    else if (c === ']' && depth === 0) break;
+  }
+  return items.length ? { bookings: items } : null;
+}

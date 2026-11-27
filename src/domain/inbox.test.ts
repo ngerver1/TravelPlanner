@@ -161,3 +161,17 @@ The property may pre-authorise your card. Please note currency conversion fees m
     expect(c.cancelBy).toBeUndefined();
   });
 });
+
+import { parseAiAnswer } from './inbox';
+describe('AI answers cut off part-way', () => {
+  it('keeps the complete bookings', () => {
+    const cut = '{"bookings":[{"type":"flight","flightNo":"CX581","depDate":"2027-01-28","note":"has a } brace and \\"quote\\""},{"type":"flight","flightNo":"CX502","depDate":"2027-02-0';
+    expect(parseAiAnswer(cut)).toEqual({ bookings: [{ type: 'flight', flightNo: 'CX581', depDate: '2027-01-28', note: 'has a } brace and "quote"' }] });
+  });
+  it('passes whole answers and objects through, and gives up on junk', () => {
+    expect(parseAiAnswer('{"bookings":[]}')).toEqual({ bookings: [] });
+    expect(parseAiAnswer({ bookings: [{ type: 'stay' }] })).toEqual({ bookings: [{ type: 'stay' }] });
+    expect(parseAiAnswer('```json\n{"bookings":[{"type":"stay","name":"X"}]}\n```')).toEqual({ bookings: [{ type: 'stay', name: 'X' }] });
+    expect(parseAiAnswer('not json')).toBeNull();
+  });
+});
