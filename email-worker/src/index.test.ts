@@ -108,3 +108,19 @@ describe('email worker', () => {
     expect(e.AI.run).not.toHaveBeenCalled();
   });
 });
+
+import { senderAllowed } from './index';
+describe('who may send', () => {
+  const list = 'me@gmail.com, other@example.com';
+  it('your address, plain or as Gmail forwards it automatically', () => {
+    expect(senderAllowed('me@gmail.com', list)).toBe(true);
+    expect(senderAllowed('Me+caf_=trips=aleagueapart.com@Gmail.com', list)).toBe(true);
+    expect(senderAllowed('other@example.com', list)).toBe(true);
+  });
+  it('anyone else is turned away', () => {
+    expect(senderAllowed('me@gmail.com.evil.com', list)).toBe(false);
+    expect(senderAllowed('someone+me@gmail.com', list)).toBe(false);
+    expect(senderAllowed('me@googlemail.com', list)).toBe(false);
+    expect(senderAllowed('me@gmail.com', '')).toBe(false);
+  });
+});

@@ -23,12 +23,21 @@ const MAX_TEXT = 15000;      // characters of email text stored for hand entry
 const AI_TEXT = 8000;        // characters sent to the AI (keeps each email ~200 Neurons)
 const GMAIL_CONFIRM = 'forwarding-noreply@google.com'; // Gmail's "confirm forwarding" code email
 
+/**
+ * Is this sender one of your addresses? A "+tag" is ignored, because Gmail's automatic forwarding sends from
+ * "you+caf_=trips=aleagueapart.com@gmail.com" (manual forwards come from plain "you@gmail.com").
+ */
+export function senderAllowed(from: string, allowedList: string): boolean {
+  const plain = (a: string) => a.trim().toLowerCase().replace(/\+[^@]*@/, '@');
+  const allowed = allowedList.split(/[\s,;]+/).filter(Boolean).map(plain);
+  return allowed.includes(plain(from));
+}
+
 export default {
   async email(message: ForwardableEmailMessage, env: Env): Promise<void> {
     const from = message.from.toLowerCase();
-    const allowed = (env.ALLOWED_SENDERS || '').toLowerCase().split(/[\s,;]+/).filter(Boolean);
     const isConfirm = from === GMAIL_CONFIRM;
-    if (!allowed.includes(from) && !isConfirm) {
+    if (!senderAllowed(from, env.ALLOWED_SENDERS || '') && !isConfirm) {
       message.setReject('This address only accepts mail from its owner.');
       return;
     }
