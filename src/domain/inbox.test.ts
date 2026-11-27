@@ -180,3 +180,50 @@ describe('AI answers cut off part-way', () => {
     expect(parseAiAnswer('not json')).toBeNull();
   });
 });
+
+import { enrichBookings as enrich2, normalizeBookings as norm2, parseMarkup as markup2 } from './inbox';
+describe('local-language names and addresses from emails', () => {
+  const jp = `【予約確認】ザ・ウェスティン ルスツリゾート
+予約番号：WR12345
+施設名：ザ・ウェスティン ルスツリゾート
+住所：〒048-1711 北海道虻田郡留寿都村泉川133
+電話番号：0136-46-3111
+チェックイン：2027年1月25日`;
+  it('Japanese email: the AI answer is kept when it was copied from the email', () => {
+    const ai = norm2({ bookings: [{ type: 'stay', name: 'The Westin Rusutsu Resort', checkIn: '2027-01-25', localName: 'ザ・ウェスティン ルスツリゾート', localAddress: '〒048-1711 北海道虻田郡留寿都村泉川133', phone: '0136-46-3111' }] });
+    const [b] = enrich2(ai, jp, []);
+    expect(b.localName).toBe('ザ・ウェスティン ルスツリゾート');
+    expect(b.localAddress).toBe('〒048-1711 北海道虻田郡留寿都村泉川133');
+    expect(b.phone).toBe('0136-46-3111');
+  });
+  it('a translated or made-up local name is dropped, and the email’s own one is used instead', () => {
+    const ai = norm2({ bookings: [{ type: 'stay', name: 'The Westin Rusutsu Resort', checkIn: '2027-01-25', localName: 'ウェスティンホテル留寿都', localAddress: '北海道留寿都村' }] });
+    const [b] = enrich2(ai, jp, []);
+    expect(b.localName).toBe('ザ・ウェスティン ルスツリゾート');
+    expect(b.localAddress).toBe('〒048-1711 北海道虻田郡留寿都村泉川133');
+  });
+  it('mixed English/Japanese email: the Japanese address is found by rules when the AI misses it', () => {
+    const mixed = `Reservation confirmed: Sushi Kanesaka
+Date: 26 January 2027, 19:00, 2 guests
+Address: 8-10-3 Ginza, Chuo-ku, Tokyo
+〒104-0061 東京都中央区銀座8-10-3 B1F
+Tel: 03-5568-4411`;
+    const ai = norm2({ bookings: [{ type: 'restaurant', name: 'Sushi Kanesaka', date: '2027-01-26', time: '19:00' }] });
+    const [b] = enrich2(ai, mixed, []);
+    expect(b.localAddress).toBe('〒104-0061 東京都中央区銀座8-10-3 B1F');
+    expect(b.phone).toBe('03-5568-4411');
+    expect(b.localName).toBeUndefined();
+  });
+  it('English-only email: nothing local is invented; flights never get local text', () => {
+    const ai = norm2({ bookings: [{ type: 'flight', flightNo: 'CX580', depDate: '2027-01-23', localName: '国泰航空' }, { type: 'stay', name: 'Hilton', checkIn: '2027-01-24', localName: 'ヒルトン' }] });
+    const out = enrich2(ai, 'Flight CX580 23 Jan. Hilton Niseko Village, check in 24 Jan.', []);
+    expect(out[0].localName).toBeUndefined();
+    expect(out[1].localName).toBeUndefined();
+  });
+  it('booking markup: a Japanese name and address become the local ones', () => {
+    const html = `<script type="application/ld+json">{"@type":"FoodEstablishmentReservation","reservationNumber":"R1","startTime":"2027-01-26T19:00:00+09:00",
+      "reservationFor":{"@type":"FoodEstablishment","name":"鮨 かねさか","alternateName":"Sushi Kanesaka","telephone":"+81 3-5568-4411","address":"東京都中央区銀座8-10-3"}}</script>`;
+    const [b] = enrich2(markup2(html), 'Your reservation is confirmed.', [], 'AUD', {}, true);
+    expect(b).toMatchObject({ type: 'restaurant', name: 'Sushi Kanesaka', localName: '鮨 かねさか', localAddress: '東京都中央区銀座8-10-3', phone: '+81 3-5568-4411' });
+  });
+});

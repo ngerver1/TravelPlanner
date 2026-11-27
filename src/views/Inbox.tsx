@@ -70,6 +70,8 @@ function Entry({ e, doc, actions }: { e: InboxEntry; doc: TripDoc; actions: Inbo
               <b>{bookingTitle(b)}</b>
               {details(b).map((l, j) => <div key={j} className="small muted">{l}</div>)}
               {b.cancelBy && <div className="small muted">{b.cancelBy}</div>}
+              {(b.localName || b.localAddress) && <div className="small ie-local"><span className="lb-glyph" lang="ja">文</span> {[b.localName, b.localAddress].filter(Boolean).join(' · ')}</div>}
+              {b.phone && <div className="small muted">Tel {b.phone}</div>}
               {(b.link || b.mapsUrl) && <div className="small row gap">
                 {b.link && <a href={b.link} target="_blank" rel="noreferrer">{hostOf(b.link)} ↗</a>}
                 {b.mapsUrl && <a href={b.mapsUrl} target="_blank" rel="noreferrer">Google Maps ↗</a>}

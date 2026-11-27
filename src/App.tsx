@@ -16,6 +16,7 @@ import { DayForm, FlightForm, ItemForm, RangeLocForm, StayForm, type FlightDraft
 import { StaysPanel, type PanelActions } from './components/panels';
 import { MoveSheet } from './components/MoveSheet';
 import { ItemView } from './components/ItemView';
+import { LocalCardProvider } from './components/LocalCard';
 import { FlightView, StayView, TransportView } from './components/BookingViews';
 import { TransportForm, type LegDraft } from './components/TransportForm';
 import { TravelPage } from './views/Travel';
@@ -27,6 +28,7 @@ import { SyncChip } from './components/SyncChip';
 import { useSync } from './sync/useSync';
 import { downloadJson, exportName } from './views/Settings';
 import { LocationNames } from './components/LocationSelect';
+import { cleanPhone, toLocal } from './domain/local';
 import { applyTheme, loadTheme, type Theme } from './theme';
 import { OverviewView, Legend, Summary } from './views/Overview';
 import { MonthView } from './views/Month';
@@ -87,7 +89,7 @@ function itemDraft(doc: TripDoc, it: Item, pi: number): ItemDraft {
     category: it.category || 'other', size: it.size || 'half', includesEvening: !!it.includesEvening,
     meals: it.meals || [], cuisine: it.cuisine || '', price: fromMoney(it.price, home), booking: it.booking || '',
     status: it.status, mustDo: !!it.mustDo, done: !!it.done,
-    placeName: it.place?.name && it.place.name !== it.title ? it.place.name : '', placeAddress: it.place?.address || '', mapsUrl: it.place?.mapsUrl || '', pos: it.place?.lat != null && it.place.lng != null ? { lat: it.place.lat, lng: it.place.lng } : null,
+    placeName: it.place?.name && it.place.name !== it.title ? it.place.name : '', placeAddress: it.place?.address || '', localName: it.local?.name || '', localAddress: it.local?.address || '', phone: it.phone || '', mapsUrl: it.place?.mapsUrl || '', pos: it.place?.lat != null && it.place.lng != null ? { lat: it.place.lat, lng: it.place.lng } : null,
     link: it.link || '', notes: it.notes || '',
     pi: p ? pi : -1, date: p?.date || '', time: p?.time || '', meal: p?.meal || it.meals?.[0] || mealFromTime(p?.time),
     elsewhere: it.kind === 'restaurant' ? it.placements.filter((_, i) => i !== pi).map(placementLabel) : [],
@@ -153,8 +155,8 @@ export default function App() {
   }), [update]);
 
   const newFlight = (d?: string) => setModal({ type: 'flight', v: { _new: true, priceDraft: fromMoney(undefined, home), id: uid(), airline: '', flightNo: '', from: '', to: '', depDate: d || '', depTime: '', arrDate: d || '', arrTime: '', status: 'planned', conf: '', notes: '' } });
-  const addStay = (from?: string, to?: string, locName = '') => setModal({ type: 'stay', v: { _new: true, priceDraft: fromMoney(undefined, home), id: uid(), name: '', locationName: locName, address: '', checkIn: from || '', checkOut: to || (from ? addDays(from, 1) : ''), checkInTime: '', checkOutTime: '', status: 'planned', conf: '', cost: '', link: '', notes: '', mapsUrl: '', pos: null } });
-  const editStay = (s: Stay) => { const { locationId, place, price, ...rest } = s; setModal({ type: 'stay', v: { ...rest, priceDraft: fromMoney(price, home), mapsUrl: place?.mapsUrl || '', pos: place?.lat != null && place.lng != null ? { lat: place.lat, lng: place.lng } : null, locationName: locationName(doc, locationId) } }); };
+  const addStay = (from?: string, to?: string, locName = '') => setModal({ type: 'stay', v: { _new: true, priceDraft: fromMoney(undefined, home), id: uid(), name: '', locationName: locName, address: '', checkIn: from || '', checkOut: to || (from ? addDays(from, 1) : ''), checkInTime: '', checkOutTime: '', status: 'planned', conf: '', cost: '', link: '', notes: '', mapsUrl: '', pos: null, localName: '', localAddress: '', phone: '' } });
+  const editStay = (s: Stay) => { const { locationId, place, price, local, phone, ...rest } = s; setModal({ type: 'stay', v: { ...rest, localName: local?.name || '', localAddress: local?.address || '', phone: phone || '', priceDraft: fromMoney(price, home), mapsUrl: place?.mapsUrl || '', pos: place?.lat != null && place.lng != null ? { lat: place.lat, lng: place.lng } : null, locationName: locationName(doc, locationId) } }); };
   const patchStay = (id: string, p: Partial<Stay>) => update((x) => { x.stays = x.stays.map((s) => (s.id === id ? { ...s, ...p } : s)); });
   const openStay = (s: Stay) => setModal({ type: 'viewStay', id: s.id });
   const openFlight = (f: Flight) => setModal({ type: 'viewFlight', id: f.id });
@@ -162,23 +164,26 @@ export default function App() {
   const locNameOf = (id?: string) => (id ? dv.locById.get(id)?.name || '' : '');
   const openLeg = (l: TransportLeg) => setModal({ type: 'viewLeg', id: l.id });
   const legDraft = (l: TransportLeg): LegDraft => {
-    const { fromLocationId, toLocationId, price, itemId, itemRole, ...rest } = l;
-    return { ...rest, fromLoc: locNameOf(fromLocationId), toLoc: locNameOf(toLocationId), priceDraft: fromMoney(price, home), itemId: itemId || '', itemRole: itemRole || 'to' };
+    const { fromLocationId, toLocationId, price, itemId, itemRole, fromLocal, toLocal, ...rest } = l;
+    return { ...rest, fromLocalName: fromLocal?.name || '', fromLocalAddress: fromLocal?.address || '', toLocalName: toLocal?.name || '', toLocalAddress: toLocal?.address || '', fromLoc: locNameOf(fromLocationId), toLoc: locNameOf(toLocationId), priceDraft: fromMoney(price, home), itemId: itemId || '', itemRole: itemRole || 'to' };
   };
   const editLeg = (l: TransportLeg) => setModal({ type: 'leg', v: legDraft(l) });
   const addLeg = (p: { date?: string; fromLoc?: string; toLoc?: string; itemId?: string; itemRole?: 'to' | 'from' }) => setModal({ type: 'leg', v: {
     _new: true, id: uid(), mode: 'train', operator: '', fromName: '', toName: '', date: p.date || '', depTime: '', arrDate: '', arrTime: '', duration: '',
     status: 'planned', conf: '', cost: '', link: '', notes: '', fromLoc: p.fromLoc || '', toLoc: p.toLoc || '', priceDraft: fromMoney(undefined, home),
-    itemId: p.itemId || '', itemRole: p.itemRole || 'to',
+    itemId: p.itemId || '', itemRole: p.itemRole || 'to', fromLocalName: '', fromLocalAddress: '', toLocalName: '', toLocalAddress: '',
   } });
   /** Prefill a new booking for a day that needs transport. */
   const gapPrefill = (d: string) => { const l = dv.info[d]?.loc; const prev = dv.info[addDays(d, -1)]?.endLoc; return { date: d, fromLoc: l?.b ? l.a.name : prev?.id ? prev.name : '', toLoc: (l?.b ?? l?.a)?.name }; };
   const patchLeg = (id: string, p: Partial<TransportLeg>) => update((x) => { x.legs = x.legs.map((l) => (l.id === id ? { ...l, ...p } : l)); });
   const saveLeg = (v: LegDraft) => {
     doneInbox();
-    const { _new, fromLoc, toLoc, priceDraft, itemId, itemRole, ...rest } = v;
+    const { _new, fromLoc, toLoc, priceDraft, itemId, itemRole, fromLocalName, fromLocalAddress, toLocalName, toLocalAddress, ...rest } = v;
     update((x) => {
       const l: TransportLeg = { ...rest, fromName: rest.fromName.trim(), toName: rest.toName.trim(), operator: rest.operator.trim() };
+      const fl = toLocal(fromLocalName, fromLocalAddress), tl = toLocal(toLocalName, toLocalAddress);
+      if (fl) l.fromLocal = fl;
+      if (tl) l.toLocal = tl;
       const a = ensureLocation(x, fromLoc), b = ensureLocation(x, toLoc);
       if (a) l.fromLocationId = a;
       if (b) l.toLocationId = b;
@@ -250,12 +255,12 @@ export default function App() {
     const price = b.price ? { priceDraft: fromMoney(b.price, home) } : {};
     const withNote = (notes: string) => (b.cancelBy && !notes.includes(b.cancelBy) ? { notes: [notes, b.cancelBy].filter(Boolean).join('\n') } : {});
     if (m.type === 'flight') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ airline: b.airline, flightNo: b.flightNo, from: b.from, to: b.to, depDate: b.depDate, depTime: b.depTime, arrDate: b.arrDate || b.depDate, arrTime: b.arrTime, conf: b.conf, link: b.link }), ...withNote(m.v.notes) } };
-    if (m.type === 'stay') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ name: b.name, address: b.address, checkIn: b.checkIn, checkOut: b.checkOut, checkInTime: b.checkInTime, checkOutTime: b.checkOutTime, conf: b.conf, link: b.link, mapsUrl: b.mapsUrl, locationName: m.v.locationName || guessLoc(`${b.city || ''} ${b.address || ''}`) || b.city }), ...withNote(m.v.notes) } };
+    if (m.type === 'stay') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ name: b.name, address: b.address, checkIn: b.checkIn, checkOut: b.checkOut, checkInTime: b.checkInTime, checkOutTime: b.checkOutTime, conf: b.conf, link: b.link, mapsUrl: b.mapsUrl, localName: b.localName, localAddress: b.localAddress, phone: b.phone, locationName: m.v.locationName || guessLoc(`${b.city || ''} ${b.address || ''}`) || b.city }), ...withNote(m.v.notes) } };
     if (m.type === 'leg') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ mode: b.mode, operator: b.operator, fromName: b.fromName, toName: b.toName, date: b.date, depTime: b.depTime, arrDate: b.arrDate, arrTime: b.arrTime, conf: b.conf, link: b.link, fromLoc: m.v.fromLoc || guessLoc(b.fromName), toLoc: m.v.toLoc || guessLoc(b.toName) }), ...withNote(m.v.notes) } };
     if (m.type === 'item') {
       const ref = [b.conf && `Ref ${b.conf}`, b.partySize && `${b.partySize} people`, b.cancelBy].filter(Boolean).join(' · ');
       const loc = m.v.locationName || guessLoc(`${b.city || ''} ${b.address || ''}`) || b.city || (b.date ? dv.info[b.date]?.endLoc?.name : '') || '';
-      return { ...m, v: { ...m.v, status: 'booked', ...defined({ title: m.v.title || b.name, placeAddress: b.address, date: b.date, time: b.time, locationName: loc, link: b.link, mapsUrl: b.mapsUrl }),
+      return { ...m, v: { ...m.v, status: 'booked', ...defined({ title: m.v.title || b.name, placeAddress: b.address, date: b.date, time: b.time, locationName: loc, link: b.link, mapsUrl: b.mapsUrl, localName: b.localName, localAddress: b.localAddress, phone: b.phone }),
         ...(b.time ? { meal: mealFromTime(b.time) } : {}), ...(b.price ? { price: fromMoney(b.price, home) } : {}),
         ...(ref ? (m.v.kind === 'restaurant' ? { booking: [m.v.booking, ref].filter(Boolean).join(' · ') } : { notes: [m.v.notes, ref].filter(Boolean).join('\n') }) : {}) } };
     }
@@ -291,7 +296,7 @@ export default function App() {
     // New ideas always open the full editor (prefilled); nothing is added until Save.
     newIdea: ({ locationId, kind, title, lane }) => setModal({ type: 'item', v: {
       _new: true, id: uid(), kind, title: title || '', locationName: locationName(doc, locationId), category: 'activity', size: 'half', includesEvening: false,
-      meals: [], cuisine: '', price: fromMoney(undefined, home), booking: '', status: 'idea', mustDo: false, done: false, placeName: '', placeAddress: '', mapsUrl: '', pos: null, link: '', notes: '',
+      meals: [], cuisine: '', price: fromMoney(undefined, home), booking: '', status: 'idea', mustDo: false, done: false, placeName: '', placeAddress: '', localName: '', localAddress: '', phone: '', mapsUrl: '', pos: null, link: '', notes: '',
       pi: -1, date: lane?.date || '', time: '', meal: lane?.meal || 'lunch', slot: lane?.slot, elsewhere: [],
     } }),
     patchItem: (id, p) => update((x) => { x.items = x.items.map((i) => (i.id === id ? { ...i, ...p } : i)); }),
@@ -322,9 +327,12 @@ export default function App() {
   };
   const saveStay = (v: StayDraft) => {
     doneInbox();
-    const { _new, locationName: ln, mapsUrl, pos, priceDraft, ...rest } = v;
+    const { _new, locationName: ln, mapsUrl, pos, priceDraft, localName, localAddress, phone, ...rest } = v;
     update((x) => {
       const s: Stay = { ...rest };
+      const local = toLocal(localName, localAddress), ph = cleanPhone(phone);
+      if (local) s.local = local;
+      if (ph) s.phone = ph;
       const price = toMoney(priceDraft);
       if (price) { s.price = price; s.cost = ''; }
       const lid = ensureLocation(x, ln);
@@ -351,6 +359,9 @@ export default function App() {
       if (f.done) it.done = true; else delete it.done;
       const place = buildPlace(it.place, f.placeName.trim() || it.title, f.placeAddress, f.mapsUrl, f.pos);
       if (place && (f.placeName.trim() || f.placeAddress.trim() || f.mapsUrl.trim() || f.pos)) it.place = place; else delete it.place;
+      const local = toLocal(f.localName, f.localAddress), ph = cleanPhone(f.phone);
+      if (local) it.local = local; else delete it.local;
+      if (ph) it.phone = ph; else delete it.phone;
       if (f.link.trim()) it.link = f.link.trim(); else delete it.link;
       if (f.notes.trim()) it.notes = f.notes; else delete it.notes;
       const price = toMoney(f.price);
@@ -482,6 +493,7 @@ export default function App() {
   return (
     <LocationNames.Provider value={dv.known}>
     <CostContext.Provider value={costCtx}>
+    <LocalCardProvider>
     <div className={'app page-' + page + (page === 'plan' ? ' view-' + route.view : '')}>
       <header className="top" ref={headerRef}>
         <TripSettings trip={doc.trip} onChange={(p) => update((x) => { x.trip = { ...x.trip, ...p }; })} />
@@ -658,6 +670,7 @@ export default function App() {
         </div>
       )}
     </div>
+    </LocalCardProvider>
     </CostContext.Provider>
     </LocationNames.Provider>
   );

@@ -5,6 +5,7 @@ import type { TripDoc } from '../domain/types';
 import type { Theme } from '../theme';
 import { Seg } from '../components/ui';
 import { SyncSettings } from './SyncSettings';
+import { loadLandscape, saveLandscape } from '../components/LocalCard';
 import type { Sync } from '../sync/useSync';
 
 export function downloadJson(filename: string, json: string, type = 'application/json') {
@@ -30,6 +31,7 @@ export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, on
   const [pending, setPending] = useState<{ doc: TripDoc; from: FileKind } | null>(null);
   const [err, setErr] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
+  const [landscape, setLandscape] = useState(loadLandscape);
   const placed = doc.items.filter((i) => i.placements.length).length;
 
   const copy = async () => {
@@ -54,6 +56,10 @@ export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, on
       <h2 className="page-h">Settings</h2>
       <h4>Appearance</h4>
       <Seg value={theme} onChange={onTheme} options={[['system', 'Match my phone'], ['light', 'Light'], ['dark', 'Dark']]} />
+      <label className="check switch-row">
+        <input type="checkbox" checked={landscape} onChange={(e) => { setLandscape(e.target.checked); saveLandscape(e.target.checked); }} />
+        <span><b>Open local card in landscape</b><br /><span className="muted small">The 文 card turns sideways where the phone allows. Saved on this device only.</span></span>
+      </label>
       <h4>Sync between devices</h4>
       <SyncSettings sync={sync} doc={doc} />
       {!statusOk && <p className="alert bad small">{status}</p>}

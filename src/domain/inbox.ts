@@ -3,6 +3,7 @@
 import type { Money, TripDoc } from './types';
 import { looseDate, looseTime, type DateContext } from './looseDates';
 import { parseCost } from './money';
+import { cleanPhone, copiedFrom, findLocalAddress, findLocalName, findPhone, hasCjk } from './local';
 
 export type BookingType = 'flight' | 'stay' | 'transport' | 'restaurant' | 'activity';
 
@@ -27,6 +28,10 @@ export interface Booking {
   mapsUrl?: string;
   /** Cancellation terms, e.g. "Free cancellation until 24 Jan 2027 18:00" or "Non-refundable". */
   cancelBy?: string;
+  /** The place's name and address in the local language, exactly as written in the email (never translated). */
+  localName?: string;
+  localAddress?: string;
+  phone?: string;
 }
 
 export interface EmailLink { text: string; url: string }
@@ -145,9 +150,11 @@ export const findCancel = summariseCancel;
  * Fill gaps in what was read, from rules over the email text and its links. Shared details (reference,
  * cancellation, maps) go on every booking; the total price only on the first booking.
  */
-export function enrichBookings(bookings: Booking[], text: string, links: EmailLink[], home = 'AUD', ctx: DateContext = {}): Booking[] {
+/** `fromMarkup`: the bookings came from the email's own booking data, so their local text needs no check against the text. */
+export function enrichBookings(bookings: Booking[], text: string, links: EmailLink[], home = 'AUD', ctx: DateContext = {}, fromMarkup = false): Booking[] {
   const conf = findConf(text), price = findPrice(text, home), cancel = summariseCancel(text, ctx);
   const link = bestLink(links), maps = mapsLinkIn(links);
+  bookings = withLocalText(bookings, text, fromMarkup);
   return bookings.map((b, i) => ({
     ...b,
     ...(!b.conf && conf ? { conf } : {}),
@@ -156,6 +163,29 @@ export function enrichBookings(bookings: Booking[], text: string, links: EmailLi
     ...(!b.mapsUrl && maps && (b.type === 'stay' || b.type === 'restaurant' || b.type === 'activity') ? { mapsUrl: maps } : {}),
     ...(cancel ? { cancelBy: cancel } : {}), // the rules' short summary wins over the AI's wording
   }));
+}
+
+const isPlace = (b: Booking) => b.type === 'stay' || b.type === 'restaurant' || b.type === 'activity';
+/**
+ * Local-language name and address: keep only text that is written in the local script AND appears in the
+ * email (so nothing translated or made up gets through), then fill gaps from labelled lines in the email
+ * when it is about a single place. Phone numbers likewise.
+ */
+export function withLocalText(bookings: Booking[], text: string, trusted = false): Booking[] {
+  const places = bookings.filter(isPlace).length;
+  const name = places === 1 ? findLocalName(text) : undefined;
+  const address = places === 1 ? findLocalAddress(text) : undefined;
+  const phone = places === 1 ? findPhone(text) : undefined;
+  return bookings.map((b0) => {
+    const b = { ...b0 };
+    for (const k of ['localName', 'localAddress'] as const) if (b[k] && !(isPlace(b) && hasCjk(b[k]) && (trusted || copiedFrom(b[k]!, text)))) delete b[k];
+    if (b.phone && !(isPlace(b) && (trusted || copiedFrom(b.phone.replace(/[^\d]/g, '').slice(-6), text.replace(/[^\d]/g, ''))))) delete b.phone;
+    if (!isPlace(b)) return b;
+    if (!b.localName && name) b.localName = name;
+    if (!b.localAddress && address) b.localAddress = address;
+    if (!b.phone && phone) b.phone = phone;
+    return b;
+  });
 }
 
 // ---------- reading schema.org booking markup (JSON-LD) ----------
@@ -179,6 +209,16 @@ const addr = (v: unknown): { address?: string; city?: string } => {
   const parts = [s(a.streetAddress), s(a.addressLocality), s(a.addressRegion), s(a.addressCountry && typeof a.addressCountry === 'object' ? o(a.addressCountry).name : a.addressCountry)].filter(Boolean);
   return { ...(parts.length ? { address: parts.join(', ') } : {}), ...(s(a.addressLocality) ? { city: s(a.addressLocality) } : {}) };
 };
+/** Name, address and phone of a place in markup. Text in the local script also becomes the local name/address. */
+const placeOf = (f: J, address: unknown): Partial<Booking> => {
+  const name = s(f.name), alt = s(f.alternateName), a = addr(address), phone = cleanPhone(s(f.telephone));
+  return {
+    name: hasCjk(name) && alt && !hasCjk(alt) ? alt : name, ...a,
+    ...(hasCjk(name) ? { localName: name } : hasCjk(alt) ? { localName: alt } : {}),
+    ...(a.address && hasCjk(a.address) ? { localAddress: a.address } : {}),
+    ...(phone ? { phone } : {}),
+  };
+};
 const clean = (b: Booking): Booking => Object.fromEntries(Object.entries(b).filter(([, v]) => v !== '' && v !== undefined)) as unknown as Booking;
 
 function fromReservation(r: J): Booking | null {
@@ -198,7 +238,7 @@ function fromReservation(r: J): Booking | null {
   }
   if (t.includes('LodgingReservation')) {
     const ci = splitIso(r.checkinTime || r.checkinDate), co = splitIso(r.checkoutTime || r.checkoutDate);
-    return clean({ type: 'stay', ...base, name: s(f.name), ...addr(f.address), checkIn: ci.date, checkInTime: ci.time, checkOut: co.date, checkOutTime: co.time });
+    return clean({ type: 'stay', ...base, ...placeOf(f, f.address), checkIn: ci.date, checkInTime: ci.time, checkOut: co.date, checkOutTime: co.time });
   }
   if (t.includes('TrainReservation') || t.includes('BusReservation') || t.includes('BoatReservation') || t.includes('RentalCarReservation') || t.includes('TaxiReservation')) {
     const mode: Booking['mode'] = t.includes('TrainReservation') ? 'train' : t.includes('BusReservation') ? 'bus' : t.includes('BoatReservation') ? 'ferry' : t.includes('RentalCarReservation') ? 'car' : 'transfer';
@@ -210,12 +250,12 @@ function fromReservation(r: J): Booking | null {
   }
   if (t.includes('FoodEstablishmentReservation')) {
     const st = splitIso(r.startTime);
-    return clean({ type: 'restaurant', ...base, name: s(f.name), ...addr(f.address), date: st.date, time: st.time, partySize: Number(s(r.partySize)) || undefined });
+    return clean({ type: 'restaurant', ...base, ...placeOf(f, f.address), date: st.date, time: st.time, partySize: Number(s(r.partySize)) || undefined });
   }
   if (t.includes('EventReservation') || t.some((x) => /Reservation$/.test(x))) {
     const st = splitIso(f.startDate || r.startTime);
     const loc = o(f.location);
-    return clean({ type: 'activity', ...base, name: s(f.name) || s(r.name), ...addr(loc.address), ...(s(loc.name) ? { notes: s(loc.name) } : {}), date: st.date, time: st.time });
+    return clean({ type: 'activity', ...base, ...placeOf({ ...loc, name: s(f.name) || s(r.name) }, loc.address), ...(s(loc.name) ? { notes: s(loc.name) } : {}), date: st.date, time: st.time });
   }
   return null;
 }
@@ -257,7 +297,8 @@ export function normalizeBookings(raw: unknown, ctx: DateContext = {}, links: Em
     const type = s(r.type).toLowerCase() as BookingType;
     if (!TYPES.includes(type)) continue;
     const b: Booking = { type };
-    for (const k of ['conf', 'airline', 'flightNo', 'name', 'address', 'city', 'operator', 'fromName', 'toName'] as const) if (s(r[k])) (b as unknown as J)[k] = s(r[k]);
+    for (const k of ['conf', 'airline', 'flightNo', 'name', 'address', 'city', 'operator', 'fromName', 'toName', 'localName', 'localAddress'] as const) if (s(r[k])) (b as unknown as J)[k] = s(r[k]);
+    const phone = cleanPhone(r.phone); if (phone) b.phone = phone;
     const cancel = s(r.cancelBy) && summariseCancel(s(r.cancelBy), ctx); // only short, dated terms
     if (cancel) b.cancelBy = cancel;
     if (/^https?:\/\//.test(s(r.mapsUrl))) b.mapsUrl = s(r.mapsUrl);
@@ -275,7 +316,7 @@ export function normalizeBookings(raw: unknown, ctx: DateContext = {}, links: Em
     const li = Number(r.linkIndex);
     const link = /^https?:\/\//.test(s(r.link)) ? s(r.link) : li >= 1 && links[li - 1] ? links[li - 1].url : '';
     if (link) b.link = link;
-    const meaningful = Object.keys(b).filter((k) => !['type', 'link', 'mapsUrl', 'cancelBy'].includes(k)).length >= 2;
+    const meaningful = Object.keys(b).filter((k) => !['type', 'link', 'mapsUrl', 'cancelBy', 'localName', 'localAddress', 'phone'].includes(k)).length >= 2;
     if (meaningful) out.push(b);
   }
   return out;

@@ -9,6 +9,15 @@ import type { Flight, Item, Status, Stay, TransportLeg } from '../domain/types';
 import { MODE_ICON, MODE_LABEL } from '../domain/constants';
 import { Linkified } from './ItemView';
 import { LocChip, Modal, StatusPill, type ColorOf } from './ui';
+import { LocalButton, cardFor } from './LocalCard';
+import { telHref } from '../domain/local';
+import type { LocalText } from '../domain/types';
+
+/** The local name and address, as a row in a read-only view. */
+export const LocalRow = ({ local }: { local?: LocalText }) => (local?.name || local?.address)
+  ? <div className="iv-row"><span className="iv-l">Local</span><span className="iv-v iv-local">{local.name && <b>{local.name}</b>}{local.address && <span>{local.address}</span>}</span></div> : null;
+export const PhoneRow = ({ phone }: { phone?: string }) => phone
+  ? <div className="iv-row"><span className="iv-l">Phone</span><span className="iv-v"><a href={telHref(phone)}>{phone}</a></span></div> : null;
 
 const Row = ({ label, children }: { label: string; children: ReactNode }) => <div className="iv-row"><span className="iv-l">{label}</span><span className="iv-v">{children}</span></div>;
 const day = (d: string) => fmt(d, { weekday: 'short', day: 'numeric', month: 'short' });
@@ -38,6 +47,7 @@ export function StayView({ stay: s, location, colorOf, onEdit, onStatus, onGoDay
         <StatusPill value={s.status} onChange={onStatus} />
       </div>
       <div className="iv-links">
+        <LocalButton label="Show local" data={cardFor(s.name || 'Hotel', s.local, { phone: s.phone, pos: s.place?.lat != null ? { lat: s.place.lat, lng: s.place.lng! } : null, context: `${s.address} ${location?.name || ''}` })} />
         <a className="btn" href={mapsLink(s.place ?? { name: s.name, address: s.address }, s.name, location?.name)} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>
         {s.link && <a className="btn" href={s.link} target="_blank" rel="noreferrer">{host(s.link)} ↗</a>}
       </div>
@@ -47,6 +57,8 @@ export function StayView({ stay: s, location, colorOf, onEdit, onStatus, onGoDay
         <Row label="Check in">{s.checkIn ? <button className="link" onClick={() => onGoDay(s.checkIn)}>{day(s.checkIn)}{s.checkInTime ? ` · from ${s.checkInTime}` : ''}</button> : '—'}</Row>
         <Row label="Check out">{s.checkOut ? <button className="link" onClick={() => onGoDay(s.checkOut)}>{day(s.checkOut)}{s.checkOutTime ? ` · by ${s.checkOutTime}` : ''}</button> : '—'}</Row>
         {s.address && <Row label="Address">{s.address}</Row>}
+        <LocalRow local={s.local} />
+        <PhoneRow phone={s.phone} />
         {s.conf && <Row label="Confirmation"><Conf value={s.conf} /></Row>}
         {(s.price || s.cost) && <Row label="Price">{s.price ? fmtPrice(s.price) : s.cost}</Row>}
         {s.link && <Row label="Link"><a href={s.link} target="_blank" rel="noreferrer" className="iv-url">{s.link}</a></Row>}
@@ -122,6 +134,8 @@ export function TransportView({ leg: l, locName, item, onEdit, onStatus, onGoDay
         <StatusPill value={l.status} onChange={onStatus} />
       </div>
       <div className="iv-links">
+        <LocalButton label={`Show local: ${from || 'from'}`} data={cardFor(from || 'From', l.fromLocal, { context: locName(l.fromLocationId) })} />
+        <LocalButton label={`Show local: ${to || 'to'}`} data={cardFor(to || 'To', l.toLocal, { context: locName(l.toLocationId) })} />
         {to && <a className="btn" href={`https://www.google.com/maps/dir/?${p}`} target="_blank" rel="noreferrer">Directions ↗</a>}
         {l.link && <a className="btn" href={l.link} target="_blank" rel="noreferrer">{host(l.link)} ↗</a>}
       </div>
@@ -129,6 +143,8 @@ export function TransportView({ leg: l, locName, item, onEdit, onStatus, onGoDay
       <div className="iv-rows">
         <Row label="Departs">{from || '?'} · {l.date ? <button className="link" onClick={() => onGoDay(l.date)}>{day(l.date)}</button> : '—'}{l.depTime ? ` · ${l.depTime}` : ''}</Row>
         <Row label="Arrives">{to || '?'} · {l.arrDate ? <button className="link" onClick={() => onGoDay(l.arrDate)}>{day(l.arrDate)}</button> : 'same day'}{l.arrTime ? ` · ${l.arrTime}` : ''}</Row>
+        {l.fromLocal && <Row label="From (local)"><span className="iv-local">{l.fromLocal.name && <b>{l.fromLocal.name}</b>}{l.fromLocal.address && <span>{l.fromLocal.address}</span>}</span></Row>}
+        {l.toLocal && <Row label="To (local)"><span className="iv-local">{l.toLocal.name && <b>{l.toLocal.name}</b>}{l.toLocal.address && <span>{l.toLocal.address}</span>}</span></Row>}
         {item && <Row label={l.itemRole === 'from' ? 'Getting back from' : 'Getting to'}><button className="link" onClick={() => onOpenItem(item)}>{item.title}</button></Row>}
         {l.conf && <Row label="Confirmation"><Conf value={l.conf} /></Row>}
         {(l.price || l.cost) && <Row label="Price">{l.price ? fmtPrice(l.price) : l.cost}</Row>}

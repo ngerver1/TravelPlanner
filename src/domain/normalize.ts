@@ -2,6 +2,7 @@
 import { isDate, isTime } from './dates';
 import { uid } from './ids';
 import { isCurrency, parseCost } from './money';
+import { cleanPhone, toLocal } from './local';
 import { CATEGORIES, MEALS, SIZES, SLOTS, STATUSES } from './constants';
 import type {
   ActivityCategory, DayOverride, Flight, Item, Location, Meal, Money, Place, Placement, Rates, Slot, Status, Stay, TransportLeg, TripDoc,
@@ -42,6 +43,16 @@ export function normPlace(v: unknown): Place | undefined {
   if (optStr(v.mapsUrl)) p.mapsUrl = str(v.mapsUrl);
   if (!name && !p.address && !p.mapsUrl && p.lat == null) return undefined;
   return p;
+}
+
+/** Local-language name/address; anything else (or nothing) gives undefined, so old trips load unchanged. */
+export function normLocal(v: unknown) {
+  return obj(v) ? toLocal(typeof v.name === 'string' ? v.name : '', typeof v.address === 'string' ? v.address : '') : undefined;
+}
+/** Adds `local` and `phone` to a stay or item when they are valid. */
+function withLocal(target: { local?: unknown; phone?: string }, raw: Raw) {
+  const l = normLocal(raw.local); if (l) target.local = l;
+  const ph = cleanPhone(raw.phone); if (ph) target.phone = ph;
 }
 
 export function normFlight(f: Raw): Flight {
@@ -147,6 +158,7 @@ export function normalizeDoc(raw: unknown): TripDoc {
     if (price) { stay.price = price; if (!s.price) stay.cost = ''; }
     const place = normPlace(s.place);
     if (place) stay.place = place;
+    withLocal(stay, s);
     doc.stays.push(stay);
   }
 
@@ -172,6 +184,7 @@ export function normalizeDoc(raw: unknown): TripDoc {
     };
     const place = normPlace(i.place);
     if (place) item.place = place;
+    withLocal(item, i);
     if (optStr(i.link)) item.link = str(i.link);
     if (optStr(i.notes)) item.notes = str(i.notes);
     const price = normMoney(i.price) ?? (optStr(i.cost) ? parseCost(str(i.cost), home) : null);
@@ -218,6 +231,8 @@ export function normalizeDoc(raw: unknown): TripDoc {
       link: str(l.link),
       notes: str(l.notes),
     };
+    const fl = normLocal(l.fromLocal); if (fl) leg.fromLocal = fl;
+    const tl = normLocal(l.toLocal); if (tl) leg.toLocal = tl;
     const a = locOk(l.fromLocationId); if (a) leg.fromLocationId = a;
     const b = locOk(l.toLocationId); if (b) leg.toLocationId = b;
     const price = normMoney(l.price) ?? (leg.cost.trim() ? parseCost(leg.cost, home) : null);

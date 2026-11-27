@@ -47,12 +47,21 @@ export interface Place {
   mapsUrl?: string;
 }
 
+/** A place's name and address in the local language (e.g. Japanese), for showing a taxi driver. Copied, never translated. */
+export interface LocalText {
+  name?: string;
+  address?: string;
+}
+
 export interface Item {
   id: string;
   locationId: string;
   kind: ItemKind;
   title: string;
   place?: Place;
+  /** Name and address in the local language. */
+  local?: LocalText;
+  phone?: string;
   link?: string;
   notes?: string;
   price?: Money;
@@ -103,6 +112,9 @@ export interface Stay {
   locationId?: string;
   address: string;
   place?: Place;
+  /** Name and address in the local language. */
+  local?: LocalText;
+  phone?: string;
   checkIn: string;
   checkOut: string;
   checkInTime: string;
@@ -127,6 +139,9 @@ export interface TransportLeg {
   /** Typed end points, e.g. "Sapporo Stn" → "Rusutsu Resort". */
   fromName: string;
   toName: string;
+  /** Local-language name/address of each end (station, pick-up point). */
+  fromLocal?: LocalText;
+  toLocal?: LocalText;
   /** Trip locations at each end; when they differ this is a travel day (like a flight). */
   fromLocationId?: string;
   toLocationId?: string;

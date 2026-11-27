@@ -8,6 +8,7 @@ import { LocationSelect } from './LocationSelect';
 import { parseMapsUrl } from '../domain/maps';
 import { MoneyField, type MoneyDraft } from './MoneyField';
 import { FindOnMap, type Pos } from './FindOnMap';
+import { LocalFields } from './LocalFields';
 
 const Footer = ({ isNew, onDelete, onClose, onSave, disabled, deleteLabel }: {
   isNew?: boolean; onDelete: () => void; onClose: () => void; onSave: () => void; disabled?: boolean; deleteLabel?: string;
@@ -54,7 +55,9 @@ export function FlightForm({ initial, onSave, onDelete, onClose }: {
 }
 
 // ---------- stay ----------
-export type StayDraft = Omit<Stay, 'locationId' | 'place' | 'price'> & { locationName: string; mapsUrl: string; pos: Pos; priceDraft: MoneyDraft; _new?: boolean };
+export type StayDraft = Omit<Stay, 'locationId' | 'place' | 'price' | 'local' | 'phone'> & {
+  locationName: string; mapsUrl: string; pos: Pos; priceDraft: MoneyDraft; localName: string; localAddress: string; phone: string; _new?: boolean;
+};
 
 export function StayForm({ initial, onSave, onDelete, onClose }: {
   initial: StayDraft; onSave: (s: StayDraft) => void; onDelete: () => void; onClose: () => void;
@@ -68,6 +71,9 @@ export function StayForm({ initial, onSave, onDelete, onClose }: {
         <Field label="Name" span><input {...bind('name')} placeholder="Hotel / apartment" autoFocus /></Field>
         <Field label="Location" hint="City or area: sets the day's location"><LocationSelect {...bind('locationName')} /></Field>
         <Field label="Address"><input {...bind('address')} /></Field>
+        <LocalFields name={f.localName} address={f.localAddress} onChange={(v) => setF((p) => ({ ...p, ...v }))}
+          english={f.name} context={f.address || f.locationName} pos={f.pos} />
+        <Field label="Phone (optional)"><input {...bind('phone')} type="tel" inputMode="tel" /></Field>
         <MapsLinkField value={f.mapsUrl} onChange={(url, parsed) => setF((p) => ({ ...p, mapsUrl: url, name: p.name || parsed?.name || '', pos: parsed?.lat != null ? { lat: parsed.lat, lng: parsed.lng! } : p.pos }))} />
         <FindOnMap value={f.pos} query={[f.name, f.address || f.locationName].filter(Boolean).join(', ')}
           onChange={(pos, r) => setF((p) => ({ ...p, pos, address: p.address || r?.address.split(',').slice(0, 3).join(',') || '' }))} />
@@ -105,6 +111,9 @@ export interface ItemDraft {
   done: boolean;
   placeName: string;
   placeAddress: string;
+  localName: string;
+  localAddress: string;
+  phone: string;
   mapsUrl: string;
   pos: Pos;
   link: string;
@@ -176,6 +185,9 @@ export function ItemForm({ initial, trip, onSave, onDelete, onClose, onMove }: {
         }))} />
         <Field label="Place name"><input {...bind('placeName')} placeholder="If different from the title" /></Field>
         <Field label="Address"><input {...bind('placeAddress')} /></Field>
+        <LocalFields name={f.localName} address={f.localAddress} onChange={(v) => setF((p) => ({ ...p, ...v }))}
+          english={f.placeName || f.title} context={f.placeAddress || f.locationName} pos={f.pos} />
+        <Field label="Phone (optional)"><input {...bind('phone')} type="tel" inputMode="tel" /></Field>
         <FindOnMap value={f.pos} query={[f.placeName || f.title, f.placeAddress || f.locationName].filter(Boolean).join(', ')}
           onChange={(pos, r) => setF((p) => ({ ...p, pos, placeAddress: p.placeAddress || r?.address.split(',').slice(0, 3).join(',') || '' }))} />
         <Field label="Link" span><input {...bind('link')} placeholder="https://" inputMode="url" /></Field>

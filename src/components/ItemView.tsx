@@ -9,6 +9,8 @@ import type { Item, Status, TransportLeg } from '../domain/types';
 import { MODE_ICON, MODE_LABEL, STATUS_LABEL } from '../domain/constants';
 import { itemIcon, sizeLabel } from './ItemCard';
 import { LocChip, Modal, StatusPill, type ColorOf } from './ui';
+import { LocalButton, cardFor } from './LocalCard';
+import { LocalRow, PhoneRow } from './BookingViews';
 
 /** Turn web addresses in text into links. */
 export function Linkified({ text }: { text: string }) {
@@ -46,6 +48,7 @@ export function ItemView({ item, location, colorOf, onEdit, onMove, onStatus, on
         <StatusPill value={item.status} onChange={onStatus} />
       </div>
       <div className="iv-links">
+        <LocalButton label="Show local" data={cardFor(p?.name || item.title, item.local, { phone: item.phone, pos: p?.lat != null ? { lat: p.lat, lng: p.lng! } : null, context: `${p?.address || ''} ${location?.name || ''}` })} />
         <a className="btn" href={mapsLink(p, item.title, location?.name)} target="_blank" rel="noreferrer">Open in Google Maps ↗</a>
         {item.link && <a className="btn" href={item.link} target="_blank" rel="noreferrer">{host(item.link)} ↗</a>}
       </div>
@@ -79,6 +82,8 @@ export function ItemView({ item, location, colorOf, onEdit, onMove, onStatus, on
           </Row>
         )}
         {(p?.name && p.name !== item.title) || p?.address ? <Row label="Place">{[p?.name !== item.title ? p?.name : '', p?.address].filter(Boolean).join(', ')}</Row> : null}
+        <LocalRow local={item.local} />
+        <PhoneRow phone={item.phone} />
         {item.price && <Row label="Cost">{fmtPrice(item.price)}</Row>}
         {item.cuisine && <Row label="Cuisine">{item.cuisine}</Row>}
         {item.meals?.length ? <Row label="Good for">{item.meals.map((m) => MEAL_LABEL[m]).join(', ')}</Row> : null}

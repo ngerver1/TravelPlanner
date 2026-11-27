@@ -17,6 +17,7 @@ Live site, once set up: `https://ngerver1.github.io/TravelPlanner/`
 | 4b | In-app maps and place search (needs a Google Cloud key) | When you have a key |
 | 5 | Train/bus legs, travel times, flight number lookup | Later |
 | 6 | Works offline, installable on your phone's home screen | **Done** |
+| 7 | Local-language names and addresses, full-screen "Show local" card for taxis | **Done** |
 
 ## One-time setup: turn on GitHub Pages
 
@@ -212,6 +213,34 @@ What the conversion does:
 - Each item belongs to the place you were on that day. Items with no day, or on a day
   with no location, go under **Unassigned**.
 - Flights, stays, statuses, notes, links and confirmation numbers come across unchanged.
+
+## Local names: show a taxi driver where you're going
+
+Stays, places to eat, things to do and transport stops can hold the place's **name and address in the local
+language** (Japanese, Chinese or Korean). Anything with one gets a **文** button that opens a full-screen card:
+the local name at the top, the address as large as fits, the English name small underneath, and a call button
+if there's a phone number. Black on white, even in dark mode, and it keeps the screen on while it's open.
+
+### Filling it in
+
+- **From emails:** forward the booking as usual. Japanese hotel and restaurant emails often include the name and
+  address in Japanese; the reader copies them exactly (it never translates) and the Inbox shows them next to 文.
+  Add or Update fills them in.
+- **Get local name:** in a stay's or idea's editor, under the address, tap **Get local name**. It looks the place up
+  on OpenStreetMap in the local language (日本語 for Japan, 繁體中文 for Hong Kong: change it in the little menu if
+  needed) and shows what it found. Tap **Use this** or **Ignore**. Setting the map position first (Find on map)
+  gives better results. One search per tap; nothing is looked up by itself.
+- **Paste it:** copy the name and address from the booking, the hotel's website or Google Maps (switch Google Maps
+  to Japanese to see them) and paste them into the two boxes.
+
+### Using the card
+
+- Tap **文** on a place in the Day view, in its details (**文 Show local**), on a stop under **Route & map**, or
+  **文 Take me to my hotel** at the top of each day.
+- It turns sideways where the phone allows (Android). On iPhone, just turn the phone yourself: the text resizes.
+  Turn this off in **⚙ Settings → Open local card in landscape**.
+- Close it with **✕**, by swiping down, or with the phone's Back button.
+- It works offline: it only uses what's saved in your trip.
 
 ## Install on your phone and use it offline
 

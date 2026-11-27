@@ -1,8 +1,9 @@
 // What goes on the map: ideas and stays with a position, filtered by day or location; and a day's route.
 import type { Derived } from './derive';
 import { dayStops } from './plan';
-import type { Item, Place, Stay, TripDoc } from './types';
+import type { Item, LocalText, Place, Stay, TripDoc } from './types';
 import { airportQuery, placeQuery } from './maps';
+import { cardFor, type LocalCardData } from './local';
 
 export interface MapPoint {
   key: string; kind: 'item' | 'stay'; lat: number; lng: number; title: string;
@@ -55,7 +56,12 @@ export function dayRoute(doc: TripDoc, dv: Derived, date: string): MapPoint[] {
  * start = arrival airport / transport stop if you arrive today, else last night's stay;
  * then the day's stops in order; end = departure airport / transport stop if you leave today, else tonight's stay.
  */
-export interface RoutePoint { label: string; query: string; kind: 'start' | 'stop' | 'end' }
+export interface RoutePoint { label: string; query: string; kind: 'start' | 'stop' | 'end'; local?: LocalCardData }
+
+const localOf = (english: string, local: LocalText | undefined, phone: string | undefined, place: Place | undefined, context: string) => {
+  const card = cardFor(english, local, { phone, pos: hasPos(place) ? { lat: place.lat, lng: place.lng } : null, context });
+  return card ? { local: card } : {};
+};
 
 /** The day as an ordered list of places (label for display, query for Google Maps). See dayRouteQueries. */
 export function dayRoutePoints(doc: TripDoc, dv: Derived, date: string): RoutePoint[] {
@@ -63,13 +69,14 @@ export function dayRoutePoints(doc: TripDoc, dv: Derived, date: string): RoutePo
   if (!x) return [];
   const area = (id?: string) => (id ? dv.locById.get(id)?.name : undefined);
   const stayPt = (s: Stay | undefined, kind: RoutePoint['kind']): RoutePoint | undefined =>
-    s ? { label: s.name || 'Hotel', query: placeQuery(s.place ?? { name: s.name, address: s.address }, s.name || 'Hotel', area(s.locationId)), kind } : undefined;
+    s ? { label: s.name || 'Hotel', query: placeQuery(s.place ?? { name: s.name, address: s.address }, s.name || 'Hotel', area(s.locationId)), kind, ...localOf(s.name || 'Hotel', s.local, s.phone, s.place, `${s.address} ${area(s.locationId) || ''}`) } : undefined;
   const airport = (code: string, kind: RoutePoint['kind']): RoutePoint => ({ label: `${code} airport`, query: airportQuery(code), kind });
-  const legPt = (name: string, locId: string | undefined, kind: RoutePoint['kind']): RoutePoint | undefined => {
+  const legPt = (name: string, locId: string | undefined, kind: RoutePoint['kind'], local?: LocalText): RoutePoint | undefined => {
     const q = name ? [name, area(locId)].filter(Boolean).join(', ') : area(locId);
-    return q ? { label: name || area(locId)!, query: q, kind } : undefined;
+    return q ? { label: name || area(locId)!, query: q, kind, ...localOf(name || area(locId)!, local, undefined, undefined, area(locId) || '') } : undefined;
   };
-  const stops: RoutePoint[] = dayStops(doc, date).map((e) => ({ label: e.item.title || 'Untitled', query: placeQuery(e.item.place, e.item.title, area(e.item.locationId)), kind: 'stop' }));
+  const stops: RoutePoint[] = dayStops(doc, date).map((e) => ({ label: e.item.title || 'Untitled', query: placeQuery(e.item.place, e.item.title, area(e.item.locationId)), kind: 'stop',
+    ...localOf(e.item.place?.name || e.item.title, e.item.local, e.item.phone, e.item.place, `${e.item.place?.address || ''} ${area(e.item.locationId) || ''}`) }));
   const arrLeg = x.legArr.find((l) => !l.itemId);
   const depLeg = x.legDep.find((l) => !l.itemId);
   // A flight that lands the same day: the day's plans happen after landing, so start at the arrival airport.
@@ -77,9 +84,9 @@ export function dayRoutePoints(doc: TripDoc, dv: Derived, date: string): RoutePo
   const landsToday = x.dep.filter((f) => f.arrDate === date).pop();
   const leavesTonight = x.dep.find((f) => f.arrDate && f.arrDate > date);
   const origin = landsToday?.to ? airport(landsToday.to, 'start') : x.arr[0]?.to ? airport(x.arr[0].to, 'start')
-    : arrLeg ? legPt(arrLeg.toName, arrLeg.toLocationId, 'start') : stayPt(x.last[0], 'start');
+    : arrLeg ? legPt(arrLeg.toName, arrLeg.toLocationId, 'start', arrLeg.toLocal) : stayPt(x.last[0], 'start');
   const destination = leavesTonight?.from ? airport(leavesTonight.from, 'end')
-    : depLeg ? legPt(depLeg.fromName, depLeg.fromLocationId, 'end') : stayPt(x.tonight[0], 'end');
+    : depLeg ? legPt(depLeg.fromName, depLeg.fromLocationId, 'end', depLeg.fromLocal) : stayPt(x.tonight[0], 'end');
   if (!stops.length && !(origin && destination && origin.query !== destination.query)) return [];
   return [origin, ...stops, destination].filter((p): p is RoutePoint => !!p);
 }

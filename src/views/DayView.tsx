@@ -14,6 +14,7 @@ import { MODE_ICON } from '../domain/constants';
 import { legTitle } from '../components/BookingViews';
 import { ItemCard, MapLink, itemIcon } from '../components/ItemCard';
 import { directionsLink, mapsLink } from '../domain/maps';
+import { LocalButton, cardFor } from '../components/LocalCard';
 import { LocChip, LocDisplay, Modal, NightBadge, StatusPill, cssVars, dayStripe } from '../components/ui';
 
 export type DropTarget = { type: 'lane'; lane: Lane; index?: number } | { type: 'pool' } | { type: 'date'; date: string } | { type: 'swap'; with: Ref };
@@ -202,6 +203,7 @@ function DayHeader({ x, dv, date, idx, actions, route }: { x: DayInfo; dv: Deriv
             : <span className="staybit" onClick={() => actions.openStay(n.stay)}>🛏 {n.stay.name || 'Stay'} <StatusPill small value={n.stay.status} onChange={(s) => actions.patchStay(n.stay.id, { status: s })} /></span>}
         </span>
       </div>
+      <HotelButton x={x} dv={dv} />
       {x.noTransport && (
         <button className="night none notransport" onClick={() => actions.addLeg({ date, fromLoc: x.loc?.b ? x.loc.a.name : '', toLoc: (x.loc?.b ?? x.loc?.a)?.name })}>
           NO TRANSPORT · add how you’re getting {x.loc?.b?.id ? `to ${x.loc.b.name}` : `to ${x.loc?.a.name}`}
@@ -214,6 +216,14 @@ function DayHeader({ x, dv, date, idx, actions, route }: { x: DayInfo; dv: Deriv
       {x.notes && <p className="iday-notes" onClick={() => actions.editDay(date)}>{x.notes}</p>}
     </header>
   );
+}
+
+/** "Take me to my hotel": tonight's stay (or last night's, on a day you leave), shown in the local language. */
+function HotelButton({ x, dv }: { x: DayInfo; dv: Derived }) {
+  const s = x.tonight[0] ?? x.last[0];
+  if (!s) return null;
+  const area = dv.locById.get(s.locationId || '')?.name || '';
+  return <LocalButton label="Take me to my hotel" className="hotel-btn" data={cardFor(s.name || 'Hotel', s.local, { phone: s.phone, pos: s.place?.lat != null ? { lat: s.place.lat, lng: s.place.lng! } : null, context: `${s.address} ${area}` })} />;
 }
 
 /**
@@ -242,7 +252,10 @@ function DayRoute({ points }: { points: RoutePoint[] }) {
               const from = points[i];
               return (
                 <li key={i}>
-                  <span className="hop-names"><span className="muted small">{from.label}</span><span className="hop-arrow">↓</span><b>{p.label}</b></span>
+                  <span className="hop-names">
+                    <span className="muted small">{from.label} {i === 0 && <LocalButton className="sm" data={from.local} />}</span>
+                    <span className="hop-arrow">↓</span><span><b>{p.label}</b> <LocalButton className="sm" data={p.local} /></span>
+                  </span>
                   <span className="hop-links">
                     <a className="btn sm" href={directionsLink([p.query], from.query, undefined, 'transit') ?? '#'} target="_blank" rel="noreferrer">Transit ↗</a>
                     <a className="btn sm ghost" href={directionsLink([p.query], from.query, undefined, 'walking') ?? '#'} target="_blank" rel="noreferrer">Walk ↗</a>

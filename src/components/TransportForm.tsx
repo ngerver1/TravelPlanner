@@ -3,11 +3,13 @@ import { MODES, MODE_ICON, MODE_LABEL, MEAL_LABEL, SLOT_LABEL } from '../domain/
 import type { Item, TransportLeg } from '../domain/types';
 import { DateInput, TimeInput } from './inputs';
 import { LocationSelect } from './LocationSelect';
+import { LocalFields } from './LocalFields';
 import { MoneyField, type MoneyDraft } from './MoneyField';
 import { ConfirmDel, Field, Modal, Seg, StatusSelect, useForm } from './ui';
 
-export type LegDraft = Omit<TransportLeg, 'fromLocationId' | 'toLocationId' | 'price' | 'itemId' | 'itemRole'> & {
+export type LegDraft = Omit<TransportLeg, 'fromLocationId' | 'toLocationId' | 'price' | 'itemId' | 'itemRole' | 'fromLocal' | 'toLocal'> & {
   _new?: boolean; fromLoc: string; toLoc: string; priceDraft: MoneyDraft; itemId: string; itemRole: 'to' | 'from';
+  fromLocalName: string; fromLocalAddress: string; toLocalName: string; toLocalAddress: string;
 };
 
 /** Items you could link a booking to: those on the booking's day (or all, if none that day). */
@@ -42,6 +44,12 @@ export function TransportForm({ initial, items, onSave, onDelete, onClose }: {
         <Field label="Operator / service" span><input {...bind('operator')} placeholder="e.g. JR Hokkaido · Super Hokuto 3" /></Field>
         <Field label="From" hint="Station, stop or address"><input {...bind('fromName')} /></Field>
         <Field label="To"><input {...bind('toName')} /></Field>
+        <LocalFields compact label="From: local name / address" name={f.fromLocalName} address={f.fromLocalAddress}
+          onChange={(v) => setF((p) => ({ ...p, ...(v.localName !== undefined ? { fromLocalName: v.localName } : {}), ...(v.localAddress !== undefined ? { fromLocalAddress: v.localAddress } : {}) }))}
+          english={f.fromName} context={f.fromLoc} />
+        <LocalFields compact label="To: local name / address" name={f.toLocalName} address={f.toLocalAddress}
+          onChange={(v) => setF((p) => ({ ...p, ...(v.localName !== undefined ? { toLocalName: v.localName } : {}), ...(v.localAddress !== undefined ? { toLocalAddress: v.localAddress } : {}) }))}
+          english={f.toName} context={f.toLoc} />
         <Field label="From location" hint="Set both to make this a travel day"><LocationSelect {...bind('fromLoc')} /></Field>
         <Field label="To location"><LocationSelect {...bind('toLoc')} /></Field>
         <Field label="Date"><DateInput {...bind('date')} onChange={(e) => { const v = e.target.value; setF((p) => ({ ...p, date: v, arrDate: p.arrDate && p.arrDate <= v ? '' : p.arrDate, itemId: '' })); }} /></Field>
