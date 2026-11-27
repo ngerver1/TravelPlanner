@@ -16,35 +16,19 @@ const Ctx = createContext<(d: LocalCardData) => void>(() => {});
 export const useShowLocal = () => useContext(Ctx);
 
 type Orient = ScreenOrientation & { lock?: (o: string) => Promise<void>; unlock?: () => void };
-/** Landscape where the phone allows: Android needs full screen first. Must run inside the tap. Fails quietly. */
-function goLandscape(): Promise<boolean> {
-  const el = document.documentElement;
-  const fs = !document.fullscreenElement && el.requestFullscreen
-    ? el.requestFullscreen({ navigationUI: 'hide' }).then(() => true, () => false)
-    : Promise.resolve(false);
-  return fs.then((entered) => {
-    const o = screen.orientation as Orient | undefined;
-    return (o?.lock ? o.lock('landscape') : Promise.reject()).then(() => entered, () => entered);
-  });
-}
-function leaveLandscape(fullscreen: boolean) {
-  try { (screen.orientation as Orient | undefined)?.unlock?.(); } catch { /* ignore */ }
-  if (fullscreen && document.fullscreenElement) document.exitFullscreen().catch(() => {});
-}
+/** Landscape where the phone allows it without going full screen (e.g. an installed app on some Android phones).
+ *  Fails quietly everywhere else; the card fits either way. */
+function goLandscape() { try { (screen.orientation as Orient | undefined)?.lock?.('landscape').catch(() => {}); } catch { /* ignore */ } }
+function leaveLandscape() { try { (screen.orientation as Orient | undefined)?.unlock?.(); } catch { /* ignore */ } }
 
 export function LocalCardProvider({ children }: { children: ReactNode }) {
   const [card, setCard] = useState<LocalCardData | null>(null);
-  const fs = useRef(false);
-  const show = useCallback((d: LocalCardData) => {
-    fs.current = false;
-    if (loadLandscape()) goLandscape().then((entered) => { fs.current = entered; });
-    setCard(d);
-  }, []);
-  const close = useCallback(() => { setCard(null); leaveLandscape(fs.current); fs.current = false; }, []);
+  const show = useCallback((d: LocalCardData) => { if (loadLandscape()) goLandscape(); setCard(d); }, []);
+  const close = useCallback(() => { setCard(null); leaveLandscape(); }, []);
   return (
     <Ctx.Provider value={show}>
       {children}
-      {card && <LocalCard data={card} onClose={close} fullscreen={fs} />}
+      {card && <LocalCard data={card} onClose={close} />}
     </Ctx.Provider>
   );
 }
@@ -84,7 +68,7 @@ function fitText(el: HTMLElement, max: number, min = 14) {
 
 const Wrapped = ({ text }: { text: string }) => <>{wrapPieces(text).map((p, i) => <Fragment key={i}>{i > 0 && <wbr />}{p}</Fragment>)}</>;
 
-function LocalCard({ data, onClose, fullscreen }: { data: LocalCardData; onClose: () => void; fullscreen: React.MutableRefObject<boolean> }) {
+function LocalCard({ data, onClose }: { data: LocalCardData; onClose: () => void }) {
   const root = useRef<HTMLDivElement>(null), nameEl = useRef<HTMLDivElement>(null), addrEl = useRef<HTMLDivElement>(null);
   const lang = guessLang(`${data.name || ''} ${data.address || ''}`, data.lang);
   const [portrait, setPortrait] = useState(() => innerHeight > innerWidth);
@@ -98,13 +82,10 @@ function LocalCard({ data, onClose, fullscreen }: { data: LocalCardData; onClose
     if (!(history.state as { localCard?: boolean } | null)?.localCard) history.pushState({ ...(history.state || {}), localCard: true }, '');
     const pop = () => onClose();
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') requestClose(); };
-    // Android: Back in full screen leaves full screen first; treat that as closing the card.
-    const fsc = () => { if (!document.fullscreenElement && fullscreen.current) { fullscreen.current = false; requestClose(); } };
     window.addEventListener('popstate', pop);
     window.addEventListener('keydown', key);
-    document.addEventListener('fullscreenchange', fsc);
-    return () => { window.removeEventListener('popstate', pop); window.removeEventListener('keydown', key); document.removeEventListener('fullscreenchange', fsc); };
-  }, [onClose, requestClose, fullscreen]);
+    return () => { window.removeEventListener('popstate', pop); window.removeEventListener('keydown', key); };
+  }, [onClose, requestClose]);
 
   // Keep the screen on while it's open (where the browser supports it).
   useEffect(() => {

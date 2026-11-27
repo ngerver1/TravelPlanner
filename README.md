@@ -237,8 +237,9 @@ if there's a phone number. Black on white, even in dark mode, and it keeps the s
 
 - Tap **文** on a place in the Day view, in its details (**文 Show local**), on a stop under **Route & map**, or
   **文 Take me to my hotel** at the top of each day.
-- It turns sideways where the phone allows (Android). On iPhone, just turn the phone yourself: the text resizes.
-  Turn this off in **⚙ Settings → Open local card in landscape**.
+- It never switches the phone to full screen, so the system bars and gestures work as usual. It asks to turn
+  sideways where the phone allows that without full screen; otherwise just turn the phone yourself and the text
+  resizes. Turn the asking off in **⚙ Settings → Open local card in landscape**.
 - Close it with **✕**, by swiping down, or with the phone's Back button.
 - It works offline: it only uses what's saved in your trip.
 
