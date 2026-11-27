@@ -29,8 +29,11 @@ export default defineConfig({
         id: base,
         display: 'standalone',
         orientation: 'any',
-        theme_color: '#ffffff',      // light; dark mode uses the <meta name="theme-color" media=…> tags in index.html
-        background_color: '#f7f8fa',
+        // Android paints its navigation bar (and the launch screen) from these, and a manifest holds only one
+        // colour, so they match the dark theme the app is used in. The status bar follows the app's own
+        // light/dark choice through the <meta name="theme-color"> tags in index.html.
+        theme_color: '#1b1f29',
+        background_color: '#12151c',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
