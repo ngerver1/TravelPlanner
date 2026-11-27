@@ -223,13 +223,13 @@ already loaded. Open it once online first so it can save itself on the phone.
 
 1. Open `https://ngerver1.github.io/TravelPlanner/` in Chrome.
 2. Tap **⋮** (top right) → **Install app** (on some phones it says **Add to Home screen**).
-3. Tap **Install**. A **Trips** icon (white paper plane on blue) appears on your home screen.
+3. Tap **Install**. A **Trip Planner** icon (hotel and plane on blue) appears on your home screen.
 
 ### iPhone (Safari)
 
 1. Open `https://ngerver1.github.io/TravelPlanner/` in **Safari** (it has to be Safari).
 2. Tap the **Share** button (square with an arrow) → **Add to Home Screen**.
-3. Tap **Add**. Open it from the **Trips** icon from then on: the home-screen app keeps its own
+3. Tap **Add**. Open it from the **Trip Planner** icon from then on: the home-screen app keeps its own
    copy of your trip, separate from the Safari tab, so connect sync in it too
    (⚙ Settings → paste your token).
 

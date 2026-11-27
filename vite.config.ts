@@ -22,7 +22,7 @@ export default defineConfig({
       includeAssets: ['icons/apple-touch-icon.png', 'icons/favicon-64.png'],
       manifest: {
         name: 'Trip Planner',
-        short_name: 'Trips',
+        short_name: 'Trip Planner',
         description: 'Plan a trip day by day: stays, flights, transport, things to do and places to eat.',
         start_url: base,
         scope: base,
