@@ -8,6 +8,8 @@ import type { Pin } from '../components/MapCanvas';
 import { useOnline } from '../pwa';
 
 const MapCanvas = lazy(() => import('../components/MapCanvas'));
+const GoogleCanvas = lazy(() => import('../components/GoogleCanvas'));
+import { hasGoogle } from '../sync/google';
 
 export function toPins(points: MapPoint[], dv: Derived, onOpen: (p: MapPoint) => void): Pin[] {
   return points.map((p) => ({
@@ -48,7 +50,7 @@ export function MapView({ doc, dv, onOpen }: { doc: TripDoc; dv: Derived; onOpen
       {filter.by === 'day' ? (
         dayRoute?.length ? <GoogleMap route={dayRoute} height={h} title="Day route" /> : <p className="muted small">Nothing planned on this day yet.</p>
       ) : (<>
-        <Lazy><MapCanvas pins={pins} height={h} /></Lazy>
+        <Lazy>{hasGoogle() ? <GoogleCanvas pins={pins} height={h} /> : <MapCanvas pins={pins} height={h} />}</Lazy>
         <p className="muted small">This overview pins things with an exact map position. To add one: open it → Edit → <b>Find on map</b>, or paste a long Google Maps link. Pick a day above to see it on Google Maps (by name, no position needed).</p>
       </>)}
       {filter.by !== 'day' && missing.length > 0 && (

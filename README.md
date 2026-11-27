@@ -187,14 +187,53 @@ lives in the same Gist.
   last night's hotel (or the arrival airport after a flight) → the day's stops in order → tonight's
   hotel (or the departure airport before an overnight flight). Up to 10 stops.
 
-- **Plan → Map → Everything / a location** pins everything that has a map position (OpenStreetMap): ideas as dots in their location's colour
+- **Plan → Map → Everything / a location** pins everything that has a map position (on Google Maps once you've
+  added a key, below; OpenStreetMap until then): ideas as dots in their location's colour
   (solid = on a day, hollow = still an idea) and stays as 🛏. Choose **Everything**, **a location** or
   **a day** (a day shows its stops numbered in order, joined from hotel to hotel). Tap a pin to open it.
 - **Giving something a position:** in an idea's or stay's editor, tap **Find on map** (searches
   OpenStreetMap by name and city; pick the right result), or paste a long Google Maps link from a
   computer. Short `maps.app.goo.gl` share links don't include the position.
-- Map tiles: © OpenStreetMap contributors (openstreetmap.org standard tiles). Place search: OpenStreetMap Nominatim (only the
-  name and city you search for are sent).
+- Without a key: map tiles © OpenStreetMap contributors, place search by OpenStreetMap Nominatim (only the name and
+  city you search for are sent). With a key, OpenStreetMap isn't used at all.
+
+### Google Maps with your own key (free, capped)
+
+With a key, the **Map** tab is a real Google map with your pins, **Find on map** searches Google (and remembers the
+exact Google place), and **Get local name** asks Google for the place's name and address in Japanese or Chinese.
+Everything else (the embedded maps, Map links, directions) already uses Google and needs no key.
+
+The key stays **in your browser only**: it isn't in the site, the trip, the Gist or exports. Add it once on each
+device. Google only charges above a free monthly allowance; the caps below keep you far under it.
+
+**1. Make the key** (on a computer, about 10 minutes)
+
+1. Go to **console.cloud.google.com** and sign in. Create a project, e.g. "Trip Planner".
+2. **Billing:** Google requires a billing account (a card) even for free use. Link one to the project.
+3. **APIs & Services → Library:** enable **Maps JavaScript API** and **Places API (New)**.
+4. **APIs & Services → Credentials → Create credentials → API key.** Then edit the key:
+   - **Application restrictions → Websites:** add `https://ngerver1.github.io/*` (only your app can use it).
+   - **API restrictions → Restrict key:** tick **Maps JavaScript API** and **Places API (New)** only.
+
+**2. Cap it so it can't cost money**
+
+1. **APIs & Services → Places API (New) → Quotas:** set the per-day limits for text search and place details
+   requests to about **100 per day**.
+2. **APIs & Services → Maps JavaScript API → Quotas:** set map loads per day to about **200**.
+3. **Billing → Budgets & alerts:** add a budget of **A$1** with email alerts, so you'd hear about any charge.
+   (Budgets only warn; the quotas are what stop use.)
+4. Check the current free monthly allowance on Google's **Maps Platform pricing** page: the caps above are far
+   below it.
+
+**3. Add it to the app**
+
+1. **⚙ Settings → Google Maps:** paste the key (starts with `AIza`) and tap **Save**. The app reloads.
+2. Tap **Test key**: it should say "Works: found Tokyo Station". If Google refuses it, check the website
+   restriction and that both APIs are enabled.
+3. Do the same on your phone (and in the home-screen app, which has its own storage).
+
+What uses it: opening the **Map** tab (one map load), **Find on map** (one search per tap) and **Get local
+name** (one request per tap). Nothing runs in the background. Offline, maps show "Map not available offline".
 
 ## Moving your trip over from v1
 

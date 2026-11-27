@@ -127,3 +127,19 @@ Tel: +81 136-46-3111`;
     expect(copiedFrom('ウェスティンホテル', jp)).toBe(false);
   });
 });
+
+import { localFromGoogle } from './local';
+describe('Google Places results', () => {
+  it('Japanese: drops the country, keeps the name and address as written', () => {
+    expect(localFromGoogle({ name: 'ザ・ウェスティン ルスツリゾート', address: '日本、〒048-1711 北海道虻田郡留寿都村泉川１３３' }))
+      .toEqual({ name: 'ザ・ウェスティン ルスツリゾート', address: '〒048-1711 北海道虻田郡留寿都村泉川１３３' });
+    expect(localFromGoogle({ name: 'らーめん一楽', address: '日本、〒048-1711北海道虻田郡留寿都村泉川13' })?.address).toBe('〒048-1711 北海道虻田郡留寿都村泉川13');
+  });
+  it('Hong Kong: Chinese name and address', () => {
+    expect(localFromGoogle({ name: '香港半島酒店', address: '香港尖沙咀梳士巴利道22號' })).toEqual({ name: '香港半島酒店', address: '香港尖沙咀梳士巴利道22號' });
+  });
+  it('English only: nothing', () => {
+    expect(localFromGoogle({ name: 'Some Hut', address: '1 Hill Rd, Niseko, Japan' })).toBeUndefined();
+    expect(localFromGoogle({ name: 'Hut', address: '日本、〒044-0081 北海道虻田郡倶知安町' })).toEqual({ address: '〒044-0081 北海道虻田郡倶知安町' });
+  });
+});

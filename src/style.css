@@ -738,3 +738,5 @@ a.btn{text-decoration:none;color:inherit}
 .lcard .lc-en{flex:1 1 auto;font-size:16px;color:#222;font-weight:600}
 .lcard .lc-phone{display:inline-flex;align-items:center;gap:6px;background:#000;color:#fff;text-decoration:none;border-radius:999px;padding:10px 18px;font-size:17px;font-weight:700;min-height:44px;box-sizing:border-box}
 .lcard .lc-close{position:absolute;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));width:48px;height:48px;border-radius:50%;border:2px solid #000;background:#fff;color:#000;font-size:22px;font-weight:700;cursor:pointer;z-index:1}
+.gmapcanvas{position:relative;overflow:hidden}
+.gmapcanvas .map-err{position:absolute;inset:auto 10px 10px 10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px}

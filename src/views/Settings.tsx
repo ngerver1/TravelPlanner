@@ -6,6 +6,7 @@ import type { Theme } from '../theme';
 import { Seg } from '../components/ui';
 import { SyncSettings } from './SyncSettings';
 import { loadLandscape, saveLandscape } from '../components/LocalCard';
+import { getGoogleKey, setGoogleKey, testGoogleKey } from '../sync/google';
 import type { Sync } from '../sync/useSync';
 
 export function downloadJson(filename: string, json: string, type = 'application/json') {
@@ -60,6 +61,8 @@ export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, on
         <input type="checkbox" checked={landscape} onChange={(e) => { setLandscape(e.target.checked); saveLandscape(e.target.checked); }} />
         <span><b>Open local card in landscape</b><br /><span className="muted small">With the phone upright, the 文 card is drawn sideways: turn the phone to read it. Your phone’s rotation setting isn’t changed. Saved on this device only.</span></span>
       </label>
+      <h4>Google Maps</h4>
+      <GoogleKey />
       <h4>Sync between devices</h4>
       <SyncSettings sync={sync} doc={doc} />
       {!statusOk && <p className="alert bad small">{status}</p>}
@@ -90,6 +93,35 @@ export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, on
           <div className="row gap"><button className="btn danger" onClick={() => { onImport(p); setPending(null); setPaste(''); }}>Replace trip</button><button className="btn ghost" onClick={() => setPending(null)}>Cancel</button></div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Your own Google Maps key: kept in this browser only (each device needs it once), never synced or published. */
+function GoogleKey() {
+  const saved = getGoogleKey();
+  const [key, setKey] = useState('');
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  // The Maps script can only load once per page, so a new key takes effect after a reload.
+  const save = (k: string) => { setGoogleKey(k); location.reload(); };
+  if (saved) return (
+    <div className="gkey">
+      <p className="small">Using your Google Maps key on this device (…{saved.slice(-4)}): the Map, Find on map and Get local name use Google.</p>
+      <div className="row gap wrap">
+        <button className="btn" disabled={busy} onClick={async () => { setBusy(true); setMsg(''); try { setMsg(await testGoogleKey()); } catch (e) { setMsg(e instanceof Error ? e.message : 'Didn’t work'); } finally { setBusy(false); } }}>{busy ? 'Testing…' : 'Test key'}</button>
+        <button className="btn ghost danger" onClick={() => save('')}>Remove key</button>
+      </div>
+      {msg && <p className="small">{msg}</p>}
+    </div>
+  );
+  return (
+    <div className="gkey">
+      <p className="muted small">Paste your Google Maps key to use Google for the Map, Find on map and Get local name (OpenStreetMap is used until then). It stays in this browser only: add it once on each device. See the README for how to make a free, capped key.</p>
+      <div className="row gap">
+        <input className="grow" type="password" autoComplete="off" spellCheck={false} placeholder="AIza…" value={key} onChange={(e) => setKey(e.target.value)} aria-label="Google Maps key" />
+        <button className="btn primary" disabled={!/^AIza[\w-]{20,}$/.test(key.trim())} onClick={() => save(key)}>Save</button>
+      </div>
     </div>
   );
 }

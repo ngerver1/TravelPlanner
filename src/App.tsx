@@ -62,7 +62,7 @@ function dayLocationId(x: TripDoc, date: string): string {
 }
 
 /** Place from the editor's fields; coordinates come from a pasted Maps link, or are kept if the link didn't change. */
-function buildPlace(prev: Place | undefined, name: string, address: string, mapsUrl: string, pos?: { lat: number; lng: number } | null): Place | undefined {
+function buildPlace(prev: Place | undefined, name: string, address: string, mapsUrl: string, pos?: { lat: number; lng: number; placeId?: string } | null): Place | undefined {
   const url = mapsUrl.trim();
   const parsed = url ? parseMapsUrl(url) : null;
   const p: Place = { name };
@@ -75,7 +75,10 @@ function buildPlace(prev: Place | undefined, name: string, address: string, maps
     const id = parsed.googlePlaceId ?? (same ? prev?.googlePlaceId : undefined);
     if (id) p.googlePlaceId = id;
   } else if (url) p.mapsUrl = url;
-  if (pos !== undefined) { if (pos) { p.lat = pos.lat; p.lng = pos.lng; } else { delete p.lat; delete p.lng; } }
+  if (pos !== undefined) {
+    if (pos) { p.lat = pos.lat; p.lng = pos.lng; if (pos.placeId) p.googlePlaceId = pos.placeId; }
+    else { delete p.lat; delete p.lng; }
+  }
   return name || p.address || p.mapsUrl || p.lat != null ? p : undefined;
 }
 
@@ -89,7 +92,7 @@ function itemDraft(doc: TripDoc, it: Item, pi: number): ItemDraft {
     category: it.category || 'other', size: it.size || 'half', includesEvening: !!it.includesEvening,
     meals: it.meals || [], cuisine: it.cuisine || '', price: fromMoney(it.price, home), booking: it.booking || '',
     status: it.status, mustDo: !!it.mustDo, done: !!it.done,
-    placeName: it.place?.name && it.place.name !== it.title ? it.place.name : '', placeAddress: it.place?.address || '', localName: it.local?.name || '', localAddress: it.local?.address || '', phone: it.phone || '', mapsUrl: it.place?.mapsUrl || '', pos: it.place?.lat != null && it.place.lng != null ? { lat: it.place.lat, lng: it.place.lng } : null,
+    placeName: it.place?.name && it.place.name !== it.title ? it.place.name : '', placeAddress: it.place?.address || '', localName: it.local?.name || '', localAddress: it.local?.address || '', phone: it.phone || '', mapsUrl: it.place?.mapsUrl || '', pos: it.place?.lat != null && it.place.lng != null ? { lat: it.place.lat, lng: it.place.lng, ...(it.place.googlePlaceId ? { placeId: it.place.googlePlaceId } : {}) } : null,
     link: it.link || '', notes: it.notes || '',
     pi: p ? pi : -1, date: p?.date || '', time: p?.time || '', meal: p?.meal || it.meals?.[0] || mealFromTime(p?.time),
     elsewhere: it.kind === 'restaurant' ? it.placements.filter((_, i) => i !== pi).map(placementLabel) : [],
@@ -156,7 +159,7 @@ export default function App() {
 
   const newFlight = (d?: string) => setModal({ type: 'flight', v: { _new: true, priceDraft: fromMoney(undefined, home), id: uid(), airline: '', flightNo: '', from: '', to: '', depDate: d || '', depTime: '', arrDate: d || '', arrTime: '', status: 'planned', conf: '', notes: '' } });
   const addStay = (from?: string, to?: string, locName = '') => setModal({ type: 'stay', v: { _new: true, priceDraft: fromMoney(undefined, home), id: uid(), name: '', locationName: locName, address: '', checkIn: from || '', checkOut: to || (from ? addDays(from, 1) : ''), checkInTime: '', checkOutTime: '', status: 'planned', conf: '', cost: '', link: '', notes: '', mapsUrl: '', pos: null, localName: '', localAddress: '', phone: '' } });
-  const editStay = (s: Stay) => { const { locationId, place, price, local, phone, ...rest } = s; setModal({ type: 'stay', v: { ...rest, localName: local?.name || '', localAddress: local?.address || '', phone: phone || '', priceDraft: fromMoney(price, home), mapsUrl: place?.mapsUrl || '', pos: place?.lat != null && place.lng != null ? { lat: place.lat, lng: place.lng } : null, locationName: locationName(doc, locationId) } }); };
+  const editStay = (s: Stay) => { const { locationId, place, price, local, phone, ...rest } = s; setModal({ type: 'stay', v: { ...rest, localName: local?.name || '', localAddress: local?.address || '', phone: phone || '', priceDraft: fromMoney(price, home), mapsUrl: place?.mapsUrl || '', pos: place?.lat != null && place.lng != null ? { lat: place.lat, lng: place.lng, ...(place.googlePlaceId ? { placeId: place.googlePlaceId } : {}) } : null, locationName: locationName(doc, locationId) } }); };
   const patchStay = (id: string, p: Partial<Stay>) => update((x) => { x.stays = x.stays.map((s) => (s.id === id ? { ...s, ...p } : s)); });
   const openStay = (s: Stay) => setModal({ type: 'viewStay', id: s.id });
   const openFlight = (f: Flight) => setModal({ type: 'viewFlight', id: f.id });

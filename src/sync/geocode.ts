@@ -1,6 +1,6 @@
 // Find a place's position with OpenStreetMap's Nominatim search (free, no key). Used only when you press
 // "Find on map" (their usage policy allows occasional searches, not search-as-you-type).
-export interface GeoResult { name: string; address: string; lat: number; lng: number }
+export interface GeoResult { name: string; address: string; lat: number; lng: number; placeId?: string }
 
 export async function geocode(query: string): Promise<GeoResult[]> {
   const url = `https://nominatim.openstreetmap.org/search?${new URLSearchParams({ q: query, format: 'jsonv2', limit: '6', 'accept-language': 'en' })}`;

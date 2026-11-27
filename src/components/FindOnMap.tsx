@@ -1,18 +1,21 @@
 import { useState } from 'react';
 import { geocode, type GeoResult } from '../sync/geocode';
+import { hasGoogle, searchPlaces } from '../sync/google';
 import { Field } from './ui';
 
-export type Pos = { lat: number; lng: number } | null;
+/** A map position, and the Google place it came from (if found with Google). */
+export type Pos = { lat: number; lng: number; placeId?: string } | null;
 
 /** Shows the saved map position and lets you find one by name (OpenStreetMap search). */
 export function FindOnMap({ value, query, onChange }: { value: Pos; query: string; onChange: (p: Pos, r?: GeoResult) => void }) {
   const [results, setResults] = useState<GeoResult[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const google = hasGoogle();
   const find = async () => {
     setBusy(true); setErr(''); setResults(null);
-    try { const r = await geocode(query); setResults(r); if (!r.length) setErr('Nothing found. Try adding the area or the address.'); }
-    catch { setErr('Couldn’t reach the map search. Check your connection.'); }
+    try { const r = google ? await searchPlaces(query) : await geocode(query); setResults(r); if (!r.length) setErr('Nothing found. Try adding the area or the address.'); }
+    catch (e) { setErr(google && e instanceof Error ? e.message : 'Couldn’t reach the map search. Check your connection.'); }
     finally { setBusy(false); }
   };
   return (
@@ -25,11 +28,11 @@ export function FindOnMap({ value, query, onChange }: { value: Pos; query: strin
       {results && results.length > 0 && (
         <span className="geo-results">
           {results.map((r, i) => (
-            <button type="button" key={i} className="pick" onClick={() => { onChange({ lat: r.lat, lng: r.lng }, r); setResults(null); }}>
+            <button type="button" key={i} className="pick" onClick={() => { onChange({ lat: r.lat, lng: r.lng, ...(r.placeId ? { placeId: r.placeId } : {}) }, r); setResults(null); }}>
               <span className="grow"><b>{r.name}</b><br /><span className="muted small">{r.address}</span></span>
             </button>
           ))}
-          <span className="muted small">Search by OpenStreetMap</span>
+          <span className="muted small">{google ? 'Search by Google' : 'Search by OpenStreetMap'}</span>
         </span>
       )}
       {err && <span className="small" style={{ color: 'var(--warn)' }}>{err}</span>}

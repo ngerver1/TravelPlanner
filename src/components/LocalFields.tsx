@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { guessLang, LANG_LABEL, langForPlace, localFromNominatim, type LocalLang } from '../domain/local';
 import type { LocalText } from '../domain/types';
 import { lookupLocal } from '../sync/geocode';
+import { hasGoogle, localFromGooglePlaces } from '../sync/google';
 import type { Pos } from './FindOnMap';
 
 export function LocalFields({ name, address, onChange, english, context = '', pos = null, compact, label = 'Local name / address' }: {
@@ -18,12 +19,20 @@ export function LocalFields({ name, address, onChange, english, context = '', po
   const [found, setFound] = useState<LocalText | null>(null);
   const [msg, setMsg] = useState('');
   const [canTryPos, setCanTryPos] = useState(false);
+  const google = hasGoogle();
   const shownLang = guessLang(`${name}${address}`, lang);
 
   // One request per tap; the result is only shown, and fills the fields if you accept it.
   const look = async (by: 'name' | 'pos') => {
     setBusy(true); setFound(null); setMsg(''); setCanTryPos(false);
     try {
+      if (google) {
+        // Google: the saved Google place in the local language, or a search by name near the map position.
+        const g = await localFromGooglePlaces({ placeId: pos?.placeId, query: [english, context].filter(Boolean).join(', '), near: pos }, lang);
+        if (g.local) setFound(g.local);
+        else setMsg(g.found ? 'Google has no local-language name or address for it.' : 'Not found on Google Maps. Try adding the area, or paste it instead.');
+        return;
+      }
       const r = by === 'pos' && pos ? await lookupLocal({ pos }, lang)
         : await lookupLocal({ name: pos ? english : [english, context].filter(Boolean).join(', '), near: pos }, lang);
       const local = r ? localFromNominatim(r, lang) : undefined;
@@ -32,7 +41,7 @@ export function LocalFields({ name, address, onChange, english, context = '', po
         setMsg(r ? 'OpenStreetMap has no local-language name or address for it.' : 'Not found on OpenStreetMap.');
         setCanTryPos(by === 'name' && !!pos);
       }
-    } catch { setMsg('Couldn’t reach OpenStreetMap. Check your connection, or paste the text instead.'); }
+    } catch (e) { setMsg(google && e instanceof Error ? e.message : 'Couldn’t reach OpenStreetMap. Check your connection, or paste the text instead.'); }
     finally { setBusy(false); }
   };
   const canLook = !!(english.trim() || pos);
@@ -49,7 +58,7 @@ export function LocalFields({ name, address, onChange, english, context = '', po
       </span>
       {found && (
         <span className="local-found">
-          <span className="muted small">Found on OpenStreetMap:</span>
+          <span className="muted small">Found on {google ? 'Google Maps' : 'OpenStreetMap'}:</span>
           {found.name && <b lang={lang}>{found.name}</b>}
           {found.address && <span lang={lang}>{found.address}</span>}
           <span className="row gap">

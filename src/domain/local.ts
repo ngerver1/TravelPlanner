@@ -168,3 +168,15 @@ export function cleanPhone(v: unknown): string | undefined {
 }
 /** For tel: links. */
 export const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, '')}`;
+
+/** Google's language code for each local language (Hong Kong Chinese for Traditional). */
+export const GOOGLE_LANG: Record<LocalLang, string> = { ja: 'ja', 'zh-Hant': 'zh-HK', ko: 'ko' };
+/**
+ * A place's local name and address from Google Places, asked for in the local language. Google puts the
+ * country first ("日本、〒048-1711 北海道…"); that's dropped. Only text in the local script counts.
+ */
+export function localFromGoogle(r: { name?: string; address?: string }): LocalText | undefined {
+  const name = hasCjk(r.name) ? r.name!.trim() : '';
+  const address = (r.address || '').trim().replace(/^(?:日本|大韓民国|대한민국|中国|中國|台灣|台湾|香港特別行政區)\s*[、,，]?\s*/, '').replace(/^(〒\s?\d{3}-?\d{4})(?=\S)/, '$1 ');
+  return toLocal(name, hasCjk(address) ? address : '');
+}
