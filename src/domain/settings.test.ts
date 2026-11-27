@@ -18,3 +18,19 @@ describe('Google Maps key saved with the trip', () => {
     expect(exportJson(emptyDoc())).toBe(JSON.stringify(emptyDoc(), null, 2));
   });
 });
+
+import { restoreDropped } from '../sync/decide';
+describe('after an update: recovering what an older version dropped', () => {
+  const remote = { ...emptyDoc(), rev: 7, settings: { googleMapsKey: KEY } };
+  it('puts the key back from the Gist’s copy of the same save', () => {
+    const local = { ...emptyDoc(), rev: 7, updatedAt: 5 };
+    expect(restoreDropped(local, remote)).toEqual({ ...local, settings: { googleMapsKey: KEY } });
+  });
+  it('leaves things alone when the saves differ or nothing was dropped', () => {
+    const newer = { ...emptyDoc(), rev: 8 };
+    expect(restoreDropped(newer, remote)).toBe(newer);
+    const has = { ...emptyDoc(), rev: 7, settings: { googleMapsKey: 'AIzaOtherKey_000000000000000' } };
+    expect(restoreDropped(has, remote)).toBe(has);
+    expect(restoreDropped(newer, null)).toBe(newer);
+  });
+});

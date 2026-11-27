@@ -11,3 +11,14 @@ export function decide(localRev: number, remoteRev: number, dirty: boolean): Syn
 
 /** Has this doc changed since it was last in step with the Gist? */
 export const isDirty = (doc: { updatedAt: number }, syncedAt: number | null) => syncedAt == null ? doc.updatedAt > 0 : doc.updatedAt > syncedAt;
+
+/**
+ * After an app update: an older version may have read the trip and dropped parts it didn't know about (like
+ * the Google Maps key in `settings`) while still counting itself in step with that save. Given the Gist's copy
+ * of the same save, put those parts back. Returns the same object when there's nothing to restore.
+ */
+export function restoreDropped<T extends { rev: number; settings?: object }>(local: T, remote: T | null): T {
+  if (!remote || remote.rev !== local.rev) return local;
+  if (remote.settings && !local.settings) return { ...local, settings: remote.settings };
+  return local;
+}

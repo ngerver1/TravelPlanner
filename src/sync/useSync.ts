@@ -4,7 +4,7 @@
 // - On open, on focus and when back online, the Gist is checked (ETag: unchanged = cheap 304).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TripDoc } from '../domain/types';
-import { decide, isDirty } from './decide';
+import { decide, isDirty, restoreDropped } from './decide';
 import { SyncError, createGist, readGist, writeGist, checkToken, listTripGists, updateInbox, type GistInfo } from './gist';
 import type { InboxEntry } from '../domain/inbox';
 
@@ -13,7 +13,9 @@ export type SyncStatus = 'local' | 'saved' | 'saving' | 'offline' | 'conflict' |
 const TOKEN = 'tripPlanner.gh.token';
 const META = 'tripPlanner.gh.sync';
 const INBOX_KEY = 'tripPlanner.gh.inbox';
-interface Meta { gistId: string | null; etag: string | null; remoteRev: number | null; syncedAt: number | null; login?: string }
+interface Meta { gistId: string | null; etag: string | null; remoteRev: number | null; syncedAt: number | null; login?: string; dataVersion?: number }
+/** Bump when the app starts keeping a part of the trip an older version dropped (2: settings, the Google Maps key). */
+const DATA_VERSION = 2;
 const EMPTY: Meta = { gistId: null, etag: null, remoteRev: null, syncedAt: null };
 
 const ls = {
@@ -66,7 +68,9 @@ export function useSync({ doc, load, setRev }: { doc: TripDoc; load: (d: TripDoc
       do {
         again.current = false;
         const m = metaRef.current;
-        let got = await readGist(t, id, m.remoteRev != null ? m.etag : null);
+        // First sync after an update: read the Gist in full (no "unchanged" shortcut) to recover dropped parts.
+        const fresh = (m.dataVersion ?? 0) < DATA_VERSION;
+        let got = await readGist(t, id, m.remoteRev != null && !fresh ? m.etag : null);
         if (got.notModified && m.remoteRev == null) got = await readGist(t, id, null);
         let remote: TripDoc | null = null, remoteRev: number;
         if (got.notModified) remoteRev = m.remoteRev!;
@@ -76,7 +80,11 @@ export function useSync({ doc, load, setRev }: { doc: TripDoc; load: (d: TripDoc
           setInbox(got.inbox);
           setMeta({ etag: got.etag, remoteRev });
         }
-        const local = docRef.current;
+        let local = docRef.current;
+        if (fresh && remote) {
+          const restored = restoreDropped(local, remote);
+          if (restored !== local) { load(restored); docRef.current = restored; local = restored; }
+        }
         const dirty = isDirty(local, metaRef.current.syncedAt);
         // An empty Gist (just created elsewhere, or emptied) takes this device's trip.
         const action = remote === null && !got.notModified ? (dirty || local.updatedAt > 0 ? 'push' : 'noop') : decide(local.rev, remoteRev, dirty);
@@ -99,6 +107,7 @@ export function useSync({ doc, load, setRev }: { doc: TripDoc; load: (d: TripDoc
           setRev(rev);
           setMeta({ remoteRev: rev, etag: null, syncedAt: snapshot.updatedAt });
         }
+        if (fresh) setMeta({ dataVersion: DATA_VERSION });
         setMessage('');
         setStatus(isDirty(docRef.current, metaRef.current.syncedAt) ? 'saving' : 'saved');
         if (isDirty(docRef.current, metaRef.current.syncedAt)) again.current = true;
