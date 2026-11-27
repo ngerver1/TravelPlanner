@@ -20,6 +20,17 @@ export interface TripDoc {
   flights: Flight[];
   stays: Stay[];
   legs: TransportLeg[]; // phase 4; always present so it slots in without a migration
+  /** Trip-wide settings that sync with the trip. */
+  settings?: TripSettings;
+}
+
+export interface TripSettings {
+  /**
+   * Your Google Maps browser key, synced through the Gist by choice so every device gets it. It must be
+   * website-restricted, API-restricted and quota-capped (see the README). Left out of exports by default.
+   * The GitHub token is never part of the trip.
+   */
+  googleMapsKey?: string;
 }
 
 export interface Money { amount: number; currency: string; perPerson?: boolean }

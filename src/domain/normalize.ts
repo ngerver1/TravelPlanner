@@ -8,6 +8,17 @@ import type {
   ActivityCategory, DayOverride, Flight, Item, Location, Meal, Money, Place, Placement, Rates, Slot, Status, Stay, TransportLeg, TripDoc,
 } from './types';
 
+/** A Google Maps browser key ("AIza…"). Anything else is dropped, so nothing else can ride along in settings. */
+export const isGoogleKey = (v: unknown): v is string => typeof v === 'string' && /^AIza[\w-]{20,60}$/.test(v.trim());
+
+/** The trip as JSON for Download / Copy: without the Google Maps key unless you ask for it. */
+export function exportJson(doc: TripDoc, includeKey = false): string {
+  if (includeKey || !doc.settings?.googleMapsKey) return JSON.stringify(doc, null, 2);
+  const { settings, ...rest } = doc;
+  const { googleMapsKey: _k, ...others } = settings;
+  return JSON.stringify(Object.keys(others).length ? { ...rest, settings: others } : rest, null, 2);
+}
+
 export function emptyDoc(): TripDoc {
   return {
     schema: 2, rev: 0, updatedAt: 0,
@@ -101,6 +112,7 @@ export function normalizeDoc(raw: unknown): TripDoc {
     locations: [], days: {}, items: [], flights: [], stays: [], legs: [],
   };
   if (doc.trip.start && doc.trip.end && doc.trip.end < doc.trip.start) doc.trip.end = doc.trip.start;
+  if (obj(raw.settings) && isGoogleKey(raw.settings.googleMapsKey)) doc.settings = { googleMapsKey: String(raw.settings.googleMapsKey).trim() };
   const home = doc.trip.currency!;
   if (obj(raw.rates) && isCurrency(raw.rates.base) && obj(raw.rates.rates)) {
     const r: Rates = { base: raw.rates.base, date: str(raw.rates.date), rates: {} };

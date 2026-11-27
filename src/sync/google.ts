@@ -1,13 +1,21 @@
 // Google Maps Platform with your own key: the map with pins, place search ("Find on map") and local-language
-// names ("Get local name"). The key is kept in this browser only (never in the trip, the Gist or the site),
-// and only used when you open the Map or tap a button: nothing runs in the background.
+// names ("Get local name"). The key is saved with the trip (so it syncs through the Gist to your other devices,
+// by your choice); a key saved on a device only still wins on that device. Only used when you open the Map or
+// tap a button: nothing runs in the background.
 import { GOOGLE_LANG, localFromGoogle, type LocalLang } from '../domain/local';
 import type { LocalText } from '../domain/types';
 import type { GeoResult } from './geocode';
 
 const KEY = 'tripPlanner.googleKey';
-export function getGoogleKey(): string { try { return (localStorage.getItem(KEY) || '').trim(); } catch { return ''; } }
-export function setGoogleKey(k: string) { try { if (k.trim()) localStorage.setItem(KEY, k.trim()); else localStorage.removeItem(KEY); } catch { /* ignore */ } }
+/** A key saved on this device only (how it worked before keys synced). */
+export function deviceGoogleKey(): string { try { return (localStorage.getItem(KEY) || '').trim(); } catch { return ''; } }
+export function clearDeviceGoogleKey() { try { localStorage.removeItem(KEY); } catch { /* ignore */ } }
+let tripKey = '';
+/** The key saved with the trip (set by the app whenever the trip changes). */
+export function setTripGoogleKey(k: string | undefined) { tripKey = (k || '').trim(); }
+/** The key in use: this device's own, else the trip's. */
+export const getGoogleKey = () => deviceGoogleKey() || tripKey;
+export const googleKeySource = (): 'device' | 'trip' | '' => (deviceGoogleKey() ? 'device' : tripKey ? 'trip' : '');
 export const hasGoogle = () => !!getGoogleKey();
 
 type W = Window & { gm_authFailure?: () => void; __tpMapsReady?: () => void };

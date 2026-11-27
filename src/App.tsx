@@ -17,6 +17,8 @@ import { StaysPanel, type PanelActions } from './components/panels';
 import { MoveSheet } from './components/MoveSheet';
 import { ItemView } from './components/ItemView';
 import { LocalCardProvider } from './components/LocalCard';
+import { setTripGoogleKey } from './sync/google';
+import { exportJson } from './domain/normalize';
 import { FlightView, StayView, TransportView } from './components/BookingViews';
 import { TransportForm, type LegDraft } from './components/TransportForm';
 import { TravelPage } from './views/Travel';
@@ -119,6 +121,11 @@ export default function App() {
   const [lastDay, setLastDay] = useState<string>('');
 
   const dv = useMemo(() => derive(doc), [doc]);
+  setTripGoogleKey(doc.settings?.googleMapsKey); // read by the map and search buttons below
+  const setGoogleKey = (key: string | undefined) => update((x) => {
+    if (key) x.settings = { ...(x.settings || {}), googleMapsKey: key };
+    else if (x.settings) { delete x.settings.googleMapsKey; if (!Object.keys(x.settings).length) delete x.settings; }
+  });
   const home = doc.trip.currency || 'AUD';
   const costCtx = useMemo(() => ({ home, used: usedCurrencies(doc) }), [home, doc]);
   const [theme, setThemeState] = useState<Theme>(loadTheme);
@@ -527,7 +534,7 @@ export default function App() {
           if (ref.type === 'stay') openStay(ref.stay); else if (ref.type === 'flight') openFlight(ref.flight); else if (ref.type === 'leg') openLeg(ref.leg); else plan.viewItem(ref.item, ref.pi);
         }} />}
         {page === 'inbox' && <InboxPage entries={sync.inbox} doc={doc} actions={inboxActions} syncing={!!sync.gistId} />}
-        {page === 'settings' && <SettingsPage doc={doc} toast={toast} theme={theme} onTheme={setTheme} sync={sync} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
+        {page === 'settings' && <SettingsPage doc={doc} toast={toast} onGoogleKey={setGoogleKey} theme={theme} onTheme={setTheme} sync={sync} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
       </main>
 
       <nav className="bottombar" aria-label="Menu">
@@ -646,7 +653,7 @@ export default function App() {
         return (
           <Modal title="Changed on two devices" onClose={() => undefined}
             footer={<>
-              <button className="btn ghost" onClick={() => { downloadJson(exportName(doc, '-this-device'), JSON.stringify(doc, null, 2)); downloadJson(exportName(r, '-other-device'), JSON.stringify(r, null, 2)); }}>Download both</button>
+              <button className="btn ghost" onClick={() => { downloadJson(exportName(doc, '-this-device'), exportJson(doc)); downloadJson(exportName(r, '-other-device'), exportJson(r)); }}>Download both</button>
               <span className="grow" />
               <button className="btn" onClick={() => sync.resolve('theirs')}>Use the other device’s</button>
               <button className="btn primary" onClick={() => sync.resolve('mine')}>Keep this device’s</button>

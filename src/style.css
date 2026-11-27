@@ -740,3 +740,6 @@ a.btn{text-decoration:none;color:inherit}
 .lcard .lc-close{position:absolute;top:max(8px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));width:48px;height:48px;border-radius:50%;border:2px solid #000;background:#fff;color:#000;font-size:22px;font-weight:700;cursor:pointer;z-index:1}
 .gmapcanvas{position:relative;overflow:hidden}
 .gmapcanvas .map-err{position:absolute;inset:auto 10px 10px 10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px}
+.warn-text{color:var(--warn);font-weight:600}
+.export-key{margin:6px 0;display:flex;flex-wrap:wrap;align-items:center}
+.export-key .warn-text{flex-basis:100%;padding-left:22px}

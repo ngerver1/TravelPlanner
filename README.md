@@ -203,8 +203,11 @@ With a key, the **Map** tab is a real Google map with your pins, **Find on map**
 exact Google place), and **Get local name** asks Google for the place's name and address in Japanese or Chinese.
 Everything else (the embedded maps, Map links, directions) already uses Google and needs no key.
 
-The key stays **in your browser only**: it isn't in the site, the trip, the Gist or exports. Add it once on each
-device. Google only charges above a free monthly allowance; the caps below keep you far under it.
+The key is **saved with the trip**, so it syncs through your Gist and your other devices pick it up (you chose
+this for this key only; the GitHub token is never synced). That means anyone who could read your Gist could copy the
+key, so **only save a key that is website-restricted, API-restricted and capped** (steps 1 and 2 below): restricted
+like that, it only works on your app, only for maps and place search, and only up to your daily limits. Google only
+charges above a free monthly allowance; the caps keep you far under it.
 
 **1. Make the key** (on a computer, about 10 minutes)
 
@@ -227,10 +230,16 @@ device. Google only charges above a free monthly allowance; the caps below keep 
 
 **3. Add it to the app**
 
-1. **⚙ Settings → Google Maps:** paste the key (starts with `AIza`) and tap **Save**. The app reloads.
+1. **⚙ Settings → Google Maps:** paste the key (starts with `AIza`) and tap **Save**. Settings shows
+   **Saved with the trip: …last 4**.
 2. Tap **Test key**: it should say "Works: found Tokyo Station". If Google refuses it, check the website
    restriction and that both APIs are enabled.
-3. Do the same on your phone (and in the home-screen app, which has its own storage).
+3. Your other devices get it at their next sync (open the app, or Settings → Sync now). A key that was saved on
+   a device only, before keys synced, keeps being used on that device; Settings shows it and offers
+   **Save it with the trip**.
+4. **Remove key** clears it from the trip, so it's gone from every device after their next sync.
+5. **Download JSON / Copy JSON** leave the key out. Tick **Include the Google Maps key** if you want it in the
+   file (you'll see a warning): don't share that file.
 
 What uses it: opening the **Map** tab (one map load), **Find on map** (one search per tap) and **Get local
 name** (one request per tap). Nothing runs in the background. Offline, maps show "Map not available offline".

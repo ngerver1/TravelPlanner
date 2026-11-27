@@ -6,7 +6,8 @@ import type { Theme } from '../theme';
 import { Seg } from '../components/ui';
 import { SyncSettings } from './SyncSettings';
 import { loadLandscape, saveLandscape } from '../components/LocalCard';
-import { getGoogleKey, setGoogleKey, testGoogleKey } from '../sync/google';
+import { clearDeviceGoogleKey, deviceGoogleKey, testGoogleKey } from '../sync/google';
+import { exportJson, isGoogleKey } from '../domain/normalize';
 import type { Sync } from '../sync/useSync';
 
 export function downloadJson(filename: string, json: string, type = 'application/json') {
@@ -24,10 +25,13 @@ export function downloadJson(filename: string, json: string, type = 'application
 export const exportName = (doc: TripDoc, suffix = '') =>
   `${(doc.trip.name || 'trip').replace(/[^\w-]+/g, '-').toLowerCase()}${suffix}-${todayStr()}.json`;
 
-export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, onTheme, sync }: {
-  doc: TripDoc; onImport: (d: TripDoc) => void; toast: (m: string) => void; status: string; statusOk: boolean; theme: Theme; onTheme: (t: Theme) => void; sync: Sync;
+export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, onTheme, sync, onGoogleKey }: {
+  doc: TripDoc; onImport: (d: TripDoc) => void; onGoogleKey: (key: string | undefined) => void; toast: (m: string) => void; status: string; statusOk: boolean; theme: Theme; onTheme: (t: Theme) => void; sync: Sync;
 }) {
-  const json = useMemo(() => JSON.stringify(doc, null, 2), [doc]);
+  const hasKey = !!doc.settings?.googleMapsKey;
+  const [withKey, setWithKey] = useState(false);
+  // Exports leave the Google Maps key out unless you tick the box.
+  const json = useMemo(() => exportJson(doc, withKey), [doc, withKey]);
   const [paste, setPaste] = useState('');
   const [pending, setPending] = useState<{ doc: TripDoc; from: FileKind } | null>(null);
   const [err, setErr] = useState('');
@@ -62,7 +66,7 @@ export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, on
         <span><b>Open local card in landscape</b><br /><span className="muted small">With the phone upright, the 文 card is drawn sideways: turn the phone to read it. Your phone’s rotation setting isn’t changed. Saved on this device only.</span></span>
       </label>
       <h4>Google Maps</h4>
-      <GoogleKey />
+      <GoogleKey tripKey={doc.settings?.googleMapsKey || ''} onSave={onGoogleKey} />
       <h4>Sync between devices</h4>
       <SyncSettings sync={sync} doc={doc} />
       {!statusOk && <p className="alert bad small">{status}</p>}
@@ -72,6 +76,12 @@ export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, on
         <button className="btn" onClick={copy}>Copy JSON</button>
         <span className="muted small">{doc.flights.length} flights · {doc.stays.length} stays · {doc.items.length} items ({placed} on a day)</span>
       </div>
+      {hasKey && (
+        <label className="check small export-key">
+          <input type="checkbox" checked={withKey} onChange={(e) => setWithKey(e.target.checked)} /> Include the Google Maps key
+          {withKey && <span className="warn-text">This file will contain your Google Maps key: don’t share it.</span>}
+        </label>
+      )}
       <details className="small"><summary>Show JSON</summary><textarea className="mono" rows={8} readOnly value={json} onFocus={(e) => e.target.select()} /></details>
       <h4>Restore (import)</h4>
       <p className="muted small">Accepts files exported from this app or from the old (v1) trip planner. v1 files are converted automatically.</p>
@@ -97,30 +107,41 @@ export function SettingsPage({ doc, onImport, toast, status, statusOk, theme, on
   );
 }
 
-/** Your own Google Maps key: kept in this browser only (each device needs it once), never synced or published. */
-function GoogleKey() {
-  const saved = getGoogleKey();
+/**
+ * Your Google Maps key, saved with the trip so it syncs through the Gist to your other devices (by your choice;
+ * the GitHub token never syncs). A key saved on a device only still wins on that device.
+ */
+function GoogleKey({ tripKey, onSave }: { tripKey: string; onSave: (key: string | undefined) => void }) {
+  const device = deviceGoogleKey();
   const [key, setKey] = useState('');
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
-  // The Maps script can only load once per page, so a new key takes effect after a reload.
-  const save = (k: string) => { setGoogleKey(k); location.reload(); };
-  if (saved) return (
+  const [askRemove, setAskRemove] = useState(false);
+  const last4 = (k: string) => `…${k.slice(-4)}`;
+  // Remove: from the trip (every device, after sync) and from this device. The Maps script can only load once
+  // per page, so the app reloads to stop using it.
+  const remove = () => { clearDeviceGoogleKey(); onSave(undefined); setTimeout(() => location.reload(), 300); };
+  if (tripKey || device) return (
     <div className="gkey">
-      <p className="small">Using your Google Maps key on this device (…{saved.slice(-4)}): the Map, Find on map and Get local name use Google.</p>
+      {tripKey && <p className="small"><b>Saved with the trip: {last4(tripKey)}</b> <span className="muted">· syncs to your other devices. Used for the Map, Find on map and Get local name.</span></p>}
+      {device && <p className="small"><b>Saved on this device only: {last4(device)}</b> <span className="muted">· {tripKey ? 'this device uses it instead of the trip’s key.' : 'not synced.'}</span>
+        {!tripKey && <> <button className="link" onClick={() => onSave(device)}>Save it with the trip</button></>}</p>}
       <div className="row gap wrap">
         <button className="btn" disabled={busy} onClick={async () => { setBusy(true); setMsg(''); try { setMsg(await testGoogleKey()); } catch (e) { setMsg(e instanceof Error ? e.message : 'Didn’t work'); } finally { setBusy(false); } }}>{busy ? 'Testing…' : 'Test key'}</button>
-        <button className="btn ghost danger" onClick={() => save('')}>Remove key</button>
+        {!askRemove ? <button className="btn ghost danger" onClick={() => setAskRemove(true)}>Remove key</button>
+          : <span className="confirm small">Remove it from the trip on every device{device ? ' and from this device' : ''}? <button className="btn danger" onClick={remove}>Remove</button> <button className="btn ghost" onClick={() => setAskRemove(false)}>Keep</button></span>}
       </div>
       {msg && <p className="small">{msg}</p>}
     </div>
   );
   return (
     <div className="gkey">
-      <p className="muted small">Paste your Google Maps key to use Google for the Map, Find on map and Get local name (OpenStreetMap is used until then). It stays in this browser only: add it once on each device. See the README for how to make a free, capped key.</p>
+      <p className="muted small">Paste your Google Maps key to use Google for the Map, Find on map and Get local name (OpenStreetMap until then).
+        It’s saved with the trip, so your other devices get it after sync. Only use a key that is <b>restricted to this website, restricted to the
+        Maps JavaScript and Places APIs, and capped</b> (see the README).</p>
       <div className="row gap">
         <input className="grow" type="password" autoComplete="off" spellCheck={false} placeholder="AIza…" value={key} onChange={(e) => setKey(e.target.value)} aria-label="Google Maps key" />
-        <button className="btn primary" disabled={!/^AIza[\w-]{20,}$/.test(key.trim())} onClick={() => save(key)}>Save</button>
+        <button className="btn primary" disabled={!isGoogleKey(key)} onClick={() => { onSave(key.trim()); setKey(''); }}>Save</button>
       </div>
     </div>
   );
