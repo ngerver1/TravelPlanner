@@ -97,3 +97,44 @@ describe('links in emails', () => {
     expect(m[0].link).toBe('https://hotel.example/manage/H1');
   });
 });
+
+import { enrichBookings, findCancel, findConf, findPrice, mapsLinkIn } from './inbox';
+describe('rule-based second pass', () => {
+  const hotel = `Your booking is confirmed
+Booking number: 4821.993.120
+PIN code: 7731
+Check-in Tue 26 Jan 2027 from 15:00
+Free cancellation until 23:59 on 24 January 2027
+Total price
+¥ 52,400
+(includes taxes and fees)
+Manage booking: https://secure.booking.example/mybooking.html?bn=4821993120&pincode=7731
+Get directions <https://maps.app.goo.gl/AbC123>`;
+  it('finds the confirmation number, price and cancellation terms', () => {
+    expect(findConf(hotel)).toBe('4821.993.120');
+    expect(findConf('Your booking reference is ABC123. Thanks')).toBe('ABC123');
+    expect(findConf('Airline booking reference (PNR): XKQWTZ')).toBe('XKQWTZ');
+    expect(findConf('Confirmation number: 1234567890')).toBe('1234567890');
+    expect(findConf('Reservation details are below')).toBeUndefined();
+    expect(findPrice(hotel)).toEqual({ amount: 52400, currency: 'JPY' });
+    expect(findPrice('Subtotal HK$900\nTotal amount paid: HK$1,034.50')).toEqual({ amount: 1034.5, currency: 'HKD' });
+    expect(findPrice('Room rate: 3 nights')).toBeUndefined();
+    expect(findCancel(hotel)).toBe('Free cancellation until 23:59 on 24 January 2027');
+    expect(findCancel('This rate is non-refundable.')).toBe('Non-refundable');
+  });
+  it('labels plain-text links by the words before them, manage-booking first, maps kept apart', () => {
+    const links = extractLinks('', hotel);
+    expect(links[0]).toMatchObject({ text: 'Manage booking', url: 'https://secure.booking.example/mybooking.html?bn=4821993120&pincode=7731' });
+    expect(mapsLinkIn(links)).toBe('https://maps.app.goo.gl/AbC123');
+  });
+  it('fills only the gaps', () => {
+    const links = extractLinks('', hotel);
+    const [b] = enrichBookings([{ type: 'stay', name: 'Granbell', checkIn: '2027-01-26' }], hotel, links, 'AUD');
+    expect(b).toMatchObject({ price: { amount: 52400, currency: 'JPY' }, cancelBy: 'Free cancellation until 23:59 on 24 January 2027',
+      link: 'https://secure.booking.example/mybooking.html?bn=4821993120&pincode=7731', mapsUrl: 'https://maps.app.goo.gl/AbC123' });
+    expect(b.conf).toBe('4821.993.120');
+    const [kept] = enrichBookings([{ type: 'stay', name: 'X', checkIn: '2027-01-26', conf: 'MINE', price: { amount: 1, currency: 'AUD' } }], hotel, links);
+    expect(kept.conf).toBe('MINE');
+    expect(kept.price).toEqual({ amount: 1, currency: 'AUD' });
+  });
+});

@@ -246,13 +246,14 @@ export default function App() {
   const patchModal = (b: Booking) => setModal((m) => {
     if (!m) return m;
     const price = b.price ? { priceDraft: fromMoney(b.price, home) } : {};
-    if (m.type === 'flight') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ airline: b.airline, flightNo: b.flightNo, from: b.from, to: b.to, depDate: b.depDate, depTime: b.depTime, arrDate: b.arrDate || b.depDate, arrTime: b.arrTime, conf: b.conf, link: b.link }) } };
-    if (m.type === 'stay') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ name: b.name, address: b.address, checkIn: b.checkIn, checkOut: b.checkOut, checkInTime: b.checkInTime, checkOutTime: b.checkOutTime, conf: b.conf, link: b.link, locationName: m.v.locationName || guessLoc(`${b.city || ''} ${b.address || ''}`) || b.city }) } };
-    if (m.type === 'leg') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ mode: b.mode, operator: b.operator, fromName: b.fromName, toName: b.toName, date: b.date, depTime: b.depTime, arrDate: b.arrDate, arrTime: b.arrTime, conf: b.conf, link: b.link, fromLoc: m.v.fromLoc || guessLoc(b.fromName), toLoc: m.v.toLoc || guessLoc(b.toName) }) } };
+    const withNote = (notes: string) => (b.cancelBy && !notes.includes(b.cancelBy) ? { notes: [notes, b.cancelBy].filter(Boolean).join('\n') } : {});
+    if (m.type === 'flight') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ airline: b.airline, flightNo: b.flightNo, from: b.from, to: b.to, depDate: b.depDate, depTime: b.depTime, arrDate: b.arrDate || b.depDate, arrTime: b.arrTime, conf: b.conf, link: b.link }), ...withNote(m.v.notes) } };
+    if (m.type === 'stay') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ name: b.name, address: b.address, checkIn: b.checkIn, checkOut: b.checkOut, checkInTime: b.checkInTime, checkOutTime: b.checkOutTime, conf: b.conf, link: b.link, mapsUrl: b.mapsUrl, locationName: m.v.locationName || guessLoc(`${b.city || ''} ${b.address || ''}`) || b.city }), ...withNote(m.v.notes) } };
+    if (m.type === 'leg') return { ...m, v: { ...m.v, status: 'booked', ...price, ...defined({ mode: b.mode, operator: b.operator, fromName: b.fromName, toName: b.toName, date: b.date, depTime: b.depTime, arrDate: b.arrDate, arrTime: b.arrTime, conf: b.conf, link: b.link, fromLoc: m.v.fromLoc || guessLoc(b.fromName), toLoc: m.v.toLoc || guessLoc(b.toName) }), ...withNote(m.v.notes) } };
     if (m.type === 'item') {
-      const ref = [b.conf && `Ref ${b.conf}`, b.partySize && `${b.partySize} people`].filter(Boolean).join(' · ');
+      const ref = [b.conf && `Ref ${b.conf}`, b.partySize && `${b.partySize} people`, b.cancelBy].filter(Boolean).join(' · ');
       const loc = m.v.locationName || guessLoc(`${b.city || ''} ${b.address || ''}`) || b.city || (b.date ? dv.info[b.date]?.endLoc?.name : '') || '';
-      return { ...m, v: { ...m.v, status: 'booked', ...defined({ title: m.v.title || b.name, placeAddress: b.address, date: b.date, time: b.time, locationName: loc, link: b.link }),
+      return { ...m, v: { ...m.v, status: 'booked', ...defined({ title: m.v.title || b.name, placeAddress: b.address, date: b.date, time: b.time, locationName: loc, link: b.link, mapsUrl: b.mapsUrl }),
         ...(b.time ? { meal: mealFromTime(b.time) } : {}), ...(b.price ? { price: fromMoney(b.price, home) } : {}),
         ...(ref ? (m.v.kind === 'restaurant' ? { booking: [m.v.booking, ref].filter(Boolean).join(' · ') } : { notes: [m.v.notes, ref].filter(Boolean).join('\n') }) : {}) } };
     }

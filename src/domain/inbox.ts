@@ -2,6 +2,7 @@
 // trip's Gist; the app shows them for review (Add / Update existing / Dismiss). Nothing goes straight in.
 import type { Money, TripDoc } from './types';
 import { looseDate, looseTime, type DateContext } from './looseDates';
+import { parseCost } from './money';
 
 export type BookingType = 'flight' | 'stay' | 'transport' | 'restaurant' | 'activity';
 
@@ -22,6 +23,10 @@ export interface Booking {
   notes?: string;
   /** Web link to view or manage the booking. */
   link?: string;
+  /** Google Maps link to the place (from the email). */
+  mapsUrl?: string;
+  /** Cancellation terms, e.g. "Free cancellation until 24 Jan 2027 18:00" or "Non-refundable". */
+  cancelBy?: string;
 }
 
 export interface EmailLink { text: string; url: string }
@@ -43,6 +48,8 @@ export interface InboxEntry {
 // ---------- links in an email ----------
 const SKIP = /unsubscribe|privacy|preferences|terms|cookie|facebook|twitter|x\.com|instagram|youtube|linkedin|tiktok|pinterest|app ?store|google ?play|apps\.apple|play\.google|mailto:|tel:|survey|feedback|newsletter|help ?cent|contact ?us|\.(png|jpe?g|gif)(\?|$)/i;
 const GOOD = /manage|my ?booking|my ?trip|view (your )?(booking|reservation|itinerary|trip|order|ticket)|itinerary|reservation|booking|e-?ticket|ticket|voucher|check-?in|confirm|order|details|receipt|boarding/i;
+const MANAGE = /manage|view (your )?(booking|reservation)|my ?booking|change|cancel (your )?(booking|reservation)/i;
+export const MAPS = /(^https?:\/\/(www\.)?google\.[a-z.]+\/maps)|maps\.google\.|goo\.gl\/maps|maps\.app\.goo\.gl/i;
 const decode = (t: string) => t.replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"');
 
 /** Links in an email's HTML (or text), most useful first: booking/itinerary links rank above everything else. */
@@ -55,16 +62,77 @@ export function extractLinks(html: string, text = ''): EmailLink[] {
     label = decode(label.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
     if (SKIP.test(url) || SKIP.test(label)) return;
     seen.add(url);
-    found.push({ url, text: label.slice(0, 80), score: (GOOD.test(label) ? 2 : 0) + (GOOD.test(url) ? 1 : 0), i: found.length });
+    found.push({ url, text: label.slice(0, 80), score: (MANAGE.test(label) ? 3 : 0) + (GOOD.test(label) ? 2 : 0) + (GOOD.test(url) ? 1 : 0) - (MAPS.test(url) ? 3 : 0), i: found.length });
   };
   const re = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(html))) add(m[1], m[2]);
-  for (const u of text.match(/https?:\/\/[^\s<>"')\]]+/g) || []) add(u, '');
+  // Plain text: "Manage booking: https://…" or "Manage booking <https://…>": use the words before the link as its label.
+  for (const m2 of text.matchAll(/([^\n<>]{0,60}?)[\s:(<-]*<?(https?:\/\/[^\s<>"')\]]+)/g)) add(m2[2], m2[1].replace(/[:\-–(]+\s*$/, ''));
   return found.sort((a, b) => b.score - a.score || a.i - b.i).map(({ url, text }) => ({ url, text: text || new URL(url).hostname.replace(/^www\./, '') }));
 }
 /** The single best link for a booking: the top-ranked one if it looks like a booking link. */
-export const bestLink = (links: EmailLink[]): string | undefined => (links[0] && (GOOD.test(links[0].text) || GOOD.test(links[0].url)) ? links[0].url : undefined);
+export const bestLink = (links: EmailLink[]): string | undefined => {
+  const l = links.find((x) => !MAPS.test(x.url));
+  return l && (GOOD.test(l.text) || GOOD.test(l.url)) ? l.url : undefined;
+};
+export const mapsLinkIn = (links: EmailLink[]): string | undefined => links.find((l) => MAPS.test(l.url))?.url;
+
+// ---------- details found by rules in the email text (a second pass after markup or the AI) ----------
+const CONF_RE = /\b(?:confirmation|booking|reservation|order|itinerary|trip|record locator|pnr|reference|ref)(?:\s*(?:number|no\.?|num|code|id|ref(?:erence)?|locator|#))?[\s:#()\-–]*(?:is\s+)?([A-Z0-9][A-Z0-9.\-]{3,19}[A-Z0-9])\b/gi;
+/** A booking reference next to a label like "Confirmation number:", "Booking reference", "PNR". */
+export function findConf(text: string): string | undefined {
+  for (const m of text.matchAll(CONF_RE)) {
+    const v = m[1];
+    const isCode = /\d/.test(v) || (v === v.toUpperCase() && /^[A-Z]{5,8}$/.test(v));
+    if (isCode && !/^(number|reference|confirmed|details|summary)$/i.test(v)) return v.toUpperCase();
+  }
+  return undefined;
+}
+const HAS_CURRENCY = /\b(AUD|HKD|JPY|USD|EUR|GBP|NZD|SGD|CNY|KRW|TWD|THB|MYR|CAD|CHF)\b|HK\$|A\$|AU\$|US\$|NZ\$|S\$|NT\$|[¥￥€£₩฿]|円/i;
+/** The total paid: from a line like "Total price: ¥42,000" (prefers "total"; needs an explicit currency). */
+export function findPrice(text: string, home = 'AUD'): Money | undefined {
+  const lines = text.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  const score = (l: string) => (/grand total|total (price|amount|cost|paid|charged)|amount (paid|charged)|total/i.test(l) ? 2 : /price|paid|charged|amount|cost/i.test(l) ? 1 : 0);
+  const cands = lines.flatMap((l, i) => {
+    const sc = score(l);
+    if (!sc) return [];
+    const withNext = HAS_CURRENCY.test(l) ? l : HAS_CURRENCY.test(lines[i + 1] || '') ? `${l} ${lines[i + 1]}` : '';
+    if (!withNext) return [];
+    const m = parseCost(withNext.replace(/(\d)[\s ](?=\d{3}\b)/g, '$1'), home);
+    return m && m.amount > 0 ? [{ m, sc, i }] : [];
+  });
+  cands.sort((a, b) => b.sc - a.sc || b.i - a.i); // highest-ranked; last "total" line wins ties
+  if (!cands[0]) return undefined;
+  const { perPerson: _pp, ...m } = cands[0].m;
+  return m;
+}
+/** Cancellation terms: "Free cancellation until …", "Cancel by …", "Non-refundable". */
+export function findCancel(text: string): string | undefined {
+  for (const line of text.split(/\n/)) {
+    const l = line.replace(/\s+/g, ' ').trim();
+    const m = l.match(/(free cancell?ation[^.;\n]{0,90}|cancel(?:lation)? (?:for free )?(?:by|before|until|up to)[^.;\n]{0,80}|cancell?ation deadline[^.;\n]{0,80}|non-?refundable)/i);
+    if (m) return m[1].replace(/\s+/g, ' ').trim().replace(/^./, (c) => c.toUpperCase()).slice(0, 140);
+  }
+  return undefined;
+}
+
+/**
+ * Fill gaps in what was read, from rules over the email text and its links. Shared details (reference,
+ * cancellation, maps) go on every booking; the total price only on the first booking.
+ */
+export function enrichBookings(bookings: Booking[], text: string, links: EmailLink[], home = 'AUD'): Booking[] {
+  const conf = findConf(text), price = findPrice(text, home), cancel = findCancel(text);
+  const link = bestLink(links), maps = mapsLinkIn(links);
+  return bookings.map((b, i) => ({
+    ...b,
+    ...(!b.conf && conf ? { conf } : {}),
+    ...(!b.price && price && i === 0 ? { price } : {}),
+    ...(!b.link && link ? { link } : {}),
+    ...(!b.mapsUrl && maps && (b.type === 'stay' || b.type === 'restaurant' || b.type === 'activity') ? { mapsUrl: maps } : {}),
+    ...(!b.cancelBy && cancel ? { cancelBy: cancel } : {}),
+  }));
+}
 
 // ---------- reading schema.org booking markup (JSON-LD) ----------
 type J = Record<string, unknown>;
@@ -165,7 +233,8 @@ export function normalizeBookings(raw: unknown, ctx: DateContext = {}, links: Em
     const type = s(r.type).toLowerCase() as BookingType;
     if (!TYPES.includes(type)) continue;
     const b: Booking = { type };
-    for (const k of ['conf', 'airline', 'flightNo', 'name', 'address', 'city', 'operator', 'fromName', 'toName', 'notes'] as const) if (s(r[k])) (b as unknown as J)[k] = s(r[k]);
+    for (const k of ['conf', 'airline', 'flightNo', 'name', 'address', 'city', 'operator', 'fromName', 'toName', 'notes', 'cancelBy'] as const) if (s(r[k])) (b as unknown as J)[k] = s(r[k]);
+    if (/^https?:\/\//.test(s(r.mapsUrl))) b.mapsUrl = s(r.mapsUrl);
     for (const k of ['from', 'to'] as const) if (/^[A-Za-z]{3}$/.test(s(r[k]))) b[k] = s(r[k]).toUpperCase();
     for (const k of ['depDate', 'arrDate', 'checkIn', 'checkOut', 'date'] as const) { const d = looseDate(r[k], ctx); if (d) b[k] = d; }
     for (const k of ['depTime', 'arrTime', 'checkInTime', 'checkOutTime', 'time'] as const) { const t = looseTime(r[k]); if (t) b[k] = t; }
@@ -180,7 +249,7 @@ export function normalizeBookings(raw: unknown, ctx: DateContext = {}, links: Em
     const li = Number(r.linkIndex);
     const link = /^https?:\/\//.test(s(r.link)) ? s(r.link) : li >= 1 && links[li - 1] ? links[li - 1].url : '';
     if (link) b.link = link;
-    const meaningful = Object.keys(b).filter((k) => k !== 'type' && k !== 'link').length >= 2;
+    const meaningful = Object.keys(b).filter((k) => !['type', 'link', 'mapsUrl', 'cancelBy'].includes(k)).length >= 2;
     if (meaningful) out.push(b);
   }
   return out;

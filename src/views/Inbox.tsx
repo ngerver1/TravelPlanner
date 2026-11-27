@@ -69,7 +69,11 @@ function Entry({ e, doc, actions }: { e: InboxEntry; doc: TripDoc; actions: Inbo
             <div className="grow">
               <b>{bookingTitle(b)}</b>
               {details(b).map((l, j) => <div key={j} className="small muted">{l}</div>)}
-              {b.link && <div className="small"><a href={b.link} target="_blank" rel="noreferrer">{hostOf(b.link)} ↗</a></div>}
+              {b.cancelBy && <div className="small muted">{b.cancelBy}</div>}
+              {(b.link || b.mapsUrl) && <div className="small row gap">
+                {b.link && <a href={b.link} target="_blank" rel="noreferrer">{hostOf(b.link)} ↗</a>}
+                {b.mapsUrl && <a href={b.mapsUrl} target="_blank" rel="noreferrer">Google Maps ↗</a>}
+              </div>}
               {m && <div className="small ie-match">Matches <b>{m.label}</b> already in your trip</div>}
             </div>
             <div className="ie-actions">

@@ -74,6 +74,18 @@ describe('email worker', () => {
     expect(entry.links).toEqual([{ text: 'View your tickets', url: 'https://tl.example/t/9' }]);
   });
 
+  it('fills in reference, price, manage link, maps link and cancellation the AI missed', async () => {
+    const body = ['Your booking is confirmed', 'Booking number: 4821.993.120', 'Shinjuku Granbell Hotel, Tue 26 Jan - Thu 28 Jan 2027',
+      'Free cancellation until 23:59 on 24 January 2027', 'Total price', '¥ 52,400',
+      'Manage booking: https://secure.booking.example/mybooking.html?bn=4821993120', 'Get directions <https://maps.app.goo.gl/AbC123>'].join('\n');
+    await worker.email(msg(ME, 'Fwd: Booking confirmed', body).m, env(() => ({ response: { bookings: [{ type: 'stay', name: 'Shinjuku Granbell Hotel', checkIn: 'Tue 26 Jan', checkOut: 'Thu 28 Jan' }] } })));
+    expect(inbox()[0].bookings[0]).toEqual({
+      type: 'stay', name: 'Shinjuku Granbell Hotel', checkIn: '2027-01-26', checkOut: '2027-01-28', conf: '4821.993.120',
+      price: { amount: 52400, currency: 'JPY' }, link: 'https://secure.booking.example/mybooking.html?bn=4821993120',
+      mapsUrl: 'https://maps.app.goo.gl/AbC123', cancelBy: 'Free cancellation until 23:59 on 24 January 2027',
+    });
+  });
+
   it('keeps the email text for hand entry when nothing can be read (e.g. AI quota used up)', async () => {
     await worker.email(msg(ME, 'Ski school', 'Lesson Tuesday 9am, ref SK-1').m, env());
     const [entry] = inbox();
