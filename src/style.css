@@ -689,3 +689,9 @@ a.btn{text-decoration:none;color:inherit}
 .ie-text pre{white-space:pre-wrap;font:12.5px/1.45 ui-monospace,Menlo,monospace;background:var(--soft);border-radius:8px;padding:8px;max-height:320px;overflow:auto;margin:6px 0}
 .ie-links{display:flex;flex-wrap:wrap;gap:4px 12px;border-top:1px solid var(--line);padding:8px 0}
 .ie-links a{color:var(--accent)}
+
+/* offline / installable app */
+.map-offline{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;background:var(--soft);border:1px dashed var(--line2);border-radius:12px;min-height:120px}
+.update-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(124px + env(safe-area-inset-bottom));z-index:61;display:flex;align-items:center;gap:4px;background:var(--toast);color:var(--toast-fg);border-radius:12px;padding:4px 4px 4px 6px;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:calc(100% - 24px);width:max-content}
+.update-go{border:0;background:none;color:inherit;font:inherit;font-weight:650;padding:8px 10px;cursor:pointer;min-height:40px;white-space:nowrap}
+.update-bar .icon{color:inherit;opacity:.8}

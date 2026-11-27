@@ -5,6 +5,7 @@ import { dayRouteQueries, mapPoints, type MapFilter, type MapPoint } from '../do
 import { GoogleMap } from '../components/GoogleMap';
 import type { TripDoc } from '../domain/types';
 import type { Pin } from '../components/MapCanvas';
+import { useOnline } from '../pwa';
 
 const MapCanvas = lazy(() => import('../components/MapCanvas'));
 
@@ -17,6 +18,8 @@ export function toPins(points: MapPoint[], dv: Derived, onOpen: (p: MapPoint) =>
 }
 
 export function Lazy({ children }: { children: React.ReactNode }) {
+  const online = useOnline();
+  if (!online) return <div className="mapcanvas map-offline">Map not available offline</div>;
   return <Suspense fallback={<div className="mapcanvas loading">Loading map…</div>}>{children}</Suspense>;
 }
 

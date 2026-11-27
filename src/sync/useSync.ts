@@ -12,6 +12,7 @@ export type SyncStatus = 'local' | 'saved' | 'saving' | 'offline' | 'conflict' |
 
 const TOKEN = 'tripPlanner.gh.token';
 const META = 'tripPlanner.gh.sync';
+const INBOX_KEY = 'tripPlanner.gh.inbox';
 interface Meta { gistId: string | null; etag: string | null; remoteRev: number | null; syncedAt: number | null; login?: string }
 const EMPTY: Meta = { gistId: null, etag: null, remoteRev: null, syncedAt: null };
 
@@ -29,7 +30,13 @@ export function useSync({ doc, load, setRev }: { doc: TripDoc; load: (d: TripDoc
   const [message, setMessage] = useState('');
   const [conflict, setConflict] = useState<{ remote: TripDoc } | null>(null);
   /** Bookings from forwarded emails, waiting for review (inbox.json in the Gist). */
-  const [inbox, setInbox] = useState<InboxEntry[]>([]);
+  // Kept on the device too, so it's there when the app is opened offline.
+  const [inbox, setInboxState] = useState<InboxEntry[]>(() => ls.get<InboxEntry[]>(INBOX_KEY, []));
+  const setInbox = useCallback((v: InboxEntry[] | ((cur: InboxEntry[]) => InboxEntry[])) => setInboxState((cur) => {
+    const next = typeof v === 'function' ? v(cur) : v;
+    ls.set(INBOX_KEY, next.length ? next : null);
+    return next;
+  }), []);
 
   const docRef = useRef(doc); docRef.current = doc;
   const metaRef = useRef(meta); metaRef.current = meta;
@@ -119,10 +126,12 @@ export function useSync({ doc, load, setRev }: { doc: TripDoc; load: (d: TripDoc
     if (!token || !meta.gistId) { setStatus('local'); return; }
     sync();
     const onFocus = () => { if (document.visibilityState === 'visible') sync(); };
+    const onOffline = () => setStatus((s) => (s === 'conflict' || s === 'auth' ? s : 'offline'));
     window.addEventListener('focus', onFocus);
     window.addEventListener('online', onFocus);
+    window.addEventListener('offline', onOffline);
     document.addEventListener('visibilitychange', onFocus);
-    return () => { window.removeEventListener('focus', onFocus); window.removeEventListener('online', onFocus); document.removeEventListener('visibilitychange', onFocus); };
+    return () => { window.removeEventListener('focus', onFocus); window.removeEventListener('online', onFocus); window.removeEventListener('offline', onOffline); document.removeEventListener('visibilitychange', onFocus); };
   }, [token, meta.gistId, sync]);
 
   // ---------- conflict ----------

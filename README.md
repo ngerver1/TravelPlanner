@@ -16,6 +16,7 @@ Live site, once set up: `https://ngerver1.github.io/TravelPlanner/`
 | 4a | Google Maps links: Map link on everything, paste-a-link places, directions for each day | **Done** (no key needed) |
 | 4b | In-app maps and place search (needs a Google Cloud key) | When you have a key |
 | 5 | Train/bus legs, travel times, flight number lookup | Later |
+| 6 | Works offline, installable on your phone's home screen | **Done** |
 
 ## One-time setup: turn on GitHub Pages
 
@@ -211,6 +212,44 @@ What the conversion does:
 - Each item belongs to the place you were on that day. Items with no day, or on a day
   with no location, go under **Unassigned**.
 - Flights, stays, statuses, notes, links and confirmation numbers come across unchanged.
+
+## Install on your phone and use it offline
+
+Once installed, the app opens from your home screen like a normal app and shows your whole trip
+with no internet: days, bookings, confirmation numbers, notes, costs and inbox items you have
+already loaded. Open it once online first so it can save itself on the phone.
+
+### Android (Chrome)
+
+1. Open `https://ngerver1.github.io/TravelPlanner/` in Chrome.
+2. Tap **⋮** (top right) → **Install app** (on some phones it says **Add to Home screen**).
+3. Tap **Install**. A **Trips** icon (white paper plane on blue) appears on your home screen.
+
+### iPhone (Safari)
+
+1. Open `https://ngerver1.github.io/TravelPlanner/` in **Safari** (it has to be Safari).
+2. Tap the **Share** button (square with an arrow) → **Add to Home Screen**.
+3. Tap **Add**. Open it from the **Trips** icon from then on: the home-screen app keeps its own
+   copy of your trip, separate from the Safari tab, so connect sync in it too
+   (⚙ Settings → paste your token).
+
+### Check it works offline
+
+1. Open the app from the home screen while online and wait for the sync chip to say **Saved**.
+2. Turn on aeroplane mode, close the app fully, then open it again from the home screen.
+3. Your trip should appear, with the sync chip showing **Offline · changes kept on this device**.
+4. Make a small edit, then turn aeroplane mode off. Within a few seconds the chip changes to
+   **Saved**: your edit has gone to the Gist.
+
+### Good to know
+
+- **Needs internet:** maps (they show "Map not available offline"), Find on map, exchange-rate
+  updates and new emails arriving in the Inbox. Everything else works offline.
+- **Edits made offline** stay on the phone and sync as soon as you're back online. If you also
+  edited on another device in the meantime, you'll get the usual conflict choice.
+- **Updates:** when a new version is published, a bar says **Update available, tap to refresh**.
+  Tap it to switch over, or ✕ to keep going and update later.
+- Nothing extra is stored anywhere: the offline copy is the app's own files, kept by the browser.
 
 ## Backups
 

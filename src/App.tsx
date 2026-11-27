@@ -20,6 +20,7 @@ import { FlightView, StayView, TransportView } from './components/BookingViews';
 import { TransportForm, type LegDraft } from './components/TransportForm';
 import { TravelPage } from './views/Travel';
 import { MapView } from './views/MapView';
+import { useAppUpdate } from './pwa';
 import type { MapPoint } from './domain/geo';
 import { TripSettings } from './components/TripSettings';
 import { SyncChip } from './components/SyncChip';
@@ -98,6 +99,7 @@ const PLAN_VIEWS: [PlanView, string][] = [['calendar', 'Calendar'], ['overview',
 export default function App() {
   const { doc, update, replace, undo, load, setRev, storageOk } = useTripStore();
   const sync = useSync({ doc, load, setRev });
+  const appUpdate = useAppUpdate();
   const [bannerHidden, setBannerHidden] = useState(() => { try { return localStorage.getItem('tripPlanner.syncBannerHidden') === '1'; } catch { return false; } });
   const [route, go] = useRoute();
   const [modal, setModal] = useState<ModalState>(null);
@@ -643,6 +645,12 @@ export default function App() {
           </Modal>
         );
       })()}
+      {appUpdate.updateAvailable && (
+        <div className="update-bar" role="status">
+          <button className="update-go" onClick={appUpdate.update}>Update available, tap to refresh</button>
+          <button className="icon sm" aria-label="Later" onClick={appUpdate.dismiss}>✕</button>
+        </div>
+      )}
       {toastMsg && (
         <div className="toast" role="status">
           {toastMsg.msg}
