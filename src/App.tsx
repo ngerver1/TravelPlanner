@@ -18,6 +18,7 @@ import { MoveSheet } from './components/MoveSheet';
 import { ItemView } from './components/ItemView';
 import { LocalCardProvider } from './components/LocalCard';
 import { setTripGoogleKey } from './sync/google';
+import { IconCosts, IconLocations, IconPlan, IconSettings, IconStays, IconTravel } from './components/NavIcons';
 import { exportJson } from './domain/normalize';
 import { FlightView, StayView, TransportView } from './components/BookingViews';
 import { TransportForm, type LegDraft } from './components/TransportForm';
@@ -538,14 +539,14 @@ export default function App() {
       </main>
 
       <nav className="bottombar" aria-label="Menu">
-        <button className={page === 'plan' ? 'on' : ''} onClick={() => goPlan(lastPlan)}><span className="bi">🗓</span><span>Plan</span></button>
-        <button className={page === 'locations' || page === 'location' ? 'on' : ''} onClick={() => navTo({ page: 'locations' })}><span className="bi">📍</span><span>Locations</span></button>
+        <button className={page === 'plan' ? 'on' : ''} onClick={() => goPlan(lastPlan)}><span className="bi"><IconPlan /></span><span>Plan</span></button>
+        <button className={page === 'locations' || page === 'location' ? 'on' : ''} onClick={() => navTo({ page: 'locations' })}><span className="bi"><IconLocations /></span><span>Locations</span></button>
         <button className={page === 'stays' ? 'on' : ''} onClick={() => navTo({ page: 'stays' })}>
-          <span className="bi">🛏{dv.stats.none ? <em className="badge bad">{dv.stats.none}</em> : null}</span><span>Stays</span>
+          <span className="bi"><IconStays />{dv.stats.none ? <em className="badge bad">{dv.stats.none}</em> : null}</span><span>Stays</span>
         </button>
-        <button className={page === 'flights' ? 'on' : ''} onClick={() => navTo({ page: 'flights' })}><span className="bi">✈{dv.stats.noTransport ? <em className="badge bad">{dv.stats.noTransport}</em> : null}</span><span>Travel</span></button>
-        <button className={page === 'costs' ? 'on' : ''} onClick={() => navTo({ page: 'costs' })}><span className="bi">💰</span><span>Costs</span></button>
-        <button className={page === 'settings' ? 'on' : ''} onClick={() => navTo({ page: 'settings' })}><span className="bi">⚙</span><span>Settings</span></button>
+        <button className={page === 'flights' ? 'on' : ''} onClick={() => navTo({ page: 'flights' })}><span className="bi"><IconTravel />{dv.stats.noTransport ? <em className="badge bad">{dv.stats.noTransport}</em> : null}</span><span>Travel</span></button>
+        <button className={page === 'costs' ? 'on' : ''} onClick={() => navTo({ page: 'costs' })}><span className="bi"><IconCosts /></span><span>Costs</span></button>
+        <button className={page === 'settings' ? 'on' : ''} onClick={() => navTo({ page: 'settings' })}><span className="bi"><IconSettings /></span><span>Settings</span></button>
       </nav>
 
       {modal?.type === 'flight' && <FlightForm initial={modal.v} onClose={close} onSave={saveFlight} onDelete={() => delEntity('flights', modal.v.id)} />}

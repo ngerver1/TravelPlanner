@@ -341,8 +341,9 @@ ul.uncov li{display:flex;justify-content:space-between;align-items:center;paddin
 main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .bottombar{position:fixed;left:0;right:0;bottom:0;z-index:35;display:grid;grid-template-columns:repeat(6,1fr);background:var(--glass);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 .bottombar button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:56px;cursor:pointer;color:var(--muted);font-size:11.5px;font-weight:600}
-.bottombar button .bi{font-size:19px;line-height:1.1;position:relative}
-.bottombar button .badge{position:absolute;top:-4px;right:-16px;font-size:10px;padding:0 5px;margin:0}
+.bottombar button .bi{line-height:0;position:relative;display:inline-flex;height:24px;align-items:center}
+.bottombar button.on .bi svg{stroke-width:2.2}
+.bottombar button .badge{position:absolute;top:-5px;right:-13px;font-size:10px;line-height:16px;height:16px;min-width:16px;box-sizing:border-box;text-align:center;border-radius:8px;padding:0 4px;margin:0;font-style:normal}
 .bottombar button.on{color:var(--accent)}
 .bottombar button:disabled{opacity:.4;cursor:default}
 .panel{bottom:calc(57px + env(safe-area-inset-bottom))}
@@ -512,7 +513,6 @@ main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 @media (max-width:700px){
   .lp-pools{grid-template-columns:minmax(0,1fr)}
   .bottombar button{font-size:10.5px}
-  .bottombar button .bi{font-size:18px}
   .lp-name{font-size:19px}
   .dv-stay{margin-left:0}
 }
