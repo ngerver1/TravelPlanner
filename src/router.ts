@@ -11,7 +11,8 @@ export type Route =
   | { page: 'flights' }
   | { page: 'settings' }
   | { page: 'costs' }
-  | { page: 'inbox' };
+  | { page: 'inbox' }
+  | { page: 'today'; which?: 'tomorrow' };
 
 export function parseRoute(hash: string): Route {
   const [head, arg] = hash.replace(/^#\/?/, '').split('/');
@@ -26,6 +27,7 @@ export function parseRoute(hash: string): Route {
     case 'settings': return { page: 'settings' };
     case 'costs': case 'budget': return { page: 'costs' };
     case 'inbox': return { page: 'inbox' };
+    case 'today': return arg === 'tomorrow' ? { page: 'today', which: 'tomorrow' } : { page: 'today' };
     default: return { page: 'plan', view: 'calendar' };
   }
 }
@@ -34,6 +36,7 @@ export function routeHash(r: Route): string {
   switch (r.page) {
     case 'plan': return r.view === 'day' ? `#day${r.date ? '/' + r.date : ''}` : `#${r.view}`;
     case 'location': return `#location/${encodeURIComponent(r.id)}`;
+    case 'today': return r.which ? '#today/tomorrow' : '#today';
     default: return `#${r.page}`;
   }
 }

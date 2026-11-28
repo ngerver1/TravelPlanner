@@ -35,19 +35,34 @@ You only do this once.
 
 The bar at the bottom has five sections:
 
-- **Plan**: your days, at three zoom levels (switch at the top):
+- **Today**: the day you're on, in time order, with a **Today | Tomorrow** switch (check tomorrow at the
+  end of the day). It shows:
+  - **the plan**: flights, transport, check-in/out and your plans by time. Plans without a time sit at their
+    part of the day's usual time, marked `~`. Earlier items fade, and a **Now** line shows where you are.
+  - **Tonight**: the hotel with check-in/out, phone, confirmation (tap Copy) and **文 Take me to my hotel**;
+    or NO STAY with an Add button.
+  - **Heads up**: anything unsorted today or tomorrow (no stay, no transport, not booked yet), and what
+    tomorrow starts with.
+
+  Before the trip it counts down, lists what's **still to book**, and shows day 1. Afterwards it sums the
+  trip up. Everything comes from the trip's saved data, so it works offline. During the trip dates the app
+  opens on Today; otherwise it reopens where you left off.
+- **Plan**: your days, at different zoom levels (switch at the top):
   - **Calendar**: the whole trip at a glance: stays as coloured bars, flights, and red bars for nights with no stay.
   - **Overview**: one card per day with its location, flights, stay, and little markers for
     morning / afternoon / evening and breakfast / lunch / dinner.
   - **Day**: one day in detail. Tap any day elsewhere to open it here.
-- **Locations**: the places on the trip. Open one to see its dates, assign it to days, add a stay,
+  - **Map**: everything with a map position.
+- **Bookings**: **Stays**, **Travel** (flights and other transport together) and **Costs**, as tabs. The red
+  number counts nights with no stay plus moves with no transport.
+- **Places**: the places on the trip. Open one to see its dates, assign it to days, add a stay,
   and collect **things to do** and **places to eat**.
-- **Stays** and **Travel**: your bookings. Travel has flights and other transport (train, bus, ferry, car, transfer) together.
-- **Settings**: backup and restore (and, later, syncing and map keys).
+- **More**: settings (sync, Google Maps key, backup and restore, appearance, app version), and the **Inbox**
+  of booking emails when there's something to review.
 
 ### Planning a day
 
-In **Day** view, the ideas for that day's location sit beside the day (on a phone, tap **💡 Ideas**).
+In **Day** view, the ideas for that day's location sit beside the day (on a phone, tap **Ideas**).
 
 - **Drag** an idea onto Morning, Afternoon or Evening (things to do) or Breakfast, Lunch or Dinner (places to eat).
   On a phone, press and hold for a moment, then drag.
@@ -80,7 +95,7 @@ Each device keeps its own copy too, so the app works offline and catches up when
 
 ### 2. Connect each device
 
-1. Open the app → **⚙ Settings → Sync between devices**.
+1. Open the app → **More → Settings → Sync between devices**.
 2. Paste the token and tap **Connect**.
 3. First device: tap **Create a new secret Gist with this trip**.
    Other devices: tap the trip in the list ("Trips already in your Gists").
@@ -156,7 +171,7 @@ lives in the same Gist.
 
 - **Prices:** stays, flights, things to do and places to eat each have an optional **amount and currency**
   (in their editors). Flights, things to do and food can be **per person**; stays are for the whole stay.
-- **💰 Costs** (bottom bar) shows:
+- **Bookings → Costs** shows:
   - the **trip total** in your home currency, split into booked / planned / idea;
   - totals **by type** (stays, flights, transport, things to do, food) and **by location**;
   - every costed thing, with its original price;
@@ -230,7 +245,7 @@ charges above a free monthly allowance; the caps keep you far under it.
 
 **3. Add it to the app**
 
-1. **⚙ Settings → Google Maps:** paste the key (starts with `AIza`) and tap **Save**. Settings shows
+1. **More → Settings → Google Maps:** paste the key (starts with `AIza`) and tap **Save**. Settings shows
    **Saved with the trip: …last 4**.
 2. Tap **Test key**: it should say "Works: found Tokyo Station". If Google refuses it, check the website
    restriction and that both APIs are enabled.
@@ -247,7 +262,7 @@ name** (one request per tap). Nothing runs in the background. Offline, maps show
 ## Moving your trip over from v1
 
 1. In the old (v1) planner, click **⇅ Backup → Export JSON** and save the file.
-2. In v2, open **⚙ Settings → Choose JSON file…** and pick that file.
+2. In v2, open **More → Settings → Choose JSON file…** and pick that file.
 3. Check the summary ("Old v1 file, will be converted…") and click **Replace trip**.
 
 What the conversion does:
@@ -287,7 +302,7 @@ if there's a phone number. Black on white, even in dark mode, and it keeps the s
   **文 Take me to my hotel** at the top of each day.
 - It's drawn in landscape: with the phone upright, the card appears sideways, so turn the phone to the left to
   read it. The phone's own rotation setting is never changed, and nothing goes full screen. If the phone is already
-  sideways, the card is drawn normally. Turn this off in **⚙ Settings → Open local card in landscape**.
+  sideways, the card is drawn normally. Turn this off in **More → Settings → Open local card in landscape**.
 - Close it with **✕**, by swiping down, or with the phone's Back button.
 - It works offline: it only uses what's saved in your trip.
 
@@ -309,7 +324,7 @@ already loaded. Open it once online first so it can save itself on the phone.
 2. Tap the **Share** button (square with an arrow) → **Add to Home Screen**.
 3. Tap **Add**. Open it from the **Trip Planner** icon from then on: the home-screen app keeps its own
    copy of your trip, separate from the Safari tab, so connect sync in it too
-   (⚙ Settings → paste your token).
+   (More → Settings → paste your token).
 
 ### Check it works offline
 
@@ -331,7 +346,7 @@ already loaded. Open it once online first so it can save itself on the phone.
 
 ## Backups
 
-**⚙ Settings → Download JSON** saves the whole trip as one file. Do this before big
+**More → Settings → Download JSON** saves the whole trip as one file. Do this before big
 changes, or every so often while you're travelling. Importing a file always asks before
 replacing anything.
 

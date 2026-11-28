@@ -24,7 +24,7 @@ const Row = ({ label, children }: { label: string; children: ReactNode }) => <di
 const day = (d: string) => fmt(d, { weekday: 'short', day: 'numeric', month: 'short' });
 const host = (u: string) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 
-function Conf({ value }: { value: string }) {
+export function Conf({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <span className="row gap">

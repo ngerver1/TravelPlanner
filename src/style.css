@@ -339,7 +339,7 @@ ul.uncov li{display:flex;justify-content:space-between;align-items:center;paddin
 .vtabs button{border:0;background:none;padding:6px 14px;cursor:pointer;color:var(--muted);font-weight:600;min-height:34px}
 .vtabs button.on{background:var(--accent-bg);color:var(--accent)}
 main{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
-.bottombar{position:fixed;left:0;right:0;bottom:0;z-index:35;display:grid;grid-template-columns:repeat(6,1fr);background:var(--glass);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.bottombar{position:fixed;left:0;right:0;bottom:0;z-index:35;display:grid;grid-template-columns:repeat(5,1fr);background:var(--glass);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 .bottombar button{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:56px;cursor:pointer;color:var(--muted);font-size:11.5px;font-weight:600}
 .bottombar button .bi{line-height:0;position:relative;display:inline-flex;height:24px;align-items:center}
 .bottombar button.on .bi svg{stroke-width:2.2}
@@ -743,3 +743,40 @@ a.btn{text-decoration:none;color:inherit}
 .export-key .warn-text{flex-basis:100%;padding-left:22px}
 .ico{display:inline-block;vertical-align:-0.18em;flex:none}
 .pin-stay svg{display:block}
+
+/* ---------- Today ---------- */
+.bottombar button .badge:not(.bad){background:var(--accent-solid);color:#fff}
+.book-tabs{display:flex;margin:12px 12px 0;width:max-content;max-width:calc(100% - 24px)}
+.book-tabs .badge{margin-left:5px}
+.more-inbox{display:flex;align-items:center;gap:6px;width:calc(100% - 24px);margin:12px 12px 0;padding:12px 14px;border:1px solid var(--accent-line);background:var(--accent-bg);color:var(--ink);border-radius:12px;font:inherit;cursor:pointer;text-align:left}
+.today{display:flex;flex-direction:column;gap:12px}
+.t-head{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.t-head h2{margin:0 0 4px;font-size:21px}
+.t-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.t-card.t-warn{border-color:var(--bad)}
+.t-hero h2{margin:0 0 4px;font-size:22px}
+.t-hero h4{margin:12px 0 4px}
+.t-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.t-h h3{margin:0;font-size:15px;flex:1}
+.agenda{list-style:none;margin:0;padding:0}
+.t-row{display:grid;grid-template-columns:48px 22px 1fr auto;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line);cursor:pointer}
+.t-row:first-child,.t-now + .t-row{border-top:0}
+.t-row.past{opacity:.5}
+.t-time{font-variant-numeric:tabular-nums;font-weight:650;font-size:13.5px}
+.t-approx{color:var(--muted);font-weight:500}
+.t-ico{color:var(--muted);display:flex;justify-content:center}
+.t-main{display:flex;flex-direction:column;min-width:0}
+.t-main b{font-weight:600;overflow-wrap:anywhere}
+.t-acts{display:flex;align-items:center;gap:6px}
+.t-now{display:flex;align-items:center;gap:8px;color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 0}
+.t-now::after{content:'';flex:1;height:2px;background:var(--accent);border-radius:2px}
+.t-hotel{margin:2px 0 6px;cursor:pointer}
+.t-facts{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--ink2)}
+.t-conf{margin-top:6px;display:flex;align-items:center;gap:8px}
+.t-btns{margin-top:10px}
+.t-problems{list-style:none;margin:0;padding:0}
+.t-problem{padding:7px 0;border-top:1px solid var(--line);cursor:pointer;color:var(--ink)}
+.t-problem:first-child{border-top:0}
+.t-problem .ico{color:var(--bad)}
+.t-problem.unbooked .ico{color:var(--warn)}
+.t-next{margin:10px 0 0;padding-top:10px;border-top:1px dashed var(--line2)}

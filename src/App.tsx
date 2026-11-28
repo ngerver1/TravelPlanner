@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from './components/Icons';
 import { addDays, diffDays, fmtLong, fmtShort, range, todayStr } from './domain/dates';
 import { uid } from './domain/ids';
@@ -11,7 +11,7 @@ import { parseMapsUrl } from './domain/maps';
 import { CostContext, fromMoney, toMoney } from './components/MoneyField';
 import { usedCurrencies } from './domain/money';
 import { useTripStore } from './store';
-import { useRoute, type PlanView, type Route } from './router';
+import { parseRoute, routeHash, useRoute, type PlanView, type Route } from './router';
 import { Modal } from './components/ui';
 import { DayForm, FlightForm, ItemForm, RangeLocForm, StayForm, type FlightDraft, type ItemDraft, type RangeDraft, type StayDraft } from './components/forms';
 import { StaysPanel, type PanelActions } from './components/panels';
@@ -19,7 +19,8 @@ import { MoveSheet } from './components/MoveSheet';
 import { ItemView } from './components/ItemView';
 import { LocalCardProvider } from './components/LocalCard';
 import { setTripGoogleKey } from './sync/google';
-import { IconCosts, IconLocations, IconPlan, IconSettings, IconStays, IconTravel } from './components/NavIcons';
+import { NavIcon } from './components/NavIcons';
+import { TodayPage } from './views/Today';
 import { exportJson } from './domain/normalize';
 import { FlightView, StayView, TransportView } from './components/BookingViews';
 import { TransportForm, type LegDraft } from './components/TransportForm';
@@ -103,6 +104,10 @@ function itemDraft(doc: TripDoc, it: Item, pi: number): ItemDraft {
   };
 }
 
+type BookingPage = 'stays' | 'flights' | 'costs';
+const BOOKING_PAGES: string[] = ['stays', 'flights', 'costs'];
+const LAST_PAGE = 'tripPlanner.lastPage';
+
 const PLAN_VIEWS: [PlanView, string][] = [['calendar', 'Calendar'], ['overview', 'Overview'], ['day', 'Day'], ['map', 'Map']];
 
 export default function App() {
@@ -120,6 +125,16 @@ export default function App() {
     toastT.current = setTimeout(() => setToastMsg(null), canUndo ? 5000 : 2600);
   }, []);
   const [lastPlan, setLastPlan] = useState<PlanView>(route.page === 'plan' ? route.view : 'calendar');
+  const [lastBooking, setLastBooking] = useState<BookingPage>(BOOKING_PAGES.includes(route.page) ? route.page as BookingPage : 'stays');
+  useEffect(() => { if (BOOKING_PAGES.includes(route.page)) setLastBooking(route.page as BookingPage); }, [route.page]);
+  // Opening the app: Today while you're on the trip, otherwise the page you were on last time.
+  useLayoutEffect(() => {
+    if (location.hash) return;
+    const t = todayStr();
+    if (doc.trip.start && doc.trip.start <= t && t <= doc.trip.end) { go({ page: 'today' }, true); return; }
+    try { const last = localStorage.getItem(LAST_PAGE); if (last && last !== '#') go(parseRoute(last), true); } catch { /* ignore */ }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { try { localStorage.setItem(LAST_PAGE, routeHash(route)); } catch { /* ignore */ } }, [route]);
   const [lastDay, setLastDay] = useState<string>('');
 
   const dv = useMemo(() => derive(doc), [doc]);
@@ -530,24 +545,36 @@ export default function App() {
         {page === 'plan' && planPage()}
         {page === 'locations' && <LocationsList doc={doc} dv={dv} actions={locActions} />}
         {page === 'location' && <LocationPage key={route.id} doc={doc} dv={dv} id={route.id} actions={locActions} plan={plan} onBack={() => navTo({ page: 'locations' })} />}
+        {page === 'today' && <TodayPage doc={doc} dv={dv} which={route.which ?? 'today'} onWhich={(w) => go(w === 'tomorrow' ? { page: 'today', which: 'tomorrow' } : { page: 'today' }, true)} actions={plan} />}
+        {BOOKING_PAGES.includes(page) && (
+          <nav className="vtabs book-tabs" aria-label="Bookings">
+            {([['stays', 'Stays', dv.stats.none], ['flights', 'Travel', dv.stats.noTransport], ['costs', 'Costs', 0]] as const).map(([pg, l, n]) => (
+              <button key={pg} className={page === pg ? 'on' : ''} onClick={() => navTo({ page: pg })}>{l}{n ? <em className="badge bad">{n}</em> : null}</button>
+            ))}
+          </nav>
+        )}
         {page === 'stays' && <div className="page"><h2 className="page-h">Stays</h2>{dv.overlaps.length > 0 && warnings}<StaysPanel dv={dv} actions={panelActions} /></div>}
         {page === 'flights' && <TravelPage dv={dv} actions={{ addFlight: newFlight, openFlight, patchFlight, addLeg, openLeg, patchLeg }} />}
         {page === 'costs' && <CostsPage doc={doc} dv={dv} update={update} onOpen={(ref) => {
           if (ref.type === 'stay') openStay(ref.stay); else if (ref.type === 'flight') openFlight(ref.flight); else if (ref.type === 'leg') openLeg(ref.leg); else plan.viewItem(ref.item, ref.pi);
         }} />}
         {page === 'inbox' && <InboxPage entries={sync.inbox} doc={doc} actions={inboxActions} syncing={!!sync.gistId} />}
+        {page === 'settings' && sync.inbox.length > 0 && (
+          <button className="more-inbox" onClick={() => navTo({ page: 'inbox' })}><Icon name="inbox" /> <b>Inbox</b> · {sync.inbox.length} email{sync.inbox.length > 1 ? 's' : ''} with bookings to review <span className="grow" />›</button>
+        )}
         {page === 'settings' && <SettingsPage doc={doc} toast={toast} onGoogleKey={setGoogleKey} onCheckUpdate={appUpdate.check} theme={theme} onTheme={setTheme} sync={sync} status={syncText} statusOk={storageOk} onImport={(d) => { replace(d); toast('Trip imported', true); }} />}
       </main>
 
       <nav className="bottombar" aria-label="Menu">
-        <button className={page === 'plan' ? 'on' : ''} onClick={() => goPlan(lastPlan)}><span className="bi"><IconPlan /></span><span>Plan</span></button>
-        <button className={page === 'locations' || page === 'location' ? 'on' : ''} onClick={() => navTo({ page: 'locations' })}><span className="bi"><IconLocations /></span><span>Locations</span></button>
-        <button className={page === 'stays' ? 'on' : ''} onClick={() => navTo({ page: 'stays' })}>
-          <span className="bi"><IconStays />{dv.stats.none ? <em className="badge bad">{dv.stats.none}</em> : null}</span><span>Stays</span>
+        <button className={page === 'today' ? 'on' : ''} onClick={() => navTo({ page: 'today' })}><span className="bi"><NavIcon name="today" /></span><span>Today</span></button>
+        <button className={page === 'plan' ? 'on' : ''} onClick={() => goPlan(lastPlan)}><span className="bi"><NavIcon name="plan" /></span><span>Plan</span></button>
+        <button className={BOOKING_PAGES.includes(page) ? 'on' : ''} onClick={() => navTo({ page: lastBooking })}>
+          <span className="bi"><NavIcon name="bookings" />{dv.stats.none + dv.stats.noTransport ? <em className="badge bad">{dv.stats.none + dv.stats.noTransport}</em> : null}</span><span>Bookings</span>
         </button>
-        <button className={page === 'flights' ? 'on' : ''} onClick={() => navTo({ page: 'flights' })}><span className="bi"><IconTravel />{dv.stats.noTransport ? <em className="badge bad">{dv.stats.noTransport}</em> : null}</span><span>Travel</span></button>
-        <button className={page === 'costs' ? 'on' : ''} onClick={() => navTo({ page: 'costs' })}><span className="bi"><IconCosts /></span><span>Costs</span></button>
-        <button className={page === 'settings' ? 'on' : ''} onClick={() => navTo({ page: 'settings' })}><span className="bi"><IconSettings /></span><span>Settings</span></button>
+        <button className={page === 'locations' || page === 'location' ? 'on' : ''} onClick={() => navTo({ page: 'locations' })}><span className="bi"><NavIcon name="location" /></span><span>Places</span></button>
+        <button className={page === 'settings' || page === 'inbox' ? 'on' : ''} onClick={() => navTo({ page: 'settings' })}>
+          <span className="bi"><NavIcon name="more" />{sync.inbox.length ? <em className="badge">{sync.inbox.length}</em> : null}</span><span>More</span>
+        </button>
       </nav>
 
       {modal?.type === 'flight' && <FlightForm initial={modal.v} onClose={close} onSave={saveFlight} onDelete={() => delEntity('flights', modal.v.id)} />}
