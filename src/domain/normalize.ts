@@ -5,7 +5,7 @@ import { isCurrency, parseCost } from './money';
 import { cleanPhone, toLocal } from './local';
 import { CATEGORIES, MEALS, SIZES, SLOTS, STATUSES } from './constants';
 import type {
-  ActivityCategory, DayOverride, Flight, Item, Location, Meal, Money, Place, Placement, Rates, Slot, Status, Stay, TransportLeg, TripDoc,
+  ActivityCategory, DayOverride, Flight, Item, Location, Meal, Money, Place, Placement, Rates, Slot, Status, Stay, Task, TransportLeg, TripDoc,
 } from './types';
 
 /** A Google Maps browser key ("AIza…"). Anything else is dropped, so nothing else can ride along in settings. */
@@ -23,7 +23,7 @@ export function emptyDoc(): TripDoc {
   return {
     schema: 2, rev: 0, updatedAt: 0,
     trip: { name: 'My trip', start: '', end: '', currency: 'AUD', people: 1 },
-    locations: [], days: {}, items: [], flights: [], stays: [], legs: [],
+    locations: [], days: {}, items: [], flights: [], stays: [], legs: [], tasks: [],
   };
 }
 
@@ -109,8 +109,15 @@ export function normalizeDoc(raw: unknown): TripDoc {
       currency: isCurrency(t.currency) ? t.currency : 'AUD',
       people: Math.min(50, Math.max(1, Math.floor(num(t.people) ?? 1))),
     },
-    locations: [], days: {}, items: [], flights: [], stays: [], legs: [],
+    locations: [], days: {}, items: [], flights: [], stays: [], legs: [], tasks: [],
   };
+  for (const t of arr(raw.tasks)) {
+    if (!obj(t) || !str(t.text).trim()) continue;
+    const task: Task = { id: str(t.id) || uid(), text: str(t.text).trim() };
+    if (t.done === true) task.done = true;
+    if (isDate(t.date)) task.date = t.date; else if (isDate(t.by)) task.by = t.by;
+    doc.tasks.push(task);
+  }
   if (doc.trip.start && doc.trip.end && doc.trip.end < doc.trip.start) doc.trip.end = doc.trip.start;
   if (obj(raw.settings) && isGoogleKey(raw.settings.googleMapsKey)) doc.settings = { googleMapsKey: String(raw.settings.googleMapsKey).trim() };
   const home = doc.trip.currency!;

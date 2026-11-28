@@ -780,3 +780,43 @@ a.btn{text-decoration:none;color:inherit}
 .t-problem .ico{color:var(--bad)}
 .t-problem.unbooked .ico{color:var(--warn)}
 .t-next{margin:10px 0 0;padding-top:10px;border-top:1px dashed var(--line2)}
+
+/* ---------- checklists ---------- */
+.tasks ul{list-style:none;margin:0 0 6px;padding:0}
+.task{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+.task:first-child{border-top:0}
+.task label{display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer}
+.task input[type=checkbox]{width:20px;height:20px;flex:none;accent-color:var(--accent-solid)}
+.task-text{overflow-wrap:anywhere}
+.task.done .task-text{text-decoration:line-through;color:var(--muted)}
+.task-by{color:var(--muted);white-space:nowrap}
+.task-by.late{color:var(--bad);font-weight:650}
+.task-x{opacity:.55}
+.task-add{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.task-add input:not([type=checkbox]){flex:1;min-width:140px}
+.task-add .task-date{flex:0 0 150px}
+.tasks.compact .task{padding:3px 0}
+.dv-tasks{margin-top:8px}
+.t-card details > summary{list-style:none;cursor:pointer}
+.t-card details > summary::-webkit-details-marker{display:none}
+.t-card details > summary h3::after{content:' ›';color:var(--muted)}
+.t-card details[open] > summary h3::after{content:' ⌄'}
+
+/* ---------- weather ---------- */
+.wx{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;padding:2px 0}
+.wx-ico{font-size:22px;display:flex;color:var(--accent)}
+.wx-temp{font-weight:700;font-variant-numeric:tabular-nums}
+.wx-what{color:var(--ink2)}
+.wx-none{padding:2px 0}
+.wx-day-block{display:flex;flex-direction:column;gap:2px;margin:6px 0 2px}
+.t-wx{padding-top:6px;padding-bottom:8px}
+.t-wx .wx-day-block{margin:0}
+.wx-hours{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
+.wx-hours::-webkit-scrollbar{display:none}
+.wx-hour{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:44px;padding:6px 4px;border-radius:10px;background:var(--soft)}
+.wx-hour .ico{font-size:18px;color:var(--accent)}
+.wx-pop{color:var(--accent)}
+.wx-week{list-style:none;margin:0 0 6px;padding:0}
+.wx-week li{display:grid;grid-template-columns:72px 22px 92px 1fr;align-items:center;gap:6px;padding:6px 0;border-top:1px solid var(--line)}
+.wx-week li:first-child{border-top:0}
+.wx-week .ico{font-size:18px;color:var(--accent)}

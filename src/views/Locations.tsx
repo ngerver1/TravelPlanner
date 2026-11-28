@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PlaceWeather } from '../components/Weather';
 import { Icon } from '../components/Icons';
 import { fmt, fmtShort, addDays } from '../domain/dates';
 import { MEAL_LABEL, SLOT_LABEL } from '../domain/constants';
@@ -92,6 +93,11 @@ export function LocationPage({ doc, dv, id, actions, plan, onBack }: {
           {loc.colorIndex != null && <button type="button" className="link sm" onClick={() => actions.patch(id, { colorIndex: undefined })}>auto</button>}
         </div>
       </div>
+
+      <section className="lp-sec">
+        <h3>Weather: next 7 days</h3>
+        <PlaceWeather doc={doc} id={id} />
+      </section>
 
       <section className="lp-sec">
         <h3>Dates</h3>

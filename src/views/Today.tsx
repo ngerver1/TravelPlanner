@@ -14,6 +14,8 @@ import { Icon, ItemIcon, ModeIcon } from '../components/Icons';
 import { LocalButton } from '../components/LocalCard';
 import { LocDisplay, StatusPill } from '../components/ui';
 import type { PlanActions } from './DayView';
+import { TaskList } from '../components/Tasks';
+import { DayWeather } from '../components/Weather';
 
 const nowHM = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
 
@@ -50,6 +52,7 @@ export function TodayPage({ doc, dv, which, onWhich, actions }: {
   const firstUpcoming = isToday ? rows.findIndex((r) => r.approx || rowMinutes(r) >= now) : -1;
   const after = nextDay(dv, date);
   const heads = [...problems(dv, date), ...(after ? problems(dv, after) : [])];
+  const leftover = doc.tasks.filter((t) => !t.date && !t.done);
 
   return (
     <div className="page today">
@@ -68,6 +71,8 @@ export function TodayPage({ doc, dv, which, onWhich, actions }: {
         </div>
       </header>
 
+      <section className="t-card t-wx"><DayWeather doc={doc} dv={dv} date={date} hourly /></section>
+
       <section className="t-card">
         <div className="t-h"><h3>{label}’s plan</h3><button className="btn sm" onClick={() => actions.goDay(date)}>Route &amp; map · Day view</button></div>
         {rows.length === 0 && <p className="muted small">Nothing planned yet. <button className="link" onClick={() => actions.goDay(date)}>Plan this day</button></p>}
@@ -76,14 +81,27 @@ export function TodayPage({ doc, dv, which, onWhich, actions }: {
         </ol>
       </section>
 
+      <section className="t-card">
+        <div className="t-h"><h3>To do {label === 'Today' || label === 'Tomorrow' ? label.toLowerCase() : `on ${label}`}</h3></div>
+        <TaskList tasks={doc.tasks.filter((t) => t.date === date)} actions={actions.tasks} date={date} placeholder={`Add a to-do for ${label === 'Today' || label === 'Tomorrow' ? label.toLowerCase() : label}`} />
+      </section>
+
       <Tonight date={date} dv={dv} actions={actions} label={label} />
 
+      {ph.kind === 'during' && leftover.length > 0 && (
+        <section className="t-card">
+          <details>
+            <summary className="t-h"><h3>Before you go: {leftover.length} not ticked</h3></summary>
+            <TaskList tasks={leftover} actions={actions.tasks} withBy placeholder="Add a to-do" />
+          </details>
+        </section>
+      )}
       {(heads.length > 0 || (which === 'today' && after)) && (
         <section className="t-card">
           <div className="t-h"><h3>Heads up</h3></div>
           {heads.length === 0 && <p className="muted small">Nothing to sort out for {label.toLowerCase()} or the day after.</p>}
           <ul className="t-problems">{heads.map((p, i) => <ProblemLine key={i} p={p} dv={dv} base={date} actions={actions} />)}</ul>
-          {which === 'today' && after && <TomorrowFirst doc={doc} dv={dv} date={after} onSee={() => onWhich('tomorrow')} />}
+          {which === 'today' && after && <TomorrowFirst doc={doc} dv={dv} date={after} name={ph.kind === 'before' ? 'Day 2' : 'Tomorrow'} onSee={() => onWhich('tomorrow')} />}
         </section>
       )}
     </div>
@@ -92,6 +110,7 @@ export function TodayPage({ doc, dv, which, onWhich, actions }: {
 
 function Countdown({ doc, dv, days, actions }: { doc: TripDoc; dv: Derived; days: number; actions: PlanActions }) {
   const list = stillToBook(doc, dv);
+  const before = doc.tasks.filter((t) => !t.date);
   return (
     <section className="t-card t-hero">
       <h2>{days} day{days === 1 ? '' : 's'} to go</h2>
@@ -101,6 +120,8 @@ function Countdown({ doc, dv, days, actions }: { doc: TripDoc; dv: Derived; days
         <ul className="t-problems">{list.slice(0, 8).map((p, i) => <ProblemLine key={i} p={p} dv={dv} actions={actions} withDate />)}</ul>
         {list.length > 8 && <p className="muted small">and {list.length - 8} more: see Bookings.</p>}
       </>)}
+      <h4>Before you go{before.length ? ` (${before.filter((t) => !t.done).length} to do)` : ''}</h4>
+      <TaskList tasks={before} actions={actions.tasks} withBy placeholder="Add something to do before the trip" />
     </section>
   );
 }
@@ -206,12 +227,12 @@ function ProblemLine({ p, dv, actions, base, withDate }: { p: Problem; dv: Deriv
   );
 }
 
-function TomorrowFirst({ doc, dv, date, onSee }: { doc: TripDoc; dv: Derived; date: string; onSee: () => void }) {
+function TomorrowFirst({ doc, dv, date, name, onSee }: { doc: TripDoc; dv: Derived; date: string; name: string; onSee: () => void }) {
   const first = agenda(doc, dv, date)[0];
   const what = !first ? 'nothing planned yet'
     : first.kind === 'item' ? first.item.title : first.kind === 'flight' ? `${flightLabel(first.flight)} ${first.at === 'dep' ? 'departs' : 'lands'}`
     : first.kind === 'leg' ? `${legTitle(first.leg)} ${first.at === 'dep' ? 'departs' : 'arrives'}` : `${first.at === 'in' ? 'Check in' : 'Check out'}: ${first.stay.name}`;
   return (
-    <p className="t-next small">Tomorrow starts {first ? <>at <b>{first.approx ? '~' : ''}{first.time || 'any time'}</b> with </> : 'with '}<b>{what}</b>. <button className="link" onClick={onSee}>See tomorrow →</button></p>
+    <p className="t-next small">{name} starts {first ? <>at <b>{first.approx ? '~' : ''}{first.time || 'any time'}</b> with </> : 'with '}<b>{what}</b>. <button className="link" onClick={onSee}>See {name === 'Tomorrow' ? 'tomorrow' : name} →</button></p>
   );
 }

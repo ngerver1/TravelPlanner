@@ -20,8 +20,19 @@ export interface TripDoc {
   flights: Flight[];
   stays: Stay[];
   legs: TransportLeg[]; // phase 4; always present so it slots in without a migration
+  /** Checklist: things to do before you go (no date) and on a trip day. */
+  tasks: Task[];
   /** Trip-wide settings that sync with the trip. */
   settings?: TripSettings;
+}
+
+/** A checklist item. With `date` it belongs to that trip day; without, it's "before you go" (optionally `by` a date). */
+export interface Task {
+  id: string;
+  text: string;
+  done?: boolean;
+  date?: string;
+  by?: string;
 }
 
 export interface TripSettings {

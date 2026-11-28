@@ -17,8 +17,11 @@ export const isDirty = (doc: { updatedAt: number }, syncedAt: number | null) => 
  * the Google Maps key in `settings`) while still counting itself in step with that save. Given the Gist's copy
  * of the same save, put those parts back. Returns the same object when there's nothing to restore.
  */
-export function restoreDropped<T extends { rev: number; settings?: object }>(local: T, remote: T | null): T {
+export function restoreDropped<T extends { rev: number }>(local: T, remote: T | null): T {
   if (!remote || remote.rev !== local.rev) return local;
-  if (remote.settings && !local.settings) return { ...local, settings: remote.settings };
-  return local;
+  const l = local as Record<string, unknown>, r = remote as Record<string, unknown>;
+  const empty = (v: unknown) => v === undefined || (Array.isArray(v) && v.length === 0);
+  const back: Record<string, unknown> = {};
+  for (const k of ['settings', 'tasks']) if (empty(l[k]) && !empty(r[k])) back[k] = r[k];
+  return Object.keys(back).length ? { ...local, ...back } : local;
 }

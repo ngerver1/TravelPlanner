@@ -44,9 +44,14 @@ The bar at the bottom has five sections:
   - **Heads up**: anything unsorted today or tomorrow (no stay, no transport, not booked yet), and what
     tomorrow starts with.
 
-  Before the trip it counts down, lists what's **still to book**, and shows day 1. Afterwards it sums the
-  trip up. Everything comes from the trip's saved data, so it works offline. During the trip dates the app
-  opens on Today; otherwise it reopens where you left off.
+  - **Weather** for the day's place (both places on a travel day): icon, high/low, chance of rain or snow,
+    and an hour-by-hour row.
+  - **To do today**: that day's checklist. Add to-dos here or in Day view; tick them off.
+
+  Before the trip it counts down, lists what's **still to book**, keeps a **Before you go** checklist (with
+  optional "by" dates; overdue ones turn red), and shows day 1. Anything not ticked by the time the trip starts
+  sits under Today until it is. Afterwards it sums the trip up. During the trip dates the app opens on Today;
+  otherwise it reopens where you left off. Checklists sync with the trip.
 - **Plan**: your days, at different zoom levels (switch at the top):
   - **Calendar**: the whole trip at a glance: stays as coloured bars, flights, and red bars for nights with no stay.
   - **Overview**: one card per day with its location, flights, stay, and little markers for
@@ -305,6 +310,17 @@ if there's a phone number. Black on white, even in dark mode, and it keeps the s
   sideways, the card is drawn normally. Turn this off in **More → Settings → Open local card in landscape**.
 - Close it with **✕**, by swiping down, or with the phone's Back button.
 - It works offline: it only uses what's saved in your trip.
+
+## Weather
+
+Forecasts come from **Open-Meteo** (free, no key or account). They show on **Today**, in each day's header in
+**Day view**, and as a **7-day forecast** on each place's page.
+
+- Forecasts reach about 16 days ahead; before that a day shows "Forecast from …".
+- The app asks for weather only when one of those screens is open, at most every 3 hours, and only sends map
+  positions. A place's position comes from its own map position, else its hotel's, else an idea there; a place
+  with none is looked up by name once (Open-Meteo's place search).
+- The last forecast is kept on the device, so it still shows offline (with "as of …" once it's old).
 
 ## Install on your phone and use it offline
 

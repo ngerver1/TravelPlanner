@@ -15,6 +15,8 @@ import { legTitle } from '../components/BookingViews';
 import { ItemCard, MapLink, itemIcon } from '../components/ItemCard';
 import { directionsLink, mapsLink } from '../domain/maps';
 import { LocalButton, cardFor } from '../components/LocalCard';
+import { TaskList, type TaskActions } from '../components/Tasks';
+import { DayWeather } from '../components/Weather';
 import { LocChip, LocDisplay, Modal, NightBadge, StatusPill, cssVars, dayStripe } from '../components/ui';
 
 export type DropTarget = { type: 'lane'; lane: Lane; index?: number } | { type: 'pool' } | { type: 'date'; date: string } | { type: 'swap'; with: Ref };
@@ -42,6 +44,8 @@ export interface PlanActions {
   moveMenu: (it: Item, pi: number, date?: string) => void;
   drop: (ref: Ref, target: DropTarget) => void;
   setChosen: (ref: Ref, chosen: boolean) => void;
+  /** The checklist: before-you-go and per-day to-dos. */
+  tasks: TaskActions;
 }
 
 /** Location id → name, so cards can search Maps as "title, city". */
@@ -182,7 +186,7 @@ function DateChip({ d, on, dv, onPick }: { d: string; on: boolean; dv: Derived; 
   );
 }
 
-function DayHeader({ x, dv, date, idx, actions, route }: { x: DayInfo; dv: Derived; doc: TripDoc; date: string; idx: number; actions: PlanActions; route: RoutePoint[] }) {
+function DayHeader({ x, dv, doc, date, idx, actions, route }: { x: DayInfo; dv: Derived; doc: TripDoc; date: string; idx: number; actions: PlanActions; route: RoutePoint[] }) {
   const prev = dv.dates[idx - 1], next = dv.dates[idx + 1];
   const n = x.night;
   return (
@@ -203,6 +207,7 @@ function DayHeader({ x, dv, date, idx, actions, route }: { x: DayInfo; dv: Deriv
             : <span className="staybit" onClick={() => actions.openStay(n.stay)}><Icon name="stay" /> {n.stay.name || 'Stay'} <StatusPill small value={n.stay.status} onChange={(s) => actions.patchStay(n.stay.id, { status: s })} /></span>}
         </span>
       </div>
+      <DayWeather doc={doc} dv={dv} date={date} />
       <HotelButton x={x} dv={dv} />
       {x.noTransport && (
         <button className="night none notransport" onClick={() => actions.addLeg({ date, fromLoc: x.loc?.b ? x.loc.a.name : '', toLoc: (x.loc?.b ?? x.loc?.a)?.name })}>
@@ -214,6 +219,9 @@ function DayHeader({ x, dv, date, idx, actions, route }: { x: DayInfo; dv: Deriv
         <DayRoute points={route} />
       </div>
       {x.notes && <p className="iday-notes" onClick={() => actions.editDay(date)}>{x.notes}</p>}
+      <div className="dv-tasks">
+        <TaskList compact tasks={doc.tasks.filter((t) => t.date === date)} actions={actions.tasks} date={date} placeholder="+ To-do for this day" />
+      </div>
     </header>
   );
 }

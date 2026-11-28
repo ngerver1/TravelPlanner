@@ -330,6 +330,11 @@ export default function App() {
     moveMenu: (it, pi, date) => setModal({ type: 'move', itemId: it.id, pi, date }),
     drop,
     setChosen: (ref, chosen) => update((x) => setChosen(x, ref, chosen)),
+    tasks: {
+      add: (text, where) => update((x) => { x.tasks.push({ id: uid(), text, ...where }); }),
+      toggle: (id) => update((x) => { x.tasks = x.tasks.map((t) => (t.id === id ? (t.done ? (({ done: _d, ...r }) => r)(t) : { ...t, done: true }) : t)); }),
+      remove: (id) => { update((x) => { x.tasks = x.tasks.filter((t) => t.id !== id); }); toast('To-do removed', true); },
+    },
   };
 
   const panelActions: PanelActions = { addStay: (f, t) => addStay(f, t), openStay, patchStay, addFlight: newFlight, openFlight, patchFlight };

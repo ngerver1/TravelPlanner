@@ -14,8 +14,8 @@ const TOKEN = 'tripPlanner.gh.token';
 const META = 'tripPlanner.gh.sync';
 const INBOX_KEY = 'tripPlanner.gh.inbox';
 interface Meta { gistId: string | null; etag: string | null; remoteRev: number | null; syncedAt: number | null; login?: string; dataVersion?: number }
-/** Bump when the app starts keeping a part of the trip an older version dropped (2: settings, the Google Maps key). */
-const DATA_VERSION = 2;
+/** Bump when the app starts keeping a part of the trip an older version dropped (2: settings/Google key; 3: tasks). */
+const DATA_VERSION = 3;
 const EMPTY: Meta = { gistId: null, etag: null, remoteRev: null, syncedAt: null };
 
 const ls = {
